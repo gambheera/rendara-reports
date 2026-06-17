@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rendara Reports — Templates</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface": "#1b1b24",
+                    "outline": "#777587",
+                    "on-secondary-fixed-variant": "#404754",
+                    "surface-bright": "#fcf8ff",
+                    "on-tertiary-fixed": "#351000",
+                    "text-placeholder": "#9CA3AF",
+                    "recessed-panel": "#F9FAFB",
+                    "inverse-surface": "#302f39",
+                    "on-tertiary": "#ffffff",
+                    "border-input": "#D1D5DB",
+                    "accent-subtle": "#EEF2FF",
+                    "on-primary": "#ffffff",
+                    "tertiary-container": "#a44100",
+                    "secondary-container": "#dce2f3",
+                    "border-hairline": "#E5E7EB",
+                    "primary": "#3525cd",
+                    "surface-variant": "#e4e1ee",
+                    "on-background": "#1b1b24",
+                    "workspace-backdrop": "#F3F4F6",
+                    "surface-container-high": "#eae6f4",
+                    "success": "#16A34A",
+                    "background": "#fcf8ff",
+                    "inverse-primary": "#c3c0ff",
+                    "secondary-fixed": "#dce2f3",
+                    "error-container": "#ffdad6",
+                    "on-primary-container": "#dad7ff",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "accent-hover": "#4338CA",
+                    "primary-fixed": "#e2dfff",
+                    "tertiary-fixed-dim": "#ffb695",
+                    "secondary-fixed-dim": "#c0c7d6",
+                    "danger": "#DC2626",
+                    "text-primary": "#111827",
+                    "surface-container-highest": "#e4e1ee",
+                    "warning": "#D97706",
+                    "on-error": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#ffdbcc",
+                    "tertiary": "#7e3000",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "surface": "#FFFFFF",
+                    "on-surface-variant": "#464555",
+                    "inverse-on-surface": "#f3effc",
+                    "on-secondary-fixed": "#151c27",
+                    "secondary": "#585f6c",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-container": "#5e6572",
+                    "surface-container": "#f0ecf9",
+                    "surface-tint": "#4d44e3",
+                    "surface-container-low": "#f5f2ff",
+                    "primary-container": "#4f46e5",
+                    "outline-variant": "#c7c4d8",
+                    "surface-dim": "#dcd8e5",
+                    "on-primary-fixed": "#0f0069",
+                    "on-tertiary-fixed-variant": "#7b2f00",
+                    "on-tertiary-container": "#ffd2be"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "row-height-sm": "28px",
+                    "icon-button": "32px",
+                    "control-height": "32px",
+                    "base": "8px",
+                    "panel-padding": "16px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Inter"],
+                    "body-md-medium": ["Inter"],
+                    "section-header": ["Inter"],
+                    "data-mono": ["JetBrains Mono"],
+                    "caption": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg": ["20px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "body-md-medium": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                    "section-header": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "caption": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "label-sm": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #F3F4F6; }
+        .material-symbols-outlined { font-size: 20px; font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .card-shadow { box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05); }
+        .canvas-shadow { box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.04); }
+        .control-height { height: 32px; }
+        .row-sm { height: 28px; }
+    </style>
+</head>
+<body class="min-h-screen text-text-primary overflow-x-hidden">
+<div class="flex h-screen overflow-hidden">
+<!-- Side Navigation (Predicted Component Map) -->
+<aside class="hidden md:flex flex-col w-64 bg-surface border-r border-border-hairline sticky top-0 h-full py-4">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-white font-bold">R</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg font-black tracking-tight text-primary">Rendara</h1>
+<p class="text-caption font-caption text-secondary">Enterprise</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 h-10 text-secondary hover:bg-surface-container-low transition-all duration-200 rounded" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 h-10 bg-accent-subtle text-primary border-l-2 border-primary transition-all duration-200" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-body-md text-body-md font-bold">Templates</span>
+</a>
+<a class="flex items-center gap-3 px-3 h-10 text-secondary hover:bg-surface-container-low transition-all duration-200 rounded" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-md text-body-md">Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 h-10 text-secondary hover:bg-surface-container-low transition-all duration-200 rounded" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-body-md text-body-md">Assets</span>
+</a>
+<a class="flex items-center gap-3 px-3 h-10 text-secondary hover:bg-surface-container-low transition-all duration-200 rounded" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</nav>
+<div class="px-6 pt-4 border-t border-border-hairline mt-auto">
+<div class="flex items-center gap-3 cursor-pointer">
+<img alt="User avatar" class="w-8 h-8 rounded-full border border-border-hairline" data-alt="A professional headshot of a creative director in a bright, modern studio. The lighting is soft and natural, emphasizing a calm and focused atmosphere. The background is a clean, neutral gray that aligns with a high-end, grayscale corporate aesthetic. The individual wears a simple dark shirt, fitting the minimalist brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-fqTPmloCyWda0M6-IqVgOrG28MdsMLvrgijajut2OEO2ct1yuT1UUPgoBaac3t9ecRvWh3m9sTKI0GKkHQugowPyDHY3fvNCrVjfipurkH6t-3s3Al77Gnxs-wsBYT_UTgdxkPPgXADzuyu03Rt6-N1fiyOpLpwKjouxPm7x6w9jSUTiKzkHEWA_2zpKfohEoCB9xXp8O9GwqtsSjcTUjhPoIC-X8xmdkYm2mkW5J06JMpzhfbyH5KEljla64AN4e2wDIHOXkAM-"/>
+<div class="overflow-hidden">
+<p class="text-label-sm font-label-sm truncate">Alex Rivera</p>
+<p class="text-caption font-caption text-secondary truncate">Pro Plan</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col min-w-0 bg-workspace-backdrop overflow-y-auto">
+<!-- Top Navigation Bar -->
+<header class="h-[52px] w-full top-0 sticky z-20 bg-surface border-b border-border-hairline flex justify-between items-center px-6">
+<div class="flex items-center gap-6">
+<span class="md:hidden font-headline-lg text-headline-lg font-bold text-primary">Rendara</span>
+<h2 class="font-headline-lg text-headline-lg text-text-primary">Templates</h2>
+</div>
+<div class="flex items-center gap-3">
+<div class="hidden md:flex items-center gap-4 mr-4">
+<button class="p-1 text-secondary hover:bg-accent-subtle transition-colors rounded">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-1 text-secondary hover:bg-accent-subtle transition-colors rounded">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<button class="control-height px-4 bg-primary text-white rounded flex items-center gap-2 hover:bg-accent-hover active:opacity-80 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="text-label-sm font-label-sm">New report</span>
+</button>
+</div>
+</header>
+<!-- Toolbar Row -->
+<div class="bg-surface px-6 py-2 border-b border-border-hairline flex items-center justify-between">
+<div class="flex items-center flex-1 max-w-md">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+<input class="w-full pl-8 pr-3 control-height text-body-md font-body-md border border-border-input rounded focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-text-placeholder" placeholder="Search templates" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<!-- Segmented Control -->
+<div class="bg-recessed-panel p-0.5 rounded border border-border-hairline flex items-center h-8">
+<button class="w-8 h-7 bg-white rounded-sm flex items-center justify-center text-primary card-shadow border border-border-hairline">
+<span class="material-symbols-outlined text-[18px]">grid_view</span>
+</button>
+<button class="w-8 h-7 flex items-center justify-center text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[18px]">list</span>
+</button>
+</div>
+<!-- Sort Dropdown -->
+<button class="flex items-center gap-2 px-3 control-height border border-border-input rounded text-body-md font-body-md-medium text-secondary hover:bg-surface-container-low transition-colors">
+<span>Sort: Recent</span>
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Dashboard Content (Responsive Grid) -->
+<div class="p-8 flex-1" id="main-grid">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1200px] mx-auto">
+<!-- Card 1: Invoice -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] bg-white rounded-lg border border-border-hairline card-shadow overflow-hidden p-4 flex flex-col transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-primary/30">
+<div class="flex-1 bg-surface-container-lowest border border-border-hairline rounded relative overflow-hidden flex items-center justify-center">
+<img alt="Invoice Preview" class="w-4/5 h-4/5 object-contain canvas-shadow" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDH0ahmXBmQirgsKytgTKVjB1M5b_CZgnf6mMeFNcKQyBdW6cNwQwH6oh-rdY0genzgY1qLi0natjGEA06toSB5fDka29bvbQ2HdajVSeeKzYwWJM2tzNvrxqr4w_m8akcxFpknULsZDtdIAstuHIx245lmQ4k7vyYfEGU5tl3eNsCrSr3r46ObW40x5F22l1ZjV-Rum1PFYX-4nvU6uUjM-PEzZWJ0rJjaVmr0xhaUP-as7mipRm7EvfrVOneQ8zsTgP9BxU__AW1_"/>
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="px-3 py-1.5 bg-primary text-white rounded-full text-caption font-caption shadow-lg">Use Template</span>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<div>
+<h3 class="text-body-md-medium font-body-md-medium text-text-primary">Invoice</h3>
+<p class="text-caption font-caption text-secondary">Edited 2 days ago</p>
+</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-outline">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2: Statement -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] bg-white rounded-lg border border-border-hairline card-shadow overflow-hidden p-4 flex flex-col transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-primary/30">
+<div class="flex-1 bg-surface-container-lowest border border-border-hairline rounded flex flex-col p-4 space-y-2 opacity-60">
+<div class="h-4 w-1/3 bg-surface-variant rounded"></div>
+<div class="h-2 w-full bg-surface-variant rounded-sm"></div>
+<div class="h-2 w-full bg-surface-variant rounded-sm"></div>
+<div class="h-2 w-4/5 bg-surface-variant rounded-sm"></div>
+<div class="mt-8 grid grid-cols-4 gap-1">
+<div class="h-6 bg-surface-variant"></div>
+<div class="h-6 bg-surface-variant"></div>
+<div class="h-6 bg-surface-variant"></div>
+<div class="h-6 bg-surface-variant"></div>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<div>
+<h3 class="text-body-md-medium font-body-md-medium text-text-primary">Statement</h3>
+<p class="text-caption font-caption text-secondary">Edited 5 days ago</p>
+</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-outline">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 3: Certificate -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] bg-white rounded-lg border border-border-hairline card-shadow overflow-hidden p-4 flex flex-col transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-primary/30">
+<div class="flex-1 bg-surface-container-lowest border-4 border-double border-surface-variant rounded flex items-center justify-center opacity-60">
+<div class="text-center">
+<div class="w-10 h-10 border-2 border-surface-variant rounded-full mx-auto mb-2"></div>
+<div class="h-2 w-20 bg-surface-variant rounded mx-auto"></div>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<div>
+<h3 class="text-body-md-medium font-body-md-medium text-text-primary">Certificate</h3>
+<p class="text-caption font-caption text-secondary">Edited 1 week ago</p>
+</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-outline">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 4: Sales Report -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] bg-white rounded-lg border border-border-hairline card-shadow overflow-hidden p-4 flex flex-col transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-primary/30">
+<div class="flex-1 bg-surface-container-lowest border border-border-hairline rounded p-4 flex flex-col space-y-4 opacity-60">
+<div class="h-3 w-1/2 bg-primary/20 rounded"></div>
+<div class="flex-1 flex items-end gap-1">
+<div class="flex-1 bg-primary/20 h-[20%]"></div>
+<div class="flex-1 bg-primary/20 h-[50%]"></div>
+<div class="flex-1 bg-primary/20 h-[80%]"></div>
+<div class="flex-1 bg-primary/20 h-[40%]"></div>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<div>
+<h3 class="text-body-md-medium font-body-md-medium text-text-primary">Sales Report</h3>
+<p class="text-caption font-caption text-secondary">Edited 2 weeks ago</p>
+</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-outline">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 5: Packing Slip -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] bg-white rounded-lg border border-border-hairline card-shadow overflow-hidden p-4 flex flex-col transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-primary/30">
+<div class="flex-1 bg-surface-container-lowest border border-border-hairline rounded p-4 flex flex-col gap-2 opacity-60">
+<div class="w-8 h-8 bg-surface-variant rounded"></div>
+<div class="h-1 w-full bg-surface-variant"></div>
+<div class="h-1 w-full bg-surface-variant"></div>
+<div class="mt-4 space-y-1">
+<div class="h-1.5 w-1/2 bg-surface-variant"></div>
+<div class="h-1.5 w-1/3 bg-surface-variant"></div>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<div>
+<h3 class="text-body-md-medium font-body-md-medium text-text-primary">Packing Slip</h3>
+<p class="text-caption font-caption text-secondary">Edited 1 month ago</p>
+</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-outline">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 6: Payslip -->
+<div class="group cursor-pointer">
+<div class="aspect-[3/4] bg-white rounded-lg border border-border-hairline card-shadow overflow-hidden p-4 flex flex-col transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-hover:border-primary/30">
+<div class="flex-1 bg-surface-container-lowest border border-border-hairline rounded p-4 flex flex-col space-y-4 opacity-60">
+<div class="flex justify-between items-start">
+<div class="w-12 h-2 bg-surface-variant"></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-variant"></div>
+</div>
+<div class="h-1 w-full bg-surface-variant"></div>
+<div class="grid grid-cols-2 gap-4">
+<div class="h-8 bg-surface-variant"></div>
+<div class="h-8 bg-surface-variant"></div>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<div>
+<h3 class="text-body-md-medium font-body-md-medium text-text-primary">Payslip</h3>
+<p class="text-caption font-caption text-secondary">Edited 2 months ago</p>
+</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-outline">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Hidden Empty State Section (Request from prompt) -->
+<section class="hidden flex-1 flex flex-col items-center justify-center p-8" id="empty-state">
+<div class="text-center space-y-4">
+<div class="w-16 h-16 bg-surface border border-border-hairline rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+<span class="material-symbols-outlined text-secondary text-4xl">post_add</span>
+</div>
+<div>
+<h2 class="text-headline-lg font-headline-lg text-text-primary">No templates yet</h2>
+<p class="text-body-md font-body-md text-secondary mt-1">Start by creating your first document template.</p>
+</div>
+<button class="control-height px-6 bg-primary text-white rounded flex items-center gap-2 hover:bg-accent-hover transition-colors shadow-sm mx-auto">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="text-label-sm font-label-sm">New report</span>
+</button>
+</div>
+</section>
+</main>
+</div>
+<!-- Micro-interaction Script -->
+<script>
+        // Simple search filter simulation
+        const searchInput = document.querySelector('input[placeholder="Search templates"]');
+        const cards = document.querySelectorAll('.group');
+        const grid = document.getElementById('main-grid');
+        const emptyState = document.getElementById('empty-state');
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            let visibleCount = 0;
+            
+            cards.forEach(card => {
+                const title = card.querySelector('h3').textContent.toLowerCase();
+                if (title.includes(query)) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            if (visibleCount === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            } else {
+                grid.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+            }
+        });
+
+        // Add subtle active states to nav items
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                document.querySelectorAll('nav a').forEach(l => {
+                    l.classList.remove('bg-accent-subtle', 'text-primary', 'border-l-2', 'border-primary');
+                    l.classList.add('text-secondary', 'hover:bg-surface-container-low');
+                    l.querySelector('span:last-child').classList.remove('font-bold');
+                });
+                link.classList.remove('text-secondary', 'hover:bg-surface-container-low');
+                link.classList.add('bg-accent-subtle', 'text-primary', 'border-l-2', 'border-primary');
+                link.querySelector('span:last-child').classList.add('font-bold');
+            });
+        });
+    </script>
+</body></html>

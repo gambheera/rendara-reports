@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rendara Reports | Designer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#ffb695",
+                        "recessed-panel": "#F9FAFB",
+                        "inverse-surface": "#302f39",
+                        "inverse-primary": "#c3c0ff",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#7e3000",
+                        "outline-variant": "#c7c4d8",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "surface-bright": "#fcf8ff",
+                        "success": "#16A34A",
+                        "secondary-container": "#dce2f3",
+                        "on-tertiary": "#ffffff",
+                        "surface": "#FFFFFF",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#351000",
+                        "text-placeholder": "#9CA3AF",
+                        "outline": "#777587",
+                        "text-primary": "#111827",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "on-tertiary-container": "#ffd2be",
+                        "inverse-on-surface": "#f3effc",
+                        "on-primary-container": "#dad7ff",
+                        "border-hairline": "#E5E7EB",
+                        "on-surface-variant": "#464555",
+                        "primary-fixed": "#e2dfff",
+                        "surface-dim": "#dcd8e5",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed": "#0f0069",
+                        "danger": "#DC2626",
+                        "on-primary": "#ffffff",
+                        "primary": "#3525cd",
+                        "accent-hover": "#4338CA",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#eae6f4",
+                        "primary-container": "#4f46e5",
+                        "on-surface": "#1b1b24",
+                        "secondary-fixed": "#dce2f3",
+                        "surface-container-highest": "#e4e1ee",
+                        "secondary-fixed-dim": "#c0c7d6",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#ffdbcc",
+                        "on-secondary-container": "#5e6572",
+                        "workspace-backdrop": "#F3F4F6",
+                        "warning": "#D97706",
+                        "accent-subtle": "#EEF2FF",
+                        "surface-tint": "#4d44e3",
+                        "tertiary-container": "#a44100",
+                        "on-error": "#ffffff",
+                        "secondary": "#585f6c",
+                        "background": "#fcf8ff",
+                        "on-secondary-fixed": "#151c27",
+                        "on-background": "#1b1b24",
+                        "border-input": "#D1D5DB",
+                        "surface-container-low": "#f5f2ff",
+                        "surface-variant": "#e4e1ee",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-secondary-fixed-variant": "#404754",
+                        "surface-container": "#f0ecf9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "panel-padding": "16px",
+                        "control-height": "32px",
+                        "base": "8px",
+                        "row-height-sm": "28px",
+                        "icon-button": "32px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "caption": ["Inter"],
+                        "body-md-medium": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "section-header": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                        "headline-lg": ["20px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "body-md-medium": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "section-header": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+            font-size: 20px;
+        }
+        .ruler-bg {
+            background-image: linear-gradient(90deg, #E5E7EB 1px, transparent 1px);
+            background-size: 10mm 100%;
+        }
+        .ruler-bg-v {
+            background-image: linear-gradient(180deg, #E5E7EB 1px, transparent 1px);
+            background-size: 100% 10mm;
+        }
+        .dot-grid {
+            background-image: radial-gradient(#E5E7EB 1px, transparent 0);
+            background-size: 8px 8px;
+        }
+        .canvas-area {
+            scrollbar-width: thin;
+            scrollbar-color: #D1D5DB transparent;
+        }
+        .canvas-area::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .canvas-area::-webkit-scrollbar-thumb {
+            background: #D1D5DB;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-text-primary h-screen flex flex-col overflow-hidden font-body-md">
+<!-- Top Bar -->
+<header class="h-[52px] w-full top-0 sticky bg-surface border-b border-border-hairline flex justify-between items-center px-panel-padding z-50">
+<div class="flex items-center gap-4">
+<span class="font-headline-lg text-headline-lg font-bold text-primary">Rendara</span>
+<div class="h-6 w-[1px] bg-border-hairline mx-2"></div>
+<div class="flex items-center group cursor-pointer">
+<span class="font-body-md-medium text-body-md-medium text-text-primary mr-2">Untitled invoice</span>
+<span class="material-symbols-outlined text-secondary text-[16px] group-hover:text-primary transition-colors">edit</span>
+</div>
+<div class="flex items-center gap-1.5 ml-2 text-success">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'wght' 600;">check_circle</span>
+<span class="text-caption font-caption opacity-80">Saved</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="h-control-height px-3 border border-border-input flex items-center gap-2 hover:bg-recessed-panel transition-colors rounded">
+<span class="material-symbols-outlined">upload</span>
+<span class="font-label-sm text-label-sm">Import data</span>
+</button>
+<button class="h-control-height px-3 border border-border-input flex items-center gap-2 hover:bg-recessed-panel transition-colors rounded">
+<span class="material-symbols-outlined">play_arrow</span>
+<span class="font-label-sm text-label-sm">Preview</span>
+</button>
+<div class="flex">
+<button class="h-control-height px-4 bg-primary-container text-on-primary font-label-sm text-label-sm rounded-l hover:bg-accent-hover transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                    Export
+                </button>
+<button class="h-control-height px-1 bg-primary-container text-on-primary border-l border-primary/20 rounded-r hover:bg-accent-hover transition-colors">
+<span class="material-symbols-outlined">arrow_drop_down</span>
+</button>
+</div>
+<button class="w-icon-button h-icon-button flex items-center justify-center text-secondary hover:bg-recessed-panel rounded transition-colors">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Left Palette -->
+<aside class="w-[260px] h-full border-r border-border-hairline bg-surface flex flex-col shrink-0 z-40">
+<div class="flex border-b border-border-hairline h-10 shrink-0">
+<button class="flex-1 font-label-sm text-label-sm text-primary border-b-2 border-primary-container h-full">Insert</button>
+<button class="flex-1 font-label-sm text-label-sm text-secondary hover:text-text-primary transition-colors h-full">Layers</button>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-6">
+<!-- Basic Section -->
+<div>
+<div class="flex items-center justify-between mb-3">
+<h3 class="font-caption text-[11px] font-bold text-secondary uppercase tracking-wider">Basic</h3>
+<span class="material-symbols-outlined text-secondary text-[16px] cursor-pointer">keyboard_arrow_down</span>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<div class="h-[72px] border border-border-hairline rounded flex flex-col items-center justify-center gap-1.5 hover:border-primary-container hover:bg-accent-subtle cursor-grab active:cursor-grabbing transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary">title</span>
+<span class="font-caption text-[12px] text-secondary group-hover:text-text-primary">Text</span>
+</div>
+<div class="h-[72px] border border-border-hairline rounded flex flex-col items-center justify-center gap-1.5 hover:border-primary-container hover:bg-accent-subtle cursor-grab active:cursor-grabbing transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary">image</span>
+<span class="font-caption text-[12px] text-secondary group-hover:text-text-primary">Image</span>
+</div>
+<div class="h-[72px] border border-border-hairline rounded flex flex-col items-center justify-center gap-1.5 hover:border-primary-container hover:bg-accent-subtle cursor-grab active:cursor-grabbing transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary">horizontal_rule</span>
+<span class="font-caption text-[12px] text-secondary group-hover:text-text-primary">Line</span>
+</div>
+<div class="h-[72px] border border-border-hairline rounded flex flex-col items-center justify-center gap-1.5 hover:border-primary-container hover:bg-accent-subtle cursor-grab active:cursor-grabbing transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary">rectangle</span>
+<span class="font-caption text-[12px] text-secondary group-hover:text-text-primary">Rectangle</span>
+</div>
+<div class="h-[72px] border border-border-hairline rounded flex flex-col items-center justify-center gap-1.5 hover:border-primary-container hover:bg-accent-subtle cursor-grab active:cursor-grabbing transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary">radio_button_unchecked</span>
+<span class="font-caption text-[12px] text-secondary group-hover:text-text-primary">Ellipse</span>
+</div>
+</div>
+</div>
+<!-- Data Section -->
+<div>
+<div class="flex items-center justify-between mb-3">
+<h3 class="font-caption text-[11px] font-bold text-secondary uppercase tracking-wider">Data</h3>
+<span class="material-symbols-outlined text-secondary text-[16px] cursor-pointer">keyboard_arrow_down</span>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<div class="h-[72px] border border-border-hairline rounded flex flex-col items-center justify-center gap-1.5 hover:border-primary-container hover:bg-accent-subtle cursor-grab active:cursor-grabbing transition-all group">
+<span class="material-symbols-outlined text-secondary group-hover:text-primary">table_rows</span>
+<span class="font-caption text-[12px] text-secondary group-hover:text-text-primary">Data Table</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Workspace -->
+<main class="flex-1 relative flex flex-col bg-workspace-backdrop overflow-hidden">
+<!-- Top Ruler -->
+<div class="h-6 w-full bg-surface border-b border-border-hairline flex items-end ruler-bg relative">
+<div class="absolute left-6 inset-y-0 right-0 flex items-end">
+<span class="text-[9px] text-secondary/40 absolute left-[10mm]">10</span>
+<span class="text-[9px] text-secondary/40 absolute left-[20mm]">20</span>
+<span class="text-[9px] text-secondary/40 absolute left-[30mm]">30</span>
+<span class="text-[9px] text-secondary/40 absolute left-[40mm]">40</span>
+<span class="text-[9px] text-secondary/40 absolute left-[50mm]">50</span>
+<span class="text-[9px] text-secondary/40 absolute left-[60mm]">60</span>
+<span class="text-[9px] text-secondary/40 absolute left-[70mm]">70</span>
+<span class="text-[9px] text-secondary/40 absolute left-[80mm]">80</span>
+<span class="text-[9px] text-secondary/40 absolute left-[90mm]">90</span>
+<span class="text-[9px] text-secondary/40 absolute left-[100mm]">100</span>
+<span class="text-[9px] text-secondary/40 absolute left-[150mm]">150</span>
+<span class="text-[9px] text-secondary/40 absolute left-[200mm]">200</span>
+</div>
+</div>
+<div class="flex flex-1 overflow-hidden relative">
+<!-- Left Ruler -->
+<div class="w-6 h-full bg-surface border-r border-border-hairline flex justify-end ruler-bg-v relative shrink-0">
+<div class="absolute top-0 inset-x-0 bottom-0 flex justify-end">
+<span class="text-[9px] text-secondary/40 absolute top-[10mm] origin-center -rotate-90">10</span>
+<span class="text-[9px] text-secondary/40 absolute top-[50mm] origin-center -rotate-90">50</span>
+<span class="text-[9px] text-secondary/40 absolute top-[100mm] origin-center -rotate-90">100</span>
+<span class="text-[9px] text-secondary/40 absolute top-[150mm] origin-center -rotate-90">150</span>
+<span class="text-[9px] text-secondary/40 absolute top-[200mm] origin-center -rotate-90">200</span>
+<span class="text-[9px] text-secondary/40 absolute top-[250mm] origin-center -rotate-90">250</span>
+</div>
+</div>
+<!-- Canvas Area -->
+<div class="flex-1 overflow-auto canvas-area p-16 flex justify-center items-start">
+<!-- A4 Paper Paper -->
+<div class="w-[210mm] min-h-[297mm] bg-surface shadow-lg dot-grid relative p-[20mm] shrink-0 border border-border-hairline/50">
+<!-- Margin Guides -->
+<div class="absolute inset-[15mm] border border-primary/5 pointer-events-none"></div>
+<!-- Empty State Content -->
+<div class="absolute inset-0 p-[20mm] pointer-events-none">
+<div class="flex justify-between items-start mb-12">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-secondary/10 rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary">business</span>
+</div>
+<span class="font-bold text-[18px]">Acme Corp.</span>
+</div>
+<div class="relative">
+<div class="absolute -inset-1 border border-primary-container bg-primary-container/5 z-10"></div>
+<div class="absolute -top-6 -left-1 bg-primary-container text-on-primary text-[9px] font-data-mono px-1.5 py-0.5 rounded-t flex items-center gap-1 z-20">
+        x 120 y 18 • 80 × 12 mm
+      </div>
+<div class="absolute -top-1 -left-1 w-1.5 h-1.5 bg-surface border border-primary-container z-30"></div>
+<div class="absolute -top-1 -right-1 w-1.5 h-1.5 bg-surface border border-primary-container z-30"></div>
+<div class="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-surface border border-primary-container z-30"></div>
+<div class="absolute -bottom-1 -right-1 w-1.5 h-1.5 bg-surface border border-primary-container z-30"></div>
+<div class="absolute top-1/2 -translate-y-1/2 -left-1 w-1.5 h-1.5 bg-surface border border-primary-container z-30"></div>
+<div class="absolute top-1/2 -translate-y-1/2 -right-1 w-1.5 h-1.5 bg-surface border border-primary-container z-30"></div>
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-surface border border-primary-container z-30"></div>
+<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-surface border border-primary-container z-30"></div>
+<span class="text-[32px] font-bold tracking-tight text-text-primary relative z-0">INVOICE</span>
+</div>
+</div>
+<div class="flex justify-between mb-8">
+<div class="space-y-1">
+<p class="text-secondary text-[11px] font-bold uppercase tracking-wider">Bill To:</p>
+<p class="font-bold">Global Logistics Inc.</p>
+<p class="text-secondary text-[12px]">123 Supply Chain Way<br/>Industrial Park, CA 90210</p>
+</div>
+<div class="text-right space-y-1">
+<p class="text-secondary text-[12px]">Invoice #: <span class="text-text-primary font-medium">INV-2042</span></p>
+<p class="text-secondary text-[12px]">Date: <span class="text-text-primary font-medium">17 Jun 2026</span></p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Status Bar -->
+<footer class="h-[30px] w-full bg-surface border-t border-border-hairline px-4 flex items-center justify-between shrink-0 z-40">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 border-r border-border-hairline pr-4">
+<button class="w-6 h-6 flex items-center justify-center hover:bg-recessed-panel rounded transition-colors">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="font-caption text-caption w-10 text-center">100%</span>
+<button class="w-6 h-6 flex items-center justify-center hover:bg-recessed-panel rounded transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+<button class="font-caption text-caption hover:text-primary transition-colors">Fit</button>
+</div>
+<div class="font-caption text-caption text-secondary flex items-center gap-2">
+<span>A4</span>
+<span class="w-[1px] h-3 bg-border-hairline"></span>
+<span>Portrait</span>
+<span class="w-[1px] h-3 bg-border-hairline"></span>
+<span>mm</span>
+</div>
+<div class="font-caption text-caption text-secondary">
+                    Page 1 of 1
+                </div>
+</footer>
+</main>
+<!-- Right Properties Panel -->
+<aside class="w-[320px] h-full border-l border-border-hairline bg-surface flex flex-col shrink-0 z-40">
+<header class="h-10 border-b border-border-hairline flex items-center px-4 shrink-0">
+<h2 class="font-caption text-[11px] font-bold text-secondary uppercase tracking-wider">Properties</h2>
+</header>
+<div class="flex-1 overflow-y-auto">
+<div class="border-b border-border-hairline">
+<div class="px-4 py-2 flex items-center justify-between bg-recessed-panel">
+<h3 class="font-caption text-[11px] font-bold text-secondary uppercase tracking-wider">Layout</h3>
+<span class="material-symbols-outlined text-secondary text-[16px]">keyboard_arrow_up</span>
+</div>
+<div class="p-4 space-y-4">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1">
+<label class="text-[11px] text-secondary uppercase">X</label>
+<div class="h-control-height border border-border-input rounded px-2 flex items-center justify-between">
+<span class="text-body-md">120</span>
+<span class="text-[10px] text-secondary">mm</span>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-[11px] text-secondary uppercase">Y</label>
+<div class="h-control-height border border-border-input rounded px-2 flex items-center justify-between">
+<span class="text-body-md">18</span>
+<span class="text-[10px] text-secondary">mm</span>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-[11px] text-secondary uppercase">Width</label>
+<div class="h-control-height border border-border-input rounded px-2 flex items-center justify-between">
+<span class="text-body-md">80</span>
+<span class="text-[10px] text-secondary">mm</span>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-[11px] text-secondary uppercase">Height</label>
+<div class="h-control-height border border-border-input rounded px-2 flex items-center justify-between">
+<span class="text-body-md">12</span>
+<span class="text-[10px] text-secondary">mm</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="border-b border-border-hairline">
+<div class="px-4 py-2 flex items-center justify-between bg-recessed-panel">
+<h3 class="font-caption text-[11px] font-bold text-secondary uppercase tracking-wider">Text</h3>
+<span class="material-symbols-outlined text-secondary text-[16px]">keyboard_arrow_up</span>
+</div>
+<div class="p-4 space-y-4">
+<textarea class="w-full border border-border-input rounded p-2 text-body-md focus:border-primary-container focus:ring-0 min-h-[60px]">INVOICE</textarea>
+<div class="space-y-1">
+<label class="text-[11px] text-secondary uppercase">Font Family</label>
+<div class="h-control-height border border-border-input rounded px-2 flex items-center justify-between">
+<span class="text-body-md">Inter</span>
+<span class="material-symbols-outlined text-secondary">unfold_more</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1">
+<label class="text-[11px] text-secondary uppercase">Size</label>
+<div class="h-control-height border border-border-input rounded px-2 flex items-center justify-between">
+<span class="text-body-md">24</span>
+<div class="flex flex-col">
+<span class="material-symbols-outlined text-[12px] leading-[8px] cursor-pointer">keyboard_arrow_up</span>
+<span class="material-symbols-outlined text-[12px] leading-[8px] cursor-pointer">keyboard_arrow_down</span>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-[11px] text-secondary uppercase">Weight</label>
+<div class="flex border border-border-input rounded overflow-hidden h-control-height">
+<button class="flex-1 text-[11px] hover:bg-recessed-panel">Reg</button>
+<button class="flex-1 text-[11px] bg-primary-container text-on-primary">Bold</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="border-b border-border-hairline">
+<div class="px-4 py-2 flex items-center justify-between bg-recessed-panel">
+<h3 class="font-caption text-[11px] font-bold text-secondary uppercase tracking-wider">Data Binding</h3>
+<span class="material-symbols-outlined text-secondary text-[16px]">keyboard_arrow_up</span>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-[12px] text-secondary">Bound to</span>
+<button class="text-[12px] text-primary font-medium">Bind ▾</button>
+</div>
+<div class="text-[12px] text-secondary/60 italic">Not bound — click to bind</div>
+</div>
+</div>
+</div>
+<!-- Contextual Info Footer -->
+<div class="p-4 border-t border-border-hairline bg-recessed-panel">
+<div class="flex items-center gap-2 text-secondary mb-2">
+<span class="material-symbols-outlined text-[16px]">info</span>
+<span class="font-caption text-[11px] font-bold uppercase tracking-tight">Shortcuts</span>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-[11px]">
+<span class="text-secondary">Duplicate</span>
+<span class="text-text-primary font-data-mono">Cmd + D</span>
+</div>
+<div class="flex justify-between text-[11px]">
+<span class="text-secondary">Snap to Grid</span>
+<span class="text-text-primary font-data-mono">Hold Shift</span>
+</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- Micro-interaction script for ruler cursor tracking -->
+<script>
+        // Simple visualization of mouse coordinates if needed or interactive states
+        document.addEventListener('mousemove', (e) => {
+            // This is just a placeholder for potential future interactions like guides
+        });
+    </script>
+</body></html>

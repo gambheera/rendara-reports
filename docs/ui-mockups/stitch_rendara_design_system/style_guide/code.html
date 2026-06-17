@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rendara Reports Design System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary": "#3525cd",
+                      "on-background": "#1b1b24",
+                      "surface-variant": "#e4e1ee",
+                      "workspace-backdrop": "#F3F4F6",
+                      "surface-container-high": "#eae6f4",
+                      "inverse-primary": "#c3c0ff",
+                      "secondary-fixed": "#dce2f3",
+                      "error-container": "#ffdad6",
+                      "success": "#16A34A",
+                      "background": "#fcf8ff",
+                      "on-secondary-fixed-variant": "#404754",
+                      "surface-bright": "#fcf8ff",
+                      "on-tertiary-fixed": "#351000",
+                      "on-surface": "#1b1b24",
+                      "outline": "#777587",
+                      "inverse-surface": "#302f39",
+                      "text-placeholder": "#9CA3AF",
+                      "recessed-panel": "#F9FAFB",
+                      "accent-subtle": "#EEF2FF",
+                      "on-tertiary": "#ffffff",
+                      "border-input": "#D1D5DB",
+                      "border-hairline": "#E5E7EB",
+                      "on-primary": "#ffffff",
+                      "secondary-container": "#dce2f3",
+                      "tertiary-container": "#a44100",
+                      "on-surface-variant": "#464555",
+                      "inverse-on-surface": "#f3effc",
+                      "on-secondary-fixed": "#151c27",
+                      "surface": "#FFFFFF",
+                      "secondary": "#585f6c",
+                      "surface-container": "#f0ecf9",
+                      "surface-tint": "#4d44e3",
+                      "surface-container-low": "#f5f2ff",
+                      "on-secondary": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary-container": "#5e6572",
+                      "on-tertiary-container": "#ffd2be",
+                      "on-tertiary-fixed-variant": "#7b2f00",
+                      "primary-container": "#4f46e5",
+                      "outline-variant": "#c7c4d8",
+                      "surface-dim": "#dcd8e5",
+                      "on-primary-fixed": "#0f0069",
+                      "accent-hover": "#4338CA",
+                      "primary-fixed": "#e2dfff",
+                      "tertiary-fixed-dim": "#ffb695",
+                      "on-primary-container": "#dad7ff",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "secondary-fixed-dim": "#c0c7d6",
+                      "danger": "#DC2626",
+                      "surface-container-highest": "#e4e1ee",
+                      "warning": "#D97706",
+                      "on-error": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "error": "#ba1a1a",
+                      "text-primary": "#111827",
+                      "tertiary-fixed": "#ffdbcc",
+                      "tertiary": "#7e3000",
+                      "on-primary-fixed-variant": "#3323cc"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "panel-padding": "16px",
+                      "base": "8px",
+                      "icon-button": "32px",
+                      "control-height": "32px",
+                      "row-height-sm": "28px"
+              },
+              "fontFamily": {
+                      "body-md": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "caption": ["Inter"],
+                      "data-mono": ["JetBrains Mono"],
+                      "section-header": ["Inter"],
+                      "body-md-medium": ["Inter"],
+                      "headline-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "label-sm": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                      "caption": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                      "section-header": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                      "body-md-medium": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                      "headline-lg": ["20px", {"lineHeight": "24px", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body {
+            background-color: #F3F4F6;
+            color: #111827;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-size: 20px;
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+        }
+        .grid-bg {
+            background-size: 32px 32px;
+            background-image: radial-gradient(circle, #E5E7EB 1px, transparent 1px);
+        }
+        .swatch-shadow {
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .paper-canvas {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="flex min-h-screen overflow-x-hidden">
+<!-- Sidebar Navigation -->
+<aside class="flex flex-col h-full border-r border-hairline bg-surface-container-low dark:bg-surface-dim docked left-0 h-screen w-64 fixed z-20">
+<div class="p-6">
+<h1 class="font-headline-lg text-headline-lg text-primary dark:text-inverse-primary tracking-tight">Rendara Reports</h1>
+<p class="font-body-md text-body-md text-secondary mt-1">Enterprise Suite</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 h-10 transition-colors bg-accent-subtle dark:bg-on-primary-fixed-variant text-primary dark:text-on-primary-container border-l-2 border-primary font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Workspace</span>
+</a>
+<a class="flex items-center gap-3 px-3 h-10 transition-colors text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-variant dark:hover:bg-on-surface-variant font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">description</span>
+<span>Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 h-10 transition-colors text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-variant dark:hover:bg-on-surface-variant font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">database</span>
+<span>Data Sources</span>
+</a>
+<a class="flex items-center gap-3 px-3 h-10 transition-colors text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-variant dark:hover:bg-on-surface-variant font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+<span>Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 h-10 transition-colors text-secondary dark:text-on-secondary-fixed-variant hover:bg-surface-variant dark:hover:bg-on-surface-variant font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="p-panel-padding border-t border-hairline">
+<button class="w-full bg-primary-container text-on-primary h-control-height rounded flex items-center justify-center gap-2 font-label-sm text-label-sm active:scale-95 duration-150">
+<span class="material-symbols-outlined">add</span>
+                Create New Report
+            </button>
+</div>
+<div class="p-3 border-t border-hairline space-y-1">
+<a class="flex items-center gap-3 px-3 h-10 text-secondary hover:bg-surface-variant transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span>Account</span>
+</a>
+<a class="flex items-center gap-3 px-3 h-10 text-secondary hover:bg-surface-variant transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span>Help</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 flex-1 bg-workspace-backdrop min-h-screen">
+<!-- Header -->
+<header class="h-12 bg-surface flex items-center justify-between px-panel-padding sticky top-0 z-10 border-b border-hairline">
+<div class="flex items-center gap-4">
+<h2 class="font-section-header text-section-header text-on-surface">Rendara Reports Design System</h2>
+<div class="h-4 w-px bg-border-hairline"></div>
+<span class="font-label-sm text-label-sm text-secondary">Quiet, Precise, Minimalist</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-4">
+<a class="text-primary border-b-2 border-primary pb-2 font-label-sm text-label-sm" href="#">System</a>
+<a class="text-on-surface-variant hover:text-primary transition-all font-label-sm text-label-sm" href="#">Assets</a>
+<a class="text-on-surface-variant hover:text-primary transition-all font-label-sm text-label-sm" href="#">Principles</a>
+</div>
+<div class="flex items-center gap-2 ml-4">
+<button class="w-8 h-8 flex items-center justify-center text-secondary hover:bg-surface-variant rounded">
+<span class="material-symbols-outlined">history</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center text-secondary hover:bg-surface-variant rounded">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-7 h-7 rounded-full bg-primary-fixed flex items-center justify-center overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjjWQ4LXPdFe75evebgI4ybkkWfe1S_EMQx_vee7lJbk0qtedQdicdNizX51z-nG9mFHqKuR-zlya9W2RQqHOnZxXXNSw2LuHm6rhy7QgHHH4T0RDLSllzGFrEwwxNLbUo5AKX1HjiftXb3uKIs-Id6hq0dIlrWrjaD9FXUNNSIGrGAT_Dmb8XyeY9YYA1YScXgfOF2CEyEA1IXVs_anTvB6xT8txgo0mSJOL9KvNI8qFZBFoJm4lf7slu2_HjPT0NUeyPTTz7La4L"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="max-w-6xl mx-auto p-12 space-y-16">
+<!-- Section: Color Tokens -->
+<section>
+<div class="mb-6 flex items-baseline gap-4">
+<h3 class="font-headline-lg text-headline-lg text-text-primary">Color Palette</h3>
+<span class="text-secondary font-body-md text-body-md">Foundation of the Grayscale Chrome identity.</span>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+<!-- Core Swatches -->
+<div class="space-y-2">
+<div class="h-20 w-full bg-surface border border-hairline rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Surface</p>
+<p class="font-caption text-caption text-secondary">#FFFFFF</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-recessed-panel border border-hairline rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Recessed Panel</p>
+<p class="font-caption text-caption text-secondary">#F9FAFB</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-workspace-backdrop border border-hairline rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Backdrop</p>
+<p class="font-caption text-caption text-secondary">#F3F4F6</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-border-hairline rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Hairline</p>
+<p class="font-caption text-caption text-secondary">#E5E7EB</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-border-input rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Input Border</p>
+<p class="font-caption text-caption text-secondary">#D1D5DB</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-primary-container rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Accent Indigo</p>
+<p class="font-caption text-caption text-secondary">#4F46E5</p>
+</div>
+</div>
+<!-- Status Swatches -->
+<div class="space-y-2">
+<div class="h-20 w-full bg-success rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Success</p>
+<p class="font-caption text-caption text-secondary">#16A34A</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-warning rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Warning</p>
+<p class="font-caption text-caption text-secondary">#D97706</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-danger rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Danger</p>
+<p class="font-caption text-caption text-secondary">#DC2626</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-text-primary rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Text Primary</p>
+<p class="font-caption text-caption text-secondary">#111827</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-secondary rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Text Secondary</p>
+<p class="font-caption text-caption text-secondary">#6B7280</p>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-20 w-full bg-text-placeholder rounded swatch-shadow"></div>
+<div class="px-1">
+<p class="font-label-sm text-label-sm text-text-primary">Placeholder</p>
+<p class="font-caption text-caption text-secondary">#9CA3AF</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Typography -->
+<section>
+<div class="mb-6 flex items-baseline gap-4">
+<h3 class="font-headline-lg text-headline-lg text-text-primary">Typography</h3>
+<span class="text-secondary font-body-md text-body-md">Precision-scaled for information density.</span>
+</div>
+<div class="bg-surface paper-canvas border border-hairline p-8 space-y-12">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div class="space-y-6">
+<div>
+<span class="font-caption text-caption text-secondary mb-1 block">Headline LG / 20px Bold</span>
+<h4 class="font-headline-lg text-headline-lg">Enterprise Resource Dashboard</h4>
+</div>
+<div>
+<span class="font-caption text-caption text-secondary mb-1 block">Section Header / 14px SemiBold</span>
+<h5 class="font-section-header text-section-header uppercase tracking-wider">Report Configuration</h5>
+</div>
+<div>
+<span class="font-caption text-caption text-secondary mb-1 block">Body MD / 14px Regular</span>
+<p class="font-body-md text-body-md">All reporting nodes must be validated through the primary data lake before publication to the workspace backdrop.</p>
+</div>
+<div>
+<span class="font-caption text-caption text-secondary mb-1 block">Label SM / 13px Medium</span>
+<p class="font-label-sm text-label-sm">Primary Filter Category</p>
+</div>
+<div>
+<span class="font-caption text-caption text-secondary mb-1 block">Caption / 12px Medium</span>
+<p class="font-caption text-caption">Modified 2 hours ago by System Admin</p>
+</div>
+</div>
+<div class="space-y-6">
+<div>
+<span class="font-caption text-caption text-secondary mb-1 block">Data Mono / JetBrains Mono</span>
+<div class="bg-recessed-panel p-4 border border-hairline font-data-mono text-data-mono text-primary-container leading-relaxed">
+                                    {<br/>
+                                      "id": "REP_9281",<br/>
+                                      "status": "published",<br/>
+                                      "count": 42,<br/>
+                                      "value": 123456.78<br/>
+                                    }
+                                </div>
+</div>
+<div class="bg-recessed-panel p-4 border border-hairline">
+<span class="font-caption text-caption text-secondary mb-1 block">Tabular Numerals Alignment</span>
+<div class="font-data-mono text-data-mono space-y-1">
+<div class="flex justify-between"><span>Total Revenue</span><span>$1,420,000.00</span></div>
+<div class="flex justify-between"><span>Operational Cost</span><span>$   98,450.23</span></div>
+<div class="flex justify-between font-bold border-t border-hairline pt-1"><span>Net Margin</span><span>$1,321,549.77</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Components -->
+<section class="space-y-12">
+<div class="mb-6 flex items-baseline gap-4">
+<h3 class="font-headline-lg text-headline-lg text-text-primary">Components Gallery</h3>
+<span class="text-secondary font-body-md text-body-md">Reusable UI units built on the 8px grid.</span>
+</div>
+<!-- Buttons & Controls -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Buttons -->
+<div class="space-y-6 bg-surface p-6 border border-hairline paper-canvas">
+<h4 class="font-section-header text-section-header border-b border-hairline pb-4">Actions</h4>
+<div class="flex flex-wrap gap-4 items-center">
+<button class="h-control-height px-4 bg-primary-container text-on-primary rounded font-label-sm text-label-sm hover:bg-accent-hover transition-colors shadow-sm">Primary Action</button>
+<button class="h-control-height px-4 border border-border-input text-text-primary rounded font-label-sm text-label-sm hover:bg-recessed-panel transition-colors">Secondary</button>
+<button class="h-control-height px-4 text-secondary rounded font-label-sm text-label-sm hover:text-text-primary transition-colors">Ghost Button</button>
+<button class="w-icon-button h-icon-button flex items-center justify-center text-secondary border border-border-input rounded hover:bg-recessed-panel">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="flex flex-wrap gap-4 items-center">
+<button class="h-control-height px-4 bg-primary-container text-on-primary rounded font-label-sm text-label-sm ring-4 ring-primary/20 outline-none">Focused State</button>
+<button class="h-control-height px-4 bg-primary-container text-on-primary rounded font-label-sm text-label-sm opacity-50 cursor-not-allowed" disabled="">Disabled</button>
+</div>
+</div>
+<!-- Inputs -->
+<div class="space-y-6 bg-surface p-6 border border-hairline paper-canvas">
+<h4 class="font-section-header text-section-header border-b border-hairline pb-4">Form Controls</h4>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="font-caption text-caption text-secondary">Text Input</label>
+<input class="w-full h-control-height border border-border-input px-3 rounded font-body-md text-body-md focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-text-placeholder" placeholder="Enter value..." type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="font-caption text-caption text-danger">Error State</label>
+<input class="w-full h-control-height border border-danger px-3 rounded font-body-md text-body-md focus:ring-4 focus:ring-danger/10 outline-none transition-all" type="text" value="Invalid data"/>
+</div>
+<div class="space-y-1.5">
+<label class="font-caption text-caption text-secondary">Select Menu</label>
+<select class="w-full h-control-height border border-border-input px-3 rounded font-body-md text-body-md focus:ring-4 focus:ring-primary/10 outline-none">
+<option>Option 01</option>
+<option>Option 02</option>
+</select>
+</div>
+<div class="flex items-end h-full gap-4 pb-1">
+<div class="flex items-center gap-2">
+<div class="w-10 h-5 bg-primary-container rounded-full relative cursor-pointer">
+<div class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+<span class="font-caption text-caption">Active</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-10 h-5 bg-border-input rounded-full relative cursor-pointer">
+<div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+<span class="font-caption text-caption">Toggle</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Navigation & Lists -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Nav Patterns -->
+<div class="space-y-6 bg-surface p-6 border border-hairline paper-canvas">
+<h4 class="font-section-header text-section-header border-b border-hairline pb-4">Navigation Patterns</h4>
+<div class="space-y-4">
+<span class="font-caption text-caption text-secondary">Segmented Control</span>
+<div class="h-control-height bg-recessed-panel p-1 rounded border border-hairline flex">
+<button class="flex-1 rounded font-label-sm text-label-sm bg-white border border-hairline shadow-sm">View Grid</button>
+<button class="flex-1 font-label-sm text-label-sm text-secondary hover:text-text-primary transition-colors">View List</button>
+</div>
+</div>
+<div class="space-y-4">
+<span class="font-caption text-caption text-secondary">Tree View (28px Row Height)</span>
+<div class="border border-hairline rounded overflow-hidden">
+<div class="h-row-height-sm flex items-center gap-2 px-2 hover:bg-accent-subtle cursor-pointer group">
+<span class="material-symbols-outlined text-secondary text-[16px]">chevron_right</span>
+<span class="material-symbols-outlined text-secondary text-[16px]">folder</span>
+<span class="font-body-md text-body-md">Root Directory</span>
+</div>
+<div class="h-row-height-sm flex items-center gap-2 px-2 bg-accent-subtle border-l-2 border-primary cursor-pointer">
+<span class="w-4"></span>
+<span class="material-symbols-outlined text-primary text-[16px]">description</span>
+<span class="font-body-md text-body-md text-primary">Active_Report.json</span>
+</div>
+<div class="h-row-height-sm flex items-center gap-2 px-2 hover:bg-accent-subtle cursor-pointer group">
+<span class="w-4"></span>
+<span class="material-symbols-outlined text-secondary text-[16px]">description</span>
+<span class="font-body-md text-body-md">Archive_01.csv</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Overlays & Feedback -->
+<div class="space-y-6 bg-surface p-6 border border-hairline paper-canvas relative">
+<h4 class="font-section-header text-section-header border-b border-hairline pb-4">Overlays & Feedback</h4>
+<div class="flex gap-4">
+<!-- Dropdown Sample -->
+<div class="w-48 bg-white border border-hairline rounded-lg shadow-xl p-1 z-20">
+<div class="px-3 py-2 font-caption text-caption text-secondary uppercase tracking-widest border-b border-hairline mb-1">Actions</div>
+<button class="w-full text-left h-control-height px-3 rounded flex items-center gap-2 hover:bg-recessed-panel font-body-md text-body-md">
+<span class="material-symbols-outlined text-[18px]">edit</span> Edit Report
+                                </button>
+<button class="w-full text-left h-control-height px-3 rounded flex items-center gap-2 hover:bg-recessed-panel font-body-md text-body-md">
+<span class="material-symbols-outlined text-[18px]">share</span> Share Link
+                                </button>
+<button class="w-full text-left h-control-height px-3 rounded flex items-center gap-2 hover:bg-recessed-panel font-body-md text-body-md text-danger">
+<span class="material-symbols-outlined text-[18px]">delete</span> Delete
+                                </button>
+</div>
+<div class="flex-1 space-y-6">
+<div class="flex flex-wrap gap-2">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-green-50 text-success text-caption border border-green-200">Success</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-warning text-caption border border-amber-200">Warning</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-red-50 text-danger text-caption border border-red-200">Critical</span>
+</div>
+<div class="bg-text-primary text-white p-2 rounded text-caption max-w-[140px] shadow-lg">
+                                    Tooltip content explaining property logic.
+                                </div>
+<div class="border-l-4 border-primary bg-accent-subtle p-3 rounded-r">
+<p class="font-label-sm text-label-sm">Toast Notification</p>
+<p class="font-caption text-caption text-secondary">Export process started.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Dialog Sample -->
+<div class="bg-surface border border-hairline paper-canvas max-w-2xl mx-auto rounded-lg overflow-hidden">
+<div class="p-6">
+<div class="flex justify-between items-center mb-4">
+<h4 class="font-headline-lg text-headline-lg">Confirm Publication</h4>
+<button class="text-secondary hover:text-text-primary"><span class="material-symbols-outlined">close</span></button>
+</div>
+<p class="font-body-md text-body-md text-secondary">Are you sure you want to publish "Quarterly Revenue" to the public workspace? This action will make data visible to all enterprise nodes.</p>
+</div>
+<div class="bg-recessed-panel p-panel-padding flex justify-end gap-3 border-t border-hairline">
+<button class="h-control-height px-4 border border-border-input text-text-primary rounded font-label-sm text-label-sm hover:bg-white transition-colors">Cancel</button>
+<button class="h-control-height px-4 bg-primary-container text-on-primary rounded font-label-sm text-label-sm shadow-sm">Confirm & Publish</button>
+</div>
+</div>
+</section>
+<!-- Geometry & Grid -->
+<section class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div>
+<div class="mb-6">
+<h3 class="font-headline-lg text-headline-lg text-text-primary">Geometry & Grid</h3>
+<p class="text-secondary font-body-md text-body-md">The 8px foundation and structural rules.</p>
+</div>
+<div class="bg-white border border-hairline p-8 grid-bg relative h-64 flex items-center justify-center gap-8">
+<div class="w-24 h-24 bg-primary-container/10 border-2 border-primary border-dashed rounded-lg flex flex-col items-center justify-center">
+<span class="font-caption text-caption text-primary">Radius LG</span>
+<span class="font-label-sm text-label-sm text-primary">0.25rem</span>
+</div>
+<div class="w-24 h-24 bg-surface border border-hairline flex flex-col items-center justify-center shadow-sm">
+<span class="font-caption text-caption text-secondary">Hairline</span>
+<span class="font-label-sm text-label-sm text-secondary">1px Solid</span>
+</div>
+<div class="w-16 h-16 bg-primary-container flex flex-col items-center justify-center rounded-full text-white">
+<span class="material-symbols-outlined">grid_4x4</span>
+<span class="text-[10px]">8px</span>
+</div>
+</div>
+</div>
+<div>
+<div class="mb-6">
+<h3 class="font-headline-lg text-headline-lg text-text-primary">Iconography</h3>
+<p class="text-secondary font-body-md text-body-md">Lucide-style 1.5px stroke with Material Symbols.</p>
+</div>
+<div class="bg-white border border-hairline p-8 flex flex-wrap gap-8 items-center justify-center">
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-secondary" style="font-size: 24px; font-variation-settings: 'wght' 300;">folder</span>
+<span class="font-caption text-caption text-secondary">24px</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-size: 20px; font-variation-settings: 'wght' 300;">settings</span>
+<span class="font-caption text-caption text-secondary">20px Accent</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-secondary" style="font-size: 16px; font-variation-settings: 'wght' 300;">description</span>
+<span class="font-caption text-caption text-secondary">16px Inline</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-success" style="font-size: 20px; font-variation-settings: 'wght' 300;">check_circle</span>
+<span class="font-caption text-caption text-secondary">Status</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-text-primary" style="font-size: 20px; font-variation-settings: 'wght' 300;">database</span>
+<span class="font-caption text-caption text-secondary">Primary</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<span class="material-symbols-outlined text-secondary" style="font-size: 20px; font-variation-settings: 'wght' 300;">search</span>
+<span class="font-caption text-caption text-secondary">Utility</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Empty State Illustration Placeholder -->
+<section class="py-12 border-t border-hairline text-center space-y-4">
+<div class="w-32 h-32 mx-auto bg-recessed-panel rounded-full flex items-center justify-center border border-dashed border-border-input mb-4 overflow-hidden">
+<img alt="Empty State Illustration" class="opacity-40 grayscale" data-alt="A clean, minimalist abstract illustration for an empty state. It features soft floating geometric shapes in shades of light gray and indigo, conveying a sense of organized potential. The aesthetic is modern and professional, fitting into a corporate design system dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCs7_jkfLqSJ-q3onuGlwPz5cL13YfAjZ3PhdDm3xpfFUGDvZMCcdfn2S1kTfkB4fgZYGycHv2l3nmWzdcNx-9ukNLEdjeSTh76GW6o82pAYmActdgWvgUdXSrub623SdaLuLEDsQyWYjBLYl2vOaNzZOeZYEP7tXDuFIZQAxYZ4IrOpmlh9qwZAaK4VgmR2qGYtAjAj6yXSZI9Qu0Ut3G2MVCyxgLdF3uXNVRwjHLTt9DgrpuJ-AgddQl5kxzTZlhOm4xQmAM8hN16"/>
+</div>
+<h4 class="font-section-header text-section-header">No Reports Found</h4>
+<p class="font-body-md text-body-md text-secondary max-w-sm mx-auto">Get started by importing your first data source or using one of our enterprise templates.</p>
+<button class="h-control-height px-4 bg-primary-container text-on-primary rounded font-label-sm text-label-sm mt-4">Create New Template</button>
+</section>
+</div>
+<!-- Footer Info -->
+<footer class="p-panel-padding border-t border-hairline bg-surface text-center">
+<p class="font-caption text-caption text-secondary">© 2024 Rendara Reports Design System • v1.4.2 stable • Generated from Design Manifest</p>
+</footer>
+</main>
+<script>
+        // Micro-interactions
+        document.querySelectorAll('button:not([disabled])').forEach(btn => {
+            btn.addEventListener('mousedown', () => btn.classList.add('scale-95'));
+            btn.addEventListener('mouseup', () => btn.classList.remove('scale-95'));
+            btn.addEventListener('mouseleave', () => btn.classList.remove('scale-95'));
+        });
+
+        // Simple Toggle interaction
+        const toggles = document.querySelectorAll('.w-10.h-5');
+        toggles.forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const knob = toggle.querySelector('div');
+                const isActive = toggle.classList.contains('bg-primary-container');
+                
+                if(isActive) {
+                    toggle.classList.remove('bg-primary-container');
+                    toggle.classList.add('bg-border-input');
+                    knob.classList.remove('right-0.5');
+                    knob.classList.add('left-0.5');
+                } else {
+                    toggle.classList.add('bg-primary-container');
+                    toggle.classList.remove('bg-border-input');
+                    knob.classList.add('right-0.5');
+                    knob.classList.remove('left-0.5');
+                }
+            });
+        });
+    </script>
+</body></html>

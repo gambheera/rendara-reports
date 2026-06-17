@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Export Template - ReportGen Pro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#e2dfff",
+                        "on-background": "#1b1b24",
+                        "error": "#ba1a1a",
+                        "primary-container": "#4f46e5",
+                        "on-secondary-fixed-variant": "#404754",
+                        "outline-variant": "#c7c4d8",
+                        "background": "#fcf8ff",
+                        "surface-container": "#f0ecf9",
+                        "secondary-fixed-dim": "#c0c7d6",
+                        "surface-dim": "#dcd8e5",
+                        "secondary": "#585f6c",
+                        "surface-container-high": "#eae6f4",
+                        "tertiary": "#7e3000",
+                        "inverse-on-surface": "#f3effc",
+                        "surface": "#FFFFFF",
+                        "on-tertiary-container": "#ffd2be",
+                        "on-surface": "#1b1b24",
+                        "text-primary": "#111827",
+                        "inverse-primary": "#c3c0ff",
+                        "border-hairline": "#E5E7EB",
+                        "surface-tint": "#4d44e3",
+                        "on-surface-variant": "#464555",
+                        "border-input": "#D1D5DB",
+                        "on-error-container": "#93000a",
+                        "accent-subtle": "#EEF2FF",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "on-error": "#ffffff",
+                        "text-placeholder": "#9CA3AF",
+                        "primary": "#3525cd",
+                        "surface-container-low": "#f5f2ff",
+                        "recessed-panel": "#F9FAFB",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "tertiary-fixed-dim": "#ffb695",
+                        "on-tertiary-fixed": "#351000",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#e4e1ee",
+                        "workspace-backdrop": "#F3F4F6",
+                        "surface-bright": "#fcf8ff",
+                        "on-primary-fixed": "#0f0069",
+                        "surface-container-highest": "#e4e1ee",
+                        "danger": "#DC2626",
+                        "secondary-fixed": "#dce2f3",
+                        "on-secondary-container": "#5e6572",
+                        "on-primary": "#ffffff",
+                        "on-primary-container": "#dad7ff",
+                        "inverse-surface": "#302f39",
+                        "secondary-container": "#dce2f3",
+                        "tertiary-container": "#a44100",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#777587",
+                        "success": "#16A34A",
+                        "on-secondary-fixed": "#151c27",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "accent-hover": "#4338CA",
+                        "warning": "#D97706",
+                        "tertiary-fixed": "#ffdbcc",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "panel-padding": "16px",
+                        "icon-button": "32px",
+                        "control-height": "32px",
+                        "row-height-sm": "28px",
+                        "base": "8px"
+                    },
+                    "fontFamily": {
+                        "section-header": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "caption": ["Inter"],
+                        "body-md-medium": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "section-header": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-sm": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                        "caption": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "body-md-medium": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "headline-lg": ["20px", {"lineHeight": "24px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+            font-size: 20px;
+        }
+        .tab-active {
+            border-bottom: 2px solid #3525cd;
+        }
+        .code-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .code-scrollbar::-webkit-scrollbar-thumb {
+            background: #E5E7EB;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-workspace-backdrop font-body-md text-text-primary overflow-hidden">
+<!-- Predicted SideNavBar Shell -->
+<aside class="bg-surface dark:bg-surface-dim h-screen w-64 fixed left-0 top-0 border-r border-hairline dark:border-outline-variant flex flex-col py-panel-padding z-10 pointer-events-none opacity-50">
+<div class="px-6 mb-8">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-primary-fixed">ReportGen Pro</h1>
+<p class="text-secondary text-caption">Technical Reporting</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<div class="flex items-center gap-3 px-3 h-row-height-sm bg-accent-subtle dark:bg-primary-container text-primary dark:text-on-primary-container border-l-2 border-primary">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md">Workspace</span>
+</div>
+<div class="flex items-center gap-3 px-3 h-row-height-sm text-secondary hover:bg-surface-container-low">
+<span class="material-symbols-outlined">description</span>
+<span>Reports</span>
+</div>
+<div class="flex items-center gap-3 px-3 h-row-height-sm text-secondary hover:bg-surface-container-low">
+<span class="material-symbols-outlined">insights</span>
+<span>Analytics</span>
+</div>
+</nav>
+</aside>
+<!-- Predicted TopAppBar Shell -->
+<header class="bg-surface dark:bg-surface-dim fixed top-0 right-0 left-64 h-control-height border-b border-hairline dark:border-outline-variant flex items-center justify-between px-panel-padding ml-64 z-10 pointer-events-none opacity-50">
+<div class="flex items-center gap-6">
+<span class="font-section-header text-section-header font-semibold text-on-surface">Workspace / Invoice Template</span>
+<div class="flex gap-4">
+<span class="text-primary border-b-2 border-primary text-section-header">Documents</span>
+<span class="text-secondary text-section-header">Shared</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-secondary">notifications</span>
+<span class="material-symbols-outlined text-secondary">account_circle</span>
+</div>
+</header>
+<!-- Main Workspace Background (Partial View of Invoice) -->
+<main class="ml-64 pt-12 min-h-screen flex items-start justify-center p-8">
+<div class="w-full max-w-4xl bg-surface shadow-sm rounded-lg p-12 min-h-[1000px] relative">
+<div class="flex justify-between items-start mb-12">
+<div>
+<div class="w-16 h-16 bg-primary-container flex items-center justify-center rounded-lg mb-4">
+<span class="material-symbols-outlined text-white text-4xl" data-weight="fill">description</span>
+</div>
+<h2 class="text-3xl font-bold">INVOICE</h2>
+<p class="text-secondary">#INV-2023-001</p>
+</div>
+<div class="text-right">
+<h3 class="font-bold">Rendara Systems Inc.</h3>
+<p class="text-secondary text-sm">123 Tech Lane, Silicon Valley, CA</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-8 mb-12">
+<div class="space-y-1">
+<p class="text-caption text-secondary uppercase tracking-wider">Bill To</p>
+<p class="font-bold">Global Solutions Ltd.</p>
+<p class="text-secondary">456 Enterprise Dr, London, UK</p>
+</div>
+<div class="text-right space-y-1">
+<p class="text-caption text-secondary uppercase tracking-wider">Issue Date</p>
+<p class="font-medium">Oct 24, 2023</p>
+<p class="text-caption text-secondary uppercase tracking-wider mt-4">Due Date</p>
+<p class="font-medium">Nov 24, 2023</p>
+</div>
+</div>
+<table class="w-full text-left mb-12">
+<thead class="border-b border-hairline">
+<tr>
+<th class="py-3 font-semibold text-secondary">Description</th>
+<th class="py-3 font-semibold text-secondary text-right">Quantity</th>
+<th class="py-3 font-semibold text-secondary text-right">Price</th>
+<th class="py-3 font-semibold text-secondary text-right">Total</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-hairline">
+<tr>
+<td class="py-4">Custom Report Designer Implementation</td>
+<td class="py-4 text-right">1</td>
+<td class="py-4 text-right">$12,000.00</td>
+<td class="py-4 text-right">$12,000.00</td>
+</tr>
+<tr>
+<td class="py-4">Advanced UI Library License</td>
+<td class="py-4 text-right">3</td>
+<td class="py-4 text-right">$2,500.00</td>
+<td class="py-4 text-right">$7,500.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</main>
+<!-- Dimmed Overlay -->
+<div class="fixed inset-0 bg-[#1b1b24]/40 backdrop-blur-[1px] z-20 flex items-center justify-center">
+<!-- Centered Modal Dialog -->
+<div class="w-[560px] bg-surface rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-300">
+<!-- Modal Header with Tabs -->
+<div class="px-6 pt-6 flex items-center justify-between border-b border-hairline relative">
+<div class="flex gap-8">
+<button class="pb-3 text-body-md-medium text-primary tab-active relative">
+                        Export
+                    </button>
+<button class="pb-3 text-body-md-medium text-secondary hover:text-text-primary transition-colors">
+                        Import
+                    </button>
+</div>
+<button class="absolute top-4 right-4 p-1 rounded-lg hover:bg-surface-container transition-colors text-secondary hover:text-text-primary">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Modal Body (Export Tab Body) -->
+<div class="p-6 space-y-6">
+<!-- Description -->
+<p class="text-secondary text-body-md">
+                    Download the template JSON to render in any app with the Rendara viewer.
+                </p>
+<!-- Code Preview Block -->
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="text-section-header font-semibold text-on-surface">Template Source</span>
+<span class="bg-success/10 text-success text-[11px] font-bold px-1.5 py-0.5 rounded border border-success/20 flex items-center gap-1">
+<span class="material-symbols-outlined !text-[12px]">check</span>
+                                validated
+                            </span>
+</div>
+<button class="p-1.5 text-secondary hover:text-primary transition-colors hover:bg-accent-subtle rounded-lg flex items-center gap-1 text-caption font-medium">
+<span class="material-symbols-outlined !text-[16px]">content_copy</span>
+                            Copy
+                        </button>
+</div>
+<div class="bg-recessed-panel border border-hairline rounded-lg p-4 font-data-mono text-data-mono text-secondary overflow-hidden h-32 relative">
+<pre class="code-scrollbar overflow-auto h-full"><code class="text-primary-container">{
+  "schemaVersion": "1.0.0",
+  "templateId": "inv_8829",
+  "pages": [
+    {
+      "id": "page_1",
+      "layout": "portrait",
+      "elements": [...]
+    }
+  ],
+  "styles": {
+    "primary": "#3525cd",
+    "font": "Inter"
+  }
+}</code></pre>
+<div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-recessed-panel to-transparent pointer-events-none"></div>
+</div>
+</div>
+<!-- Options -->
+<div class="space-y-4">
+<div class="flex flex-col gap-1.5">
+<label class="text-label-sm font-semibold text-on-surface" for="filename">Filename</label>
+<input class="h-control-height border border-border-input rounded px-3 text-body-md focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" id="filename" type="text" value="invoice-template.json"/>
+</div>
+<div class="flex items-center justify-between py-1">
+<span class="text-body-md font-medium text-text-primary">Pretty-print JSON</span>
+<!-- Toggle Switch -->
+<button class="relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none bg-primary" id="toggle-pretty" onclick="this.classList.toggle('bg-primary'); this.classList.toggle('bg-outline-variant'); document.getElementById('toggle-pill').classList.toggle('translate-x-5')">
+<span class="translate-x-5 pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" id="toggle-pill"></span>
+</button>
+</div>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="px-6 py-4 bg-surface-container-low flex justify-end items-center gap-3 border-t border-hairline">
+<button class="h-control-height px-4 text-body-md-medium text-text-primary hover:bg-surface-container transition-colors rounded-lg">
+                    Cancel
+                </button>
+<button class="h-control-height px-4 bg-primary hover:bg-accent-hover text-white rounded-lg font-body-md-medium flex items-center gap-2 transition-all shadow-sm">
+<span class="material-symbols-outlined !text-[18px]">download</span>
+                    Download JSON
+                </button>
+</div>
+</div>
+</div>
+<!-- Micro-interaction Scripts -->
+<script>
+        // Simple Micro-interaction for the "Copy" action feedback
+        const copyBtn = document.querySelector('button .material-symbols-outlined:contains("content_copy")')?.parentElement;
+        if(copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const icon = copyBtn.querySelector('.material-symbols-outlined');
+                const text = copyBtn.lastChild;
+                const originalText = text.textContent;
+                
+                icon.textContent = 'check';
+                text.textContent = ' Copied';
+                copyBtn.classList.add('text-success');
+                
+                setTimeout(() => {
+                    icon.textContent = 'content_copy';
+                    text.textContent = originalText;
+                    copyBtn.classList.remove('text-success');
+                }, 2000);
+            });
+        }
+    </script>
+</body></html>

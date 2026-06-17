@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(grep -nE \"^#{1,4} |E0-S[0-9]|pnpm|nx |Vitest|Playwright|package manager\" docs/claude_prompts/RENDARA_BACKLOG.md)",
+      "Bash(pnpm --version)",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(git --version)",
+      "Bash(corepack --version)",
+      "Bash(corepack pnpm *)",
+      "Bash(corepack prepare *)",
+      "Bash(rm -rf /c/Source_Codes/_rendara_nx_tmp)",
+      "Bash(mkdir -p /c/Source_Codes/_rendara_nx_tmp)",
+      "Read(//c/Source_Codes/**)",
+      "Bash(npx --yes create-nx-workspace@latest rendara --preset=apps --packageManager=pnpm --nxCloud=skip --no-interactive)",
+      "Bash(npm install *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm nx *)",
+      "Bash(npx --yes create-nx-workspace@latest --help)",
+      "Bash(rm -rf /c/Source_Codes/_rendara_nx_tmp/rendara)",
+      "Bash(npx --yes create-nx-workspace@latest rendara --preset=apps --workspaceType=integrated --no-workspaces --useProjectJson=true --packageManager=pnpm --nxCloud=skip --interactive=false --skipGit)",
+      "Bash(npx --yes create-nx-workspace@latest rendara --preset=angular-monorepo --appName=scaffold --style=css --bundler=esbuild --ssr=false --routing=false --e2eTestRunner=none --unitTestRunner=none --zoneless=true --standaloneApi=true --prefix=rdr --packageManager=pnpm --nxCloud=skip --interactive=false --skipGit)",
+      "Bash(pnpm config *)",
+      "Bash(echo \"===== template .vscode/extensions.json =====\"; cat /c/Source_Codes/_rendara_nx_tmp/rendara/.vscode/extensions.json 2>&1 *)",
+      "Bash(echo \"=== exit: $? ===\")",
+      "Bash(pnpm exec *)",
+      "Bash(echo \"lint exit: $?\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Source_Codes\\Rendara5\\.vscode"
+    ]
+  }
+}

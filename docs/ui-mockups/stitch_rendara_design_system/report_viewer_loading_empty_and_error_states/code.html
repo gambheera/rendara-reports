@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rendara Report Viewer - States Demo</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Config with Design System Tokens -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "primary-fixed-dim": "#c3c0ff",
+                "surface-bright": "#fcf8ff",
+                "border-hairline": "#E5E7EB",
+                "primary-fixed": "#e2dfff",
+                "outline-variant": "#c7c4d8",
+                "on-error-container": "#93000a",
+                "on-tertiary-container": "#ffd2be",
+                "on-primary-fixed-variant": "#3323cc",
+                "primary": "#3525cd",
+                "secondary-fixed-dim": "#c0c7d6",
+                "tertiary-fixed": "#ffdbcc",
+                "surface": "#FFFFFF",
+                "workspace-backdrop": "#F3F4F6",
+                "on-secondary-fixed": "#151c27",
+                "error": "#ba1a1a",
+                "background": "#fcf8ff",
+                "tertiary": "#7e3000",
+                "on-primary-container": "#dad7ff",
+                "on-tertiary-fixed-variant": "#7b2f00",
+                "on-secondary": "#ffffff",
+                "on-secondary-container": "#5e6572",
+                "danger": "#DC2626",
+                "on-surface-variant": "#464555",
+                "surface-container-lowest": "#ffffff",
+                "on-tertiary": "#ffffff",
+                "on-primary-fixed": "#0f0069",
+                "tertiary-fixed-dim": "#ffb695",
+                "on-secondary-fixed-variant": "#404754",
+                "inverse-on-surface": "#f3effc",
+                "surface-variant": "#e4e1ee",
+                "surface-container-low": "#f5f2ff",
+                "error-container": "#ffdad6",
+                "inverse-primary": "#c3c0ff",
+                "surface-tint": "#4d44e3",
+                "on-background": "#1b1b24",
+                "on-surface": "#1b1b24",
+                "on-tertiary-fixed": "#351000",
+                "on-primary": "#ffffff",
+                "success": "#16A34A",
+                "primary-container": "#4f46e5",
+                "secondary": "#585f6c",
+                "accent-hover": "#4338CA",
+                "surface-container": "#f0ecf9",
+                "on-error": "#ffffff",
+                "accent-subtle": "#EEF2FF",
+                "text-placeholder": "#9CA3AF",
+                "surface-dim": "#dcd8e5",
+                "warning": "#D97706",
+                "secondary-container": "#dce2f3",
+                "border-input": "#D1D5DB",
+                "surface-container-highest": "#e4e1ee",
+                "recessed-panel": "#F9FAFB",
+                "inverse-surface": "#302f39",
+                "outline": "#777587",
+                "text-primary": "#111827",
+                "surface-container-high": "#eae6f4",
+                "secondary-fixed": "#dce2f3",
+                "tertiary-container": "#a44100"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+            },
+            "spacing": {
+                "icon-button": "32px",
+                "base": "8px",
+                "row-height-sm": "28px",
+                "panel-padding": "16px",
+                "control-height": "32px"
+            },
+            "fontFamily": {
+                "body-md-medium": ["Inter"],
+                "body-md": ["Inter"],
+                "data-mono": ["JetBrains Mono"],
+                "section-header": ["Inter"],
+                "label-sm": ["Inter"],
+                "headline-lg": ["Inter"],
+                "caption": ["Inter"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
+            font-size: 20px;
+        }
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .spinner {
+            border: 2px solid #EEF2FF;
+            border-top: 2px solid #4F46E5;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-workspace-backdrop font-body-md text-text-primary h-full overflow-y-auto">
+<!-- Container for the 3 states -->
+<div class="flex flex-col gap-12 p-12 max-w-[1440px] mx-auto">
+<!-- VARIANT 1: LOADING -->
+<section class="flex flex-col h-[600px] bg-surface border border-hairline shadow-sm overflow-hidden">
+<!-- TopNavBar (Shared Component: TopNavBar) -->
+<header class="bg-surface border-b border-hairline h-[52px] flex justify-between items-center w-full px-panel-padding opacity-60">
+<div class="flex items-center gap-6">
+<span class="text-body-md-medium font-body-md-medium text-primary">Report Viewer</span>
+<h1 class="font-headline-lg text-headline-lg text-text-primary truncate">Invoice — Acme Corp</h1>
+<nav class="flex gap-4">
+<span class="text-primary border-b-2 border-primary pb-1 font-label-sm text-label-sm cursor-default">File</span>
+<span class="text-secondary font-label-sm text-label-sm cursor-default">View</span>
+<span class="text-secondary font-label-sm text-label-sm cursor-default">Annotate</span>
+<span class="text-secondary font-label-sm text-label-sm cursor-default">Review</span>
+</nav>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1 mr-4">
+<span class="material-symbols-outlined text-secondary">water_orp</span>
+<span class="material-symbols-outlined text-secondary">zoom_out</span>
+<span class="text-label-sm font-label-sm text-secondary">100%</span>
+<span class="material-symbols-outlined text-secondary">zoom_in</span>
+<span class="material-symbols-outlined text-secondary">fit_screen</span>
+</div>
+<button class="h-[32px] px-3 border border-border-input text-secondary text-label-sm font-label-sm rounded cursor-not-allowed" disabled="">Print</button>
+<button class="h-[32px] px-3 bg-accent-subtle text-secondary text-label-sm font-label-sm rounded cursor-not-allowed" disabled="">Export</button>
+</div>
+</header>
+<!-- Loading Body -->
+<main class="flex-1 overflow-hidden relative flex flex-col items-center bg-workspace-backdrop p-8">
+<div class="flex flex-col items-center gap-3 mt-12 z-10">
+<div class="spinner"></div>
+<span class="text-secondary font-body-md-medium text-body-md-medium">Rendering report...</span>
+</div>
+<div class="w-[420px] flex flex-col gap-8 mt-12 opacity-40">
+<div class="h-[580px] w-full bg-surface shadow-sm rounded-lg p-10 flex flex-col gap-6">
+<div class="h-8 w-1/3 skeleton-shimmer rounded"></div>
+<div class="h-4 w-full skeleton-shimmer rounded"></div>
+<div class="h-4 w-full skeleton-shimmer rounded"></div>
+<div class="h-4 w-2/3 skeleton-shimmer rounded"></div>
+<div class="mt-8 grid grid-cols-2 gap-4">
+<div class="h-24 skeleton-shimmer rounded"></div>
+<div class="h-24 skeleton-shimmer rounded"></div>
+</div>
+</div>
+</div>
+</main>
+</section>
+<!-- VARIANT 2: EMPTY -->
+<section class="flex flex-col h-[600px] bg-surface border border-hairline shadow-sm overflow-hidden">
+<!-- TopNavBar Active -->
+<header class="bg-surface border-b border-hairline h-[52px] flex justify-between items-center w-full px-panel-padding">
+<div class="flex items-center gap-6">
+<span class="text-body-md-medium font-body-md-medium text-primary">Report Viewer</span>
+<h1 class="font-headline-lg text-headline-lg text-text-primary">Invoice — Acme Corp</h1>
+<nav class="flex gap-4">
+<span class="text-primary border-b-2 border-primary pb-1 font-label-sm text-label-sm cursor-pointer transition-colors hover:bg-accent-subtle">File</span>
+<span class="text-secondary font-label-sm text-label-sm cursor-pointer transition-colors hover:bg-accent-subtle">View</span>
+<span class="text-secondary font-label-sm text-label-sm cursor-pointer transition-colors hover:bg-accent-subtle">Annotate</span>
+<span class="text-secondary font-label-sm text-label-sm cursor-pointer transition-colors hover:bg-accent-subtle">Review</span>
+</nav>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1 mr-4">
+<span class="text-label-sm font-label-sm text-secondary mr-2">0 / 0</span>
+<span class="material-symbols-outlined text-secondary cursor-pointer hover:bg-accent-subtle">water_orp</span>
+<span class="material-symbols-outlined text-secondary cursor-pointer hover:bg-accent-subtle">zoom_out</span>
+<span class="text-label-sm font-label-sm text-text-primary px-1">100%</span>
+<span class="material-symbols-outlined text-secondary cursor-pointer hover:bg-accent-subtle">zoom_in</span>
+<span class="material-symbols-outlined text-secondary cursor-pointer hover:bg-accent-subtle">fit_screen</span>
+</div>
+<button class="h-[32px] px-3 border border-border-input text-text-primary text-label-sm font-label-sm rounded hover:bg-recessed-panel transition-colors">Print</button>
+<button class="h-[32px] px-3 bg-primary text-on-primary text-label-sm font-label-sm rounded hover:bg-accent-hover transition-colors">Export</button>
+</div>
+</header>
+<!-- Empty Body -->
+<main class="flex-1 flex flex-col items-center justify-center bg-workspace-backdrop p-8">
+<div class="flex flex-col items-center text-center max-w-sm">
+<div class="w-16 h-16 rounded-full bg-surface border border-hairline flex items-center justify-center mb-6 text-secondary">
+<span class="material-symbols-outlined" style="font-size: 32px;">description</span>
+</div>
+<h2 class="font-section-header text-section-header text-text-primary mb-1">No data to display</h2>
+<p class="text-secondary font-body-md text-body-md">Provide a data JSON to render this report.</p>
+</div>
+</main>
+</section>
+<!-- VARIANT 3: ERROR -->
+<section class="flex flex-col h-[600px] bg-surface border border-hairline shadow-sm overflow-hidden">
+<!-- TopNavBar Active but restricted -->
+<header class="bg-surface border-b border-hairline h-[52px] flex justify-between items-center w-full px-panel-padding">
+<div class="flex items-center gap-6">
+<span class="text-body-md-medium font-body-md-medium text-primary">Report Viewer</span>
+<h1 class="font-headline-lg text-headline-lg text-text-primary">Invoice — Acme Corp</h1>
+<nav class="flex gap-4">
+<span class="text-primary border-b-2 border-primary pb-1 font-label-sm text-label-sm cursor-pointer">File</span>
+<span class="text-secondary font-label-sm text-label-sm cursor-pointer">View</span>
+<span class="text-secondary font-label-sm text-label-sm cursor-pointer">Annotate</span>
+<span class="text-secondary font-label-sm text-label-sm cursor-pointer">Review</span>
+</nav>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1 mr-4 opacity-40">
+<span class="material-symbols-outlined text-secondary">water_orp</span>
+<span class="material-symbols-outlined text-secondary">zoom_out</span>
+<span class="text-label-sm font-label-sm text-secondary">100%</span>
+<span class="material-symbols-outlined text-secondary">zoom_in</span>
+<span class="material-symbols-outlined text-secondary">fit_screen</span>
+</div>
+<button class="h-[32px] px-3 border border-border-input text-secondary text-label-sm font-label-sm rounded cursor-not-allowed" disabled="">Print</button>
+<button class="h-[32px] px-3 bg-accent-subtle text-secondary text-label-sm font-label-sm rounded cursor-not-allowed" disabled="">Export</button>
+</div>
+</header>
+<!-- Error Body -->
+<main class="flex-1 flex flex-col items-center justify-center bg-workspace-backdrop p-8">
+<div class="flex flex-col items-center text-center max-w-sm">
+<div class="w-16 h-16 rounded-full bg-error-container/20 border border-error/20 flex items-center justify-center mb-6 text-error/60">
+<span class="material-symbols-outlined" style="font-size: 32px;">error</span>
+</div>
+<h2 class="font-section-header text-section-header text-text-primary mb-1">Couldn't render this report</h2>
+<p class="text-secondary font-body-md text-body-md mb-6">Template failed validation: missing 'page.size'</p>
+<button class="h-[32px] px-4 border border-border-input text-text-primary text-label-sm font-label-sm rounded hover:bg-recessed-panel transition-all active:scale-[0.98]">
+                        View details
+                    </button>
+</div>
+</main>
+</section>
+</div>
+<!-- Micro-interaction script -->
+<script>
+        document.querySelectorAll('button').forEach(btn => {
+            if(!btn.disabled) {
+                btn.addEventListener('mouseenter', () => {
+                    btn.classList.add('opacity-90');
+                });
+                btn.addEventListener('mouseleave', () => {
+                    btn.classList.remove('opacity-90');
+                });
+            }
+        });
+    </script>
+</body></html>

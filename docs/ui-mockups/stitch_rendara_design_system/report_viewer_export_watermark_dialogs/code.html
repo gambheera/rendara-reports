@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rendara Reports - Export Dialogs</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "surface-tint": "#4d44e3",
+                "on-surface-variant": "#464555",
+                "border-input": "#D1D5DB",
+                "on-error-container": "#93000a",
+                "accent-subtle": "#EEF2FF",
+                "primary-fixed-dim": "#c3c0ff",
+                "on-error": "#ffffff",
+                "text-placeholder": "#9CA3AF",
+                "primary": "#3525cd",
+                "surface-container-low": "#f5f2ff",
+                "recessed-panel": "#F9FAFB",
+                "on-tertiary-fixed-variant": "#7b2f00",
+                "tertiary-fixed-dim": "#ffb695",
+                "on-tertiary-fixed": "#351000",
+                "on-tertiary": "#ffffff",
+                "primary-fixed": "#e2dfff",
+                "error": "#ba1a1a",
+                "on-background": "#1b1b24",
+                "on-secondary-fixed-variant": "#404754",
+                "primary-container": "#4f46e5",
+                "surface-container": "#f0ecf9",
+                "outline-variant": "#c7c4d8",
+                "background": "#fcf8ff",
+                "secondary-fixed-dim": "#c0c7d6",
+                "surface-container-high": "#eae6f4",
+                "surface-dim": "#dcd8e5",
+                "secondary": "#585f6c",
+                "surface": "#FFFFFF",
+                "on-tertiary-container": "#ffd2be",
+                "on-surface": "#1b1b24",
+                "tertiary": "#7e3000",
+                "inverse-on-surface": "#f3effc",
+                "inverse-primary": "#c3c0ff",
+                "text-primary": "#111827",
+                "border-hairline": "#E5E7EB",
+                "surface-container-lowest": "#ffffff",
+                "outline": "#777587",
+                "success": "#16A34A",
+                "on-primary-fixed-variant": "#3323cc",
+                "on-secondary-fixed": "#151c27",
+                "warning": "#D97706",
+                "accent-hover": "#4338CA",
+                "tertiary-fixed": "#ffdbcc",
+                "on-secondary": "#ffffff",
+                "workspace-backdrop": "#F3F4F6",
+                "surface-bright": "#fcf8ff",
+                "surface-variant": "#e4e1ee",
+                "on-primary-fixed": "#0f0069",
+                "surface-container-highest": "#e4e1ee",
+                "danger": "#DC2626",
+                "secondary-fixed": "#dce2f3",
+                "on-secondary-container": "#5e6572",
+                "on-primary": "#ffffff",
+                "on-primary-container": "#dad7ff",
+                "inverse-surface": "#302f39",
+                "secondary-container": "#dce2f3",
+                "tertiary-container": "#a44100",
+                "error-container": "#ffdad6"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+            },
+            "spacing": {
+                "base": "8px",
+                "row-height-sm": "28px",
+                "control-height": "32px",
+                "panel-padding": "16px",
+                "icon-button": "32px"
+            },
+            "fontFamily": {
+                "headline-lg": ["Inter"],
+                "body-md-medium": ["Inter"],
+                "section-header": ["Inter"],
+                "data-mono": ["JetBrains Mono"],
+                "body-md": ["Inter"],
+                "label-sm": ["Inter"],
+                "caption": ["Inter"]
+            },
+            "fontSize": {
+                "headline-lg": ["20px", {"lineHeight": "24px", "fontWeight": "600"}],
+                "body-md-medium": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                "section-header": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "label-sm": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                "caption": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-size: 20px;
+            vertical-align: middle;
+        }
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(2px);
+        }
+        .segmented-control-track {
+            background: #F9FAFB;
+            padding: 2px;
+        }
+        .segmented-control-active {
+            background: white;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border: 1px solid #D1D5DB;
+        }
+        /* Custom Scrollbar for sidebars */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 2px; }
+    </style>
+</head>
+<body class="bg-workspace-backdrop text-text-primary font-body-md m-0 overflow-x-hidden">
+<!-- Wrapper for two side-by-side screens -->
+<div class="flex flex-row space-x-12 p-12 w-[3000px]">
+<!-- FRAME 1: EXPORT PDF TAB -->
+<div class="relative w-[1440px] h-[900px] border border-hairline overflow-hidden shadow-2xl bg-surface">
+<!-- BACKGROUND: THE REPORT VIEWER (Dimmed) -->
+<div class="absolute inset-0 opacity-40 select-none pointer-events-none">
+<!-- Top Nav -->
+<header class="flex justify-between items-center h-control-height px-panel-padding w-full border-b border-hairline bg-surface">
+<div class="flex items-center gap-6">
+<span class="text-headline-lg font-headline-lg text-primary">Rendara Reports</span>
+<nav class="flex gap-4">
+<span class="font-body-md text-primary border-b-2 border-primary pb-1">File</span>
+<span class="font-body-md text-secondary">View</span>
+<span class="font-body-md text-secondary">Insert</span>
+<span class="font-body-md text-secondary">Format</span>
+<span class="font-body-md text-secondary">Tools</span>
+</nav>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">zoom_in</span>
+<span class="material-symbols-outlined text-secondary">zoom_out</span>
+<button class="bg-primary text-on-primary px-3 py-1 rounded-lg text-label-sm h-control-height">Export</button>
+</div>
+</header>
+<!-- Layout -->
+<div class="flex h-full bg-recessed-panel">
+<aside class="w-64 border-r border-hairline flex flex-col pt-4 bg-surface">
+<div class="px-4 mb-8">
+<div class="text-label-sm font-bold text-primary">Project Alpha</div>
+<div class="text-caption text-secondary">V2.4 Final Draft</div>
+</div>
+<div class="flex flex-col">
+<div class="px-4 py-2 bg-accent-subtle border-l-2 border-primary flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">grid_view</span>
+<span class="text-label-sm text-primary">Thumbnails</span>
+</div>
+<div class="px-4 py-2 hover:bg-surface-container flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">format_list_bulleted</span>
+<span class="text-label-sm text-secondary">Outline</span>
+</div>
+</div>
+</aside>
+<main class="flex-1 p-12 flex justify-center overflow-auto">
+<div class="w-[800px] h-[1100px] bg-white shadow-lg border border-hairline p-16">
+<h1 class="text-3xl font-bold mb-8">Service Invoice</h1>
+<div class="grid grid-cols-2 gap-8 mb-12">
+<div>
+<div class="text-caption text-secondary uppercase font-bold">From</div>
+<div class="font-bold">ACME Corp.</div>
+<div class="text-body-md">123 Business Way<br/>Mountain View, CA</div>
+</div>
+<div>
+<div class="text-caption text-secondary uppercase font-bold">To</div>
+<div class="font-bold">Global Solutions</div>
+<div class="text-body-md">456 Enterprise Dr<br/>London, UK</div>
+</div>
+</div>
+<table class="w-full text-left">
+<tbody><tr class="border-b border-hairline text-caption text-secondary">
+<th class="py-2">Description</th>
+<th class="py-2 text-right">Amount</th>
+</tr>
+<tr class="border-b border-hairline">
+<td class="py-4">Cloud Computing Services (Oct 2023)</td>
+<td class="py-4 text-right">$4,500.00</td>
+</tr>
+</tbody></table>
+</div>
+</main>
+</div>
+</div>
+<!-- MODAL DIALOG -->
+<div class="absolute inset-0 z-[100] flex items-center justify-center modal-overlay">
+<div class="bg-surface w-[560px] rounded-xl shadow-2xl overflow-hidden border border-hairline">
+<!-- Modal Header Tabs -->
+<div class="flex px-panel-padding pt-4 border-b border-hairline">
+<button class="pb-3 px-2 border-b-2 border-primary text-primary font-body-md-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">picture_as_pdf</span>
+                            Export PDF
+                        </button>
+<button class="pb-3 px-4 text-secondary font-body-md hover:text-primary transition-colors">
+                            Watermark
+                        </button>
+</div>
+<!-- Modal Body -->
+<div class="p-6 space-y-6">
+<!-- Filename -->
+<div class="space-y-1.5">
+<label class="font-label-sm text-on-surface-variant block">Filename</label>
+<input class="w-full h-control-height border border-border-input px-3 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-body-md" type="text" value="invoice-acme.pdf"/>
+</div>
+<!-- Pages Segmented Control -->
+<div class="space-y-1.5">
+<label class="font-label-sm text-on-surface-variant block">Pages</label>
+<div class="flex items-center gap-4">
+<div class="flex-1 h-control-height segmented-control-track rounded-lg flex p-0.5">
+<button class="flex-1 h-full rounded-lg bg-white border border-hairline text-primary font-body-md-medium shadow-sm">All</button>
+<button class="flex-1 h-full rounded-lg text-secondary font-body-md hover:bg-surface-container transition-colors">Current</button>
+<button class="flex-1 h-full rounded-lg text-secondary font-body-md hover:bg-surface-container transition-colors">Range</button>
+</div>
+<input class="w-20 h-control-height border border-border-input px-3 rounded-lg text-center font-data-mono" placeholder="1-5" type="text"/>
+</div>
+</div>
+<!-- Quality/Size -->
+<div class="space-y-1.5">
+<label class="font-label-sm text-on-surface-variant block">Quality/size</label>
+<div class="relative">
+<select class="w-full h-control-height border border-border-input px-3 rounded-lg appearance-none bg-white font-body-md outline-none">
+<option>Standard (High Quality)</option>
+<option>Optimized for Web</option>
+<option>Print Quality (Lossless)</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-secondary">expand_more</span>
+</div>
+</div>
+<!-- Include Watermark Toggle -->
+<div class="flex items-center justify-between py-2">
+<div class="space-y-0.5">
+<label class="font-label-sm text-text-primary block">Include watermark</label>
+<p class="text-caption text-secondary">Apply document overlay</p>
+</div>
+<button class="w-10 h-5 rounded-full bg-primary relative transition-colors">
+<div class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</button>
+</div>
+<!-- Footnote -->
+<p class="text-caption text-secondary text-center pt-2">
+                            Generated in your browser — no data leaves the page.
+                        </p>
+</div>
+<!-- Footer -->
+<div class="bg-recessed-panel px-6 py-4 flex justify-end items-center gap-3">
+<button class="h-control-height px-4 text-secondary font-body-md-medium hover:bg-surface-container rounded-lg">Cancel</button>
+<button class="h-control-height px-4 bg-primary text-on-primary rounded-lg font-body-md-medium flex items-center gap-2 hover:bg-accent-hover transition-colors">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+                            Export PDF
+                        </button>
+</div>
+</div>
+</div>
+</div>
+<!-- FRAME 2: WATERMARK TAB -->
+<div class="relative w-[1440px] h-[900px] border border-hairline overflow-hidden shadow-2xl bg-surface">
+<!-- BACKGROUND: THE REPORT VIEWER (Dimmed) -->
+<div class="absolute inset-0 opacity-40 select-none pointer-events-none">
+<header class="flex justify-between items-center h-control-height px-panel-padding w-full border-b border-hairline bg-surface">
+<div class="flex items-center gap-6">
+<span class="text-headline-lg font-headline-lg text-primary">Rendara Reports</span>
+<nav class="flex gap-4">
+<span class="font-body-md text-primary border-b-2 border-primary pb-1">File</span>
+<span class="font-body-md text-secondary">View</span>
+<span class="font-body-md text-secondary">Insert</span>
+<span class="font-body-md text-secondary">Format</span>
+<span class="font-body-md text-secondary">Tools</span>
+</nav>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">zoom_in</span>
+<span class="material-symbols-outlined text-secondary">zoom_out</span>
+<button class="bg-primary text-on-primary px-3 py-1 rounded-lg text-label-sm h-control-height">Export</button>
+</div>
+</header>
+<div class="flex h-full bg-recessed-panel">
+<aside class="w-64 border-r border-hairline flex flex-col pt-4 bg-surface">
+<div class="px-4 mb-8">
+<div class="text-label-sm font-bold text-primary">Project Alpha</div>
+<div class="text-caption text-secondary">V2.4 Final Draft</div>
+</div>
+</aside>
+<main class="flex-1 p-12 flex justify-center">
+<div class="w-[800px] h-[1100px] bg-white shadow-lg border border-hairline"></div>
+</main>
+</div>
+</div>
+<!-- MODAL DIALOG (Watermark Active) -->
+<div class="absolute inset-0 z-[100] flex items-center justify-center modal-overlay">
+<div class="bg-surface w-[560px] rounded-xl shadow-2xl overflow-hidden border border-hairline">
+<!-- Modal Header Tabs -->
+<div class="flex px-panel-padding pt-4 border-b border-hairline">
+<button class="pb-3 px-4 text-secondary font-body-md hover:text-primary transition-colors">
+                            Export PDF
+                        </button>
+<button class="pb-3 px-2 border-b-2 border-primary text-primary font-body-md-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">branding_watermark</span>
+                            Watermark
+                        </button>
+</div>
+<!-- Modal Body -->
+<div class="p-6 space-y-6">
+<!-- Type Segmented Control -->
+<div class="space-y-1.5">
+<label class="font-label-sm text-on-surface-variant block">Type</label>
+<div class="w-full h-control-height segmented-control-track rounded-lg flex p-0.5">
+<button class="flex-1 h-full rounded-lg bg-white border border-hairline text-primary font-body-md-medium shadow-sm">Text</button>
+<button class="flex-1 h-full rounded-lg text-secondary font-body-md hover:bg-surface-container transition-colors">Image</button>
+</div>
+</div>
+<!-- Text Input -->
+<div class="space-y-1.5">
+<label class="font-label-sm text-on-surface-variant block">Text</label>
+<input class="w-full h-control-height border border-border-input px-3 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-body-md uppercase" type="text" value="CONFIDENTIAL"/>
+</div>
+<!-- Multi-control Row (Opacity, Angle, Color) -->
+<div class="grid grid-cols-3 gap-4">
+<div class="space-y-1.5">
+<label class="font-label-sm text-on-surface-variant block">Opacity (15%)</label>
+<div class="relative flex items-center h-control-height">
+<input class="w-full h-1 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary" type="range" value="15"/>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="font-label-sm text-on-surface-variant block">Angle</label>
+<div class="flex items-center h-control-height border border-border-input rounded-lg px-2 bg-white">
+<input class="w-full text-center outline-none font-data-mono" type="text" value="-45°"/>
+<div class="flex flex-col">
+<span class="material-symbols-outlined text-secondary" style="font-size: 14px; cursor: pointer;">expand_less</span>
+<span class="material-symbols-outlined text-secondary" style="font-size: 14px; cursor: pointer;">expand_more</span>
+</div>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="font-label-sm text-on-surface-variant block">Color</label>
+<button class="w-full h-control-height border border-border-input rounded-lg flex items-center px-2 gap-2 bg-white">
+<div class="w-4 h-4 rounded-sm bg-gray-400 border border-hairline"></div>
+<span class="text-label-sm text-secondary">#9CA3AF</span>
+</button>
+</div>
+</div>
+<!-- Preview Section -->
+<div class="space-y-1.5">
+<label class="font-label-sm text-on-surface-variant block">Preview</label>
+<div class="w-full h-40 bg-recessed-panel border border-hairline rounded-lg flex items-center justify-center overflow-hidden">
+<div class="w-24 h-32 bg-white shadow-sm border border-hairline relative flex items-center justify-center">
+<span class="text-[10px] text-gray-300 font-bold tracking-[4px] -rotate-45 absolute whitespace-nowrap">CONFIDENTIAL</span>
+<!-- Tiny dummy content -->
+<div class="w-16 space-y-1">
+<div class="h-1 bg-gray-50 w-full"></div>
+<div class="h-1 bg-gray-50 w-3/4"></div>
+<div class="h-1 bg-gray-50 w-full"></div>
+<div class="h-1 bg-gray-50 w-1/2 pt-4"></div>
+<div class="h-1 bg-gray-50 w-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<div class="bg-recessed-panel px-6 py-4 flex justify-end items-center gap-3">
+<button class="h-control-height px-4 text-secondary font-body-md-medium hover:bg-surface-container rounded-lg">Cancel</button>
+<button class="h-control-height px-6 bg-primary text-on-primary rounded-lg font-body-md-medium hover:bg-accent-hover transition-colors">
+                            Apply
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+        // Micro-interactions
+        document.querySelectorAll('button, input, select').forEach(el => {
+            el.addEventListener('mousedown', () => el.style.transform = 'scale(0.98)');
+            el.addEventListener('mouseup', () => el.style.transform = 'scale(1)');
+            el.addEventListener('mouseleave', () => el.style.transform = 'scale(1)');
+        });
+    </script>
+</body></html>

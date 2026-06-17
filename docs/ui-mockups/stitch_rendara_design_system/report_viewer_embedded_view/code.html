@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rendara Reports — Report Viewer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#3525cd",
+                        "secondary-fixed-dim": "#c0c7d6",
+                        "danger": "#DC2626",
+                        "on-primary-fixed-variant": "#3323cc",
+                        "inverse-surface": "#302f39",
+                        "background": "#fcf8ff",
+                        "error-container": "#ffdad6",
+                        "outline-variant": "#c7c4d8",
+                        "on-tertiary-fixed": "#351000",
+                        "surface-container-highest": "#e4e1ee",
+                        "text-placeholder": "#9CA3AF",
+                        "surface-bright": "#fcf8ff",
+                        "on-background": "#1b1b24",
+                        "secondary-container": "#dce2f3",
+                        "on-primary-container": "#dad7ff",
+                        "accent-hover": "#4338CA",
+                        "inverse-primary": "#c3c0ff",
+                        "surface-tint": "#4d44e3",
+                        "on-tertiary-container": "#ffd2be",
+                        "recessed-panel": "#F9FAFB",
+                        "warning": "#D97706",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#7e3000",
+                        "on-error": "#ffffff",
+                        "accent-subtle": "#EEF2FF",
+                        "surface-container-low": "#f5f2ff",
+                        "surface": "#FFFFFF",
+                        "on-primary-fixed": "#0f0069",
+                        "on-error-container": "#93000a",
+                        "on-secondary-fixed": "#151c27",
+                        "tertiary-fixed": "#ffdbcc",
+                        "on-tertiary-fixed-variant": "#7b2f00",
+                        "tertiary-fixed-dim": "#ffb695",
+                        "outline": "#777587",
+                        "surface-container": "#f0ecf9",
+                        "surface-variant": "#e4e1ee",
+                        "primary-fixed-dim": "#c3c0ff",
+                        "error": "#ba1a1a",
+                        "primary-container": "#4f46e5",
+                        "primary-fixed": "#e2dfff",
+                        "inverse-on-surface": "#f3effc",
+                        "surface-container-high": "#eae6f4",
+                        "secondary": "#585f6c",
+                        "on-primary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "workspace-backdrop": "#F3F4F6",
+                        "tertiary-container": "#a44100",
+                        "border-input": "#D1D5DB",
+                        "success": "#16A34A",
+                        "on-secondary-fixed-variant": "#404754",
+                        "surface-dim": "#dcd8e5",
+                        "on-surface-variant": "#464555",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#5e6572",
+                        "text-primary": "#111827",
+                        "on-surface": "#1b1b24",
+                        "secondary-fixed": "#dce2f3",
+                        "border-hairline": "#E5E7EB",
+                        "hairline": "#E5E7EB"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "row-height-sm": "28px",
+                        "control-height": "32px",
+                        "icon-button": "32px",
+                        "base": "8px",
+                        "panel-padding": "16px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-md-medium": ["Inter"],
+                        "section-header": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-lg": ["Inter"],
+                        "caption": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-md-medium": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "section-header": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                        "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "headline-lg": ["20px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+            font-size: 20px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        .paper-shadow { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .thumbnail-card:hover { background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="bg-workspace-backdrop text-text-primary font-body-md overflow-hidden h-screen flex flex-col">
+<!-- TopNavBar (Shared Component Impl) -->
+<header class="bg-surface border-b border-hairline flex justify-between items-center px-panel-padding w-full h-[52px] z-50">
+<div class="flex items-center gap-4 min-w-[240px]">
+<span class="font-section-header text-section-header font-semibold text-text-primary truncate">Invoice — Acme Corp</span>
+</div>
+<div class="flex items-center gap-4">
+<!-- Page Nav -->
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 flex items-center justify-center hover:bg-accent-subtle rounded transition-colors">
+<span class="material-symbols-outlined text-secondary">chevron_left</span>
+</button>
+<div class="flex items-center gap-1.5 px-2">
+<input class="w-10 h-[32px] text-center border border-border-input rounded font-data-mono text-data-mono focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" type="text" value="1"/>
+<span class="text-secondary font-label-sm text-label-sm">/ 12</span>
+</div>
+<button class="w-8 h-8 flex items-center justify-center hover:bg-accent-subtle rounded transition-colors">
+<span class="material-symbols-outlined text-secondary">chevron_right</span>
+</button>
+</div>
+<div class="h-6 w-px bg-border-hairline mx-2"></div>
+<!-- Zoom Controls -->
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 flex items-center justify-center hover:bg-accent-subtle rounded transition-colors">
+<span class="material-symbols-outlined text-secondary">remove</span>
+</button>
+<span class="w-14 text-center font-label-sm text-label-sm">100%</span>
+<button class="w-8 h-8 flex items-center justify-center hover:bg-accent-subtle rounded transition-colors">
+<span class="material-symbols-outlined text-secondary">add</span>
+</button>
+</div>
+<button class="flex items-center gap-2 px-3 h-[32px] border border-border-input rounded hover:bg-accent-subtle transition-colors text-label-sm font-label-sm">
+<span>Fit width</span>
+<span class="material-symbols-outlined text-secondary !text-[16px]">expand_more</span>
+</button>
+</div>
+<div class="flex items-center gap-2 min-w-[240px] justify-end">
+<button class="p-1.5 hover:bg-accent-subtle rounded transition-colors" title="Print">
+<span class="material-symbols-outlined text-secondary">print</span>
+</button>
+<button class="p-1.5 hover:bg-accent-subtle rounded transition-colors" title="Export PDF">
+<span class="material-symbols-outlined text-secondary">download</span>
+</button>
+<button class="p-1.5 hover:bg-accent-subtle rounded transition-colors" title="Watermark">
+<span class="material-symbols-outlined text-secondary">approval</span>
+</button>
+<button class="p-1.5 hover:bg-accent-subtle rounded transition-colors" title="More actions">
+<span class="material-symbols-outlined text-secondary">more_horiz</span>
+</button>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<!-- SideNavBar (Shared Component Impl - Thumbnail Rail) -->
+<aside class="w-[168px] bg-recessed-panel border-r border-hairline flex flex-col z-40 overflow-y-auto custom-scrollbar">
+<div class="p-4 flex flex-col gap-6">
+<!-- Thumbnail 1 (Active) -->
+<div class="flex flex-col items-center gap-2">
+<div class="w-full aspect-[1/1.41] bg-surface border-2 border-primary paper-shadow p-1 cursor-pointer">
+<div class="w-full h-full bg-surface-container-high relative overflow-hidden">
+<div class="absolute top-2 left-2 w-8 h-1 bg-secondary/20"></div>
+<div class="absolute top-4 left-2 w-12 h-1 bg-secondary/10"></div>
+<div class="absolute bottom-4 right-2 w-10 h-6 bg-secondary/5"></div>
+<!-- Minimalist invoice preview representation -->
+</div>
+</div>
+<span class="font-label-sm text-label-sm text-primary font-semibold">1</span>
+</div>
+<!-- Thumbnail 2 -->
+<div class="flex flex-col items-center gap-2 group">
+<div class="w-[110px] aspect-[1/1.41] bg-surface border border-border-hairline paper-shadow p-1 cursor-pointer thumbnail-card">
+<div class="w-full h-full bg-surface-container-low opacity-50"></div>
+</div>
+<span class="font-label-sm text-label-sm text-secondary group-hover:text-text-primary">2</span>
+</div>
+<!-- Thumbnail 3 -->
+<div class="flex flex-col items-center gap-2 group">
+<div class="w-[110px] aspect-[1/1.41] bg-surface border border-border-hairline paper-shadow p-1 cursor-pointer thumbnail-card">
+<div class="w-full h-full bg-surface-container-low opacity-50"></div>
+</div>
+<span class="font-label-sm text-label-sm text-secondary group-hover:text-text-primary">3</span>
+</div>
+<!-- Thumbnail 4 -->
+<div class="flex flex-col items-center gap-2 group">
+<div class="w-[110px] aspect-[1/1.41] bg-surface border border-border-hairline paper-shadow p-1 cursor-pointer thumbnail-card">
+<div class="w-full h-full bg-surface-container-low opacity-50"></div>
+</div>
+<span class="font-label-sm text-label-sm text-secondary group-hover:text-text-primary">4</span>
+</div>
+</div>
+</aside>
+<!-- Main Page Area -->
+<main class="flex-1 overflow-auto custom-scrollbar p-12 flex justify-center items-start">
+<!-- A4 Page Container -->
+<div class="bg-surface paper-shadow w-[794px] min-h-[1123px] p-[60px] flex flex-col relative text-[12px] leading-relaxed">
+<!-- Invoice Header -->
+<div class="flex justify-between items-start mb-16">
+<div>
+<div class="flex items-center gap-2 mb-4">
+<div class="w-10 h-10 bg-primary flex items-center justify-center rounded">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">corporate_fare</span>
+</div>
+<span class="font-headline-lg text-headline-lg tracking-tight uppercase">Acme Corp</span>
+</div>
+<div class="text-secondary font-label-sm">
+                            123 Business Avenue, Suite 500<br/>
+                            San Francisco, CA 94107<br/>
+                            United States
+                        </div>
+</div>
+<div class="text-right">
+<h1 class="text-[32px] font-bold text-text-primary mb-2 uppercase tracking-widest">Invoice</h1>
+<div class="grid grid-cols-2 gap-x-4 text-right">
+<span class="text-secondary font-label-sm">Invoice #</span>
+<span class="font-data-mono text-data-mono">INV-2024-0012</span>
+<span class="text-secondary font-label-sm">Date</span>
+<span class="font-data-mono text-data-mono">Nov 12, 2023</span>
+<span class="text-secondary font-label-sm">Due Date</span>
+<span class="font-data-mono text-data-mono">Dec 12, 2023</span>
+</div>
+</div>
+</div>
+<!-- Billing Info -->
+<div class="grid grid-cols-2 gap-12 mb-12">
+<div>
+<h3 class="font-section-header text-section-header text-secondary uppercase tracking-wider border-b border-hairline pb-1 mb-3">Bill To</h3>
+<div class="font-body-md-medium text-text-primary mb-1">Northwind Trading Ltd</div>
+<div class="text-secondary">
+                            789 Commerce Way<br/>
+                            London, EC1A 1BB<br/>
+                            United Kingdom
+                        </div>
+</div>
+<div>
+<h3 class="font-section-header text-section-header text-secondary uppercase tracking-wider border-b border-hairline pb-1 mb-3">Ship To</h3>
+<div class="font-body-md-medium text-text-primary mb-1">Northwind Trading Ltd</div>
+<div class="text-secondary">
+                            Logistic Hub Alpha<br/>
+                            Manchester, M1 1AF<br/>
+                            United Kingdom
+                        </div>
+</div>
+</div>
+<!-- Data Table -->
+<div class="flex-1">
+<table class="w-full border-collapse">
+<thead>
+<tr class="bg-surface-container border-y border-hairline">
+<th class="py-2 px-4 text-left font-section-header text-section-header text-secondary">Description</th>
+<th class="py-2 px-4 text-right font-section-header text-section-header text-secondary w-20">Qty</th>
+<th class="py-2 px-4 text-right font-section-header text-section-header text-secondary w-32">Unit Price</th>
+<th class="py-2 px-4 text-right font-section-header text-section-header text-secondary w-32">Amount</th>
+</tr>
+</thead>
+<tbody class="font-data-mono text-data-mono">
+<tr class="border-b border-hairline">
+<td class="py-4 px-4 align-top">
+<div class="text-text-primary font-medium">Cloud Infrastructure - Enterprise Node</div>
+<div class="text-[11px] text-secondary font-sans mt-1">Monthly subscription for high-availability cluster nodes (Zone: US-East-1)</div>
+</td>
+<td class="py-4 px-4 text-right align-top">1</td>
+<td class="py-4 px-4 text-right align-top">$1,250.00</td>
+<td class="py-4 px-4 text-right align-top">$1,250.00</td>
+</tr>
+<tr class="border-b border-hairline">
+<td class="py-4 px-4 align-top">
+<div class="text-text-primary font-medium">Data Storage (Standard Tier)</div>
+<div class="text-[11px] text-secondary font-sans mt-1">Managed block storage - 500GB capacity with daily snapshot backups</div>
+</td>
+<td class="py-4 px-4 text-right align-top">5</td>
+<td class="py-4 px-4 text-right align-top">$45.00</td>
+<td class="py-4 px-4 text-right align-top">$225.00</td>
+</tr>
+<tr class="border-b border-hairline">
+<td class="py-4 px-4 align-top">
+<div class="text-text-primary font-medium">Global CDN Bandwidth</div>
+<div class="text-[11px] text-secondary font-sans mt-1">Excess traffic usage over 1TB base allocation</div>
+</td>
+<td class="py-4 px-4 text-right align-top">142</td>
+<td class="py-4 px-4 text-right align-top">$0.12</td>
+<td class="py-4 px-4 text-right align-top">$17.04</td>
+</tr>
+<tr class="border-b border-hairline">
+<td class="py-4 px-4 align-top">
+<div class="text-text-primary font-medium">Professional Services - Security Audit</div>
+<div class="text-[11px] text-secondary font-sans mt-1">Compliance review and vulnerability assessment for Q4 2023</div>
+</td>
+<td class="py-4 px-4 text-right align-top">8</td>
+<td class="py-4 px-4 text-right align-top">$150.00</td>
+<td class="py-4 px-4 text-right align-top">$1,200.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Totals -->
+<div class="mt-8 flex justify-end">
+<div class="w-64">
+<div class="flex justify-between py-1">
+<span class="text-secondary font-label-sm">Subtotal</span>
+<span class="font-data-mono text-data-mono">$2,692.04</span>
+</div>
+<div class="flex justify-between py-1">
+<span class="text-secondary font-label-sm">Tax (8.5%)</span>
+<span class="font-data-mono text-data-mono">$228.82</span>
+</div>
+<div class="flex justify-between py-3 border-t-2 border-text-primary mt-2">
+<span class="font-section-header text-section-header uppercase">Total</span>
+<span class="font-data-mono text-data-mono font-bold text-[16px]">$2,920.86</span>
+</div>
+</div>
+</div>
+<!-- Page Footer -->
+<footer class="mt-auto pt-16 border-t border-hairline flex justify-between text-caption text-secondary">
+<div>Questions? contact@acme-corp.com</div>
+<div class="font-data-mono uppercase">Page 1 of 12</div>
+</footer>
+</div>
+</main>
+</div>
+<!-- Status Bar -->
+<footer class="h-[30px] bg-surface border-t border-hairline flex justify-between items-center px-panel-padding z-50 text-caption text-secondary">
+<div class="flex items-center gap-4">
+<span class="font-label-sm">Page 1 of 12</span>
+<div class="h-3 w-px bg-border-hairline"></div>
+<span class="font-label-sm">Selection: None</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-label-sm">UTF-8</span>
+<div class="h-3 w-px bg-border-hairline"></div>
+<span class="font-label-sm">100%</span>
+</div>
+</footer>
+<script>
+        // Simple micro-interaction for thumbnail selection
+        document.querySelectorAll('.thumbnail-card').forEach(card => {
+            card.addEventListener('click', function() {
+                // In a real app, this would scroll the main area to the page
+                console.log('Navigate to page');
+            });
+        });
+
+        // Search highlight mock
+        const inputField = document.querySelector('input');
+        inputField.addEventListener('focus', () => {
+            inputField.parentElement.classList.add('ring-2', 'ring-primary/10');
+        });
+        inputField.addEventListener('blur', () => {
+            inputField.parentElement.classList.remove('ring-2', 'ring-primary/10');
+        });
+    </script>
+</body></html>
