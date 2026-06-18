@@ -1,0 +1,80 @@
+{
+  "name": "viewer-demo",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "prefix": "rdr",
+  "sourceRoot": "apps/viewer-demo/src",
+  "tags": ["scope:viewer-demo", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@angular/build:application",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "outputPath": "dist/apps/viewer-demo",
+        "browser": "apps/viewer-demo/src/main.ts",
+        "tsConfig": "apps/viewer-demo/tsconfig.app.json",
+        "assets": [
+          {
+            "glob": "**/*",
+            "input": "apps/viewer-demo/public"
+          }
+        ],
+        "styles": ["apps/viewer-demo/src/styles.css"]
+      },
+      "configurations": {
+        "production": {
+          "budgets": [
+            {
+              "type": "initial",
+              "maximumWarning": "500kb",
+              "maximumError": "1mb"
+            },
+            {
+              "type": "anyComponentStyle",
+              "maximumWarning": "4kb",
+              "maximumError": "8kb"
+            }
+          ],
+          "outputHashing": "all"
+        },
+        "development": {
+          "optimization": false,
+          "extractLicenses": false,
+          "sourceMap": true
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
+      "configurations": {
+        "production": {
+          "buildTarget": "viewer-demo:build:production"
+        },
+        "development": {
+          "buildTarget": "viewer-demo:build:development"
+        }
+      }
+    },
+    "serve-static": {
+      "continuous": true,
+      "executor": "@nx/web:file-server",
+      "options": {
+        "buildTarget": "viewer-demo:build",
+        "staticFilePath": "dist/apps/viewer-demo/browser",
+        "spa": true
+      }
+    },
+    "test": {
+      "outputs": [
+        "{projectRoot}/{options.coverage.reportsDirectory}",
+        "{workspaceRoot}/coverage/apps/viewer-demo"
+      ],
+      "options": {
+        "coverage.reportsDirectory": "../../coverage/apps/viewer-demo"
+      }
+    }
+  }
+}

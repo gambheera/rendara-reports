@@ -1,0 +1,16 @@
+/**
+ * Designer global styles. Design tokens are loaded ahead of this file via the
+ * build `styles` array (libs/ui-kit/src/styles/tokens.css), so `--rdr-*` is
+ * available here and in every component. The real four-zone chrome lands in
+ * Epic 5 (where Tailwind may be bound to these tokens); this just sets the base
+ * page surface and font.
+ */
+html,
+body {
+  margin: 0;
+  background: var(--rdr-color-backdrop);
+  color: var(--rdr-color-text-primary);
+  font-family: var(--rdr-font-ui);
+  font-size: var(--rdr-font-size-body);
+  line-height: var(--rdr-line-height-body);
+}

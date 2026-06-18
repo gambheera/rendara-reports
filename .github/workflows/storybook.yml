@@ -1,0 +1,41 @@
+# Minimal CI stub (E0-S6): builds every project's Storybook so the
+# "builds in CI" acceptance criterion is gated on each PR. This is intentionally
+# a thin, self-contained slice — the full pipeline (install -> lint -> typecheck
+# -> test -> build via `nx affected`, Nx Cloud caching, branch protection) is
+# owned by E0-S3, which should fold this build-storybook step into it and drop
+# this file.
+name: Storybook
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: storybook-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-storybook:
+    name: Build Storybook (report-renderer, report-viewer, ui-kit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Storybook (all projects)
+        run: pnpm storybook:build

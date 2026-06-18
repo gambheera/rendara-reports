@@ -1,0 +1,43 @@
+{
+  "name": "ui-kit",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ui-kit/src",
+  "prefix": "rdr",
+  "projectType": "library",
+  "tags": ["scope:ui-kit", "type:ui"],
+  "targets": {
+    "test": {
+      "outputs": [
+        "{projectRoot}/{options.coverage.reportsDirectory}",
+        "{workspaceRoot}/coverage/libs/ui-kit"
+      ],
+      "options": {
+        "coverage.reportsDirectory": "../../coverage/libs/ui-kit"
+      }
+    },
+    "storybook": {
+      "executor": "@storybook/angular:start-storybook",
+      "options": {
+        "configDir": "libs/ui-kit/.storybook",
+        "tsConfig": "libs/ui-kit/.storybook/tsconfig.json",
+        "browserTarget": "ui-kit:build-storybook",
+        "port": 4400,
+        "compodoc": false,
+        "experimentalZoneless": true,
+        "styles": ["libs/ui-kit/src/styles/tokens.css"]
+      }
+    },
+    "build-storybook": {
+      "executor": "@storybook/angular:build-storybook",
+      "outputs": ["{options.outputDir}"],
+      "options": {
+        "outputDir": "dist/storybook/ui-kit",
+        "configDir": "libs/ui-kit/.storybook",
+        "tsConfig": "libs/ui-kit/.storybook/tsconfig.json",
+        "compodoc": false,
+        "experimentalZoneless": true,
+        "styles": ["libs/ui-kit/src/styles/tokens.css"]
+      }
+    }
+  }
+}

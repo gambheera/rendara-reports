@@ -1,0 +1,77 @@
+# Release tooling & commit hygiene (E0-S7).
+#
+# Two independent gates that enforce commit hygiene and prove the release flow
+# in CI (local git hooks can be bypassed with --no-verify, so the checks are
+# repeated here):
+#   * commitlint      — validate every commit on the PR against Conventional Commits.
+#   * publish-dry-run — `pnpm -r publish --dry-run` for the publishable packages
+#                       (no real publish — packaging/APF build lands in E9).
+#
+# Like .github/workflows/storybook.yml this is a thin, self-contained slice.
+# E0-S3 (CI pipeline) should fold these into the main `nx affected` pipeline
+# (install -> lint -> typecheck -> test -> build) with Nx caching + branch
+# protection, and may then drop this file.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commitlint:
+    name: Lint commit messages (Conventional Commits)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need full history to lint the whole PR commit range.
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint commits in this push/PR
+        env:
+          # On a PR, lint base..head; on a push, lint just the new commit(s).
+          FROM: ${{ github.event.pull_request.base.sha || github.event.before }}
+          TO: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: pnpm exec commitlint --from "$FROM" --to "$TO" --verbose
+
+  publish-dry-run:
+    name: Publish dry-run (no real publish)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Dry-run publish of @rendara/report-schema + @rendara/report-viewer
+        run: pnpm release:dry-run

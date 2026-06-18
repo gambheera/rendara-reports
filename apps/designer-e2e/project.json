@@ -1,0 +1,14 @@
+{
+  "name": "designer-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/designer-e2e/src",
+  "tags": ["type:e2e"],
+  "implicitDependencies": ["designer"],
+  "// e2e": "Playwright's own webServer starts (and waits on) the dev server; clearing the inferred serve dependency avoids double-starting it, which trips Nx's recursive-task guard.",
+  "targets": {
+    "e2e": {
+      "dependsOn": []
+    }
+  }
+}

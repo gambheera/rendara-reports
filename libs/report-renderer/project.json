@@ -1,0 +1,41 @@
+{
+  "name": "report-renderer",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/report-renderer/src",
+  "prefix": "rdr",
+  "projectType": "library",
+  "tags": ["scope:renderer", "type:feature"],
+  "targets": {
+    "test": {
+      "outputs": [
+        "{projectRoot}/{options.coverage.reportsDirectory}",
+        "{workspaceRoot}/coverage/libs/report-renderer"
+      ],
+      "options": {
+        "coverage.reportsDirectory": "../../coverage/libs/report-renderer"
+      }
+    },
+    "storybook": {
+      "executor": "@storybook/angular:start-storybook",
+      "options": {
+        "configDir": "libs/report-renderer/.storybook",
+        "tsConfig": "libs/report-renderer/.storybook/tsconfig.json",
+        "browserTarget": "report-renderer:build-storybook",
+        "port": 4401,
+        "compodoc": false,
+        "experimentalZoneless": true
+      }
+    },
+    "build-storybook": {
+      "executor": "@storybook/angular:build-storybook",
+      "outputs": ["{options.outputDir}"],
+      "options": {
+        "outputDir": "dist/storybook/report-renderer",
+        "configDir": "libs/report-renderer/.storybook",
+        "tsConfig": "libs/report-renderer/.storybook/tsconfig.json",
+        "compodoc": false,
+        "experimentalZoneless": true
+      }
+    }
+  }
+}

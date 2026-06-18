@@ -1,0 +1,14 @@
+# Generated / vendored output that should not be formatted
+/dist
+/coverage
+/.nx/cache
+/.nx/workspace-data
+/.nx/self-healing
+.angular
+pnpm-lock.yaml
+
+# Authored documentation maintained outside the formatter:
+# the project brief/backlog, Stitch UI mockups, and Claude Code project config.
+/docs
+/CLAUDE.md
+/.claude

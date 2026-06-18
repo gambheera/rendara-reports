@@ -1,0 +1,18 @@
+{
+  "name": "report-engine",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/report-engine/src",
+  "projectType": "library",
+  "tags": ["scope:engine", "type:util"],
+  "targets": {
+    "test": {
+      "outputs": [
+        "{projectRoot}/{options.coverage.reportsDirectory}",
+        "{workspaceRoot}/coverage/libs/report-engine"
+      ],
+      "options": {
+        "coverage.reportsDirectory": "../../coverage/libs/report-engine"
+      }
+    }
+  }
+}

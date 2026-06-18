@@ -1,0 +1,25 @@
+{
+  "name": "visual-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/visual-e2e/e2e",
+  "tags": ["type:e2e"],
+  "// visual": "Visual regression is a distinct `visual` target (not `e2e`), so the functional e2e gate stays independent of pixel baselines. Config is named playwright.visual.config.mts so the @nx/playwright plugin does not infer an `e2e` target here.",
+  "targets": {
+    "visual": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["default", { "externalDependencies": ["@playwright/test"] }],
+      "outputs": ["{workspaceRoot}/dist/.playwright/apps/visual-e2e"],
+      "options": {
+        "cwd": "apps/visual-e2e",
+        "command": "playwright test --config=playwright.visual.config.mts"
+      },
+      "configurations": {
+        "update": {
+          "command": "playwright test --config=playwright.visual.config.mts --update-snapshots"
+        }
+      }
+    }
+  }
+}

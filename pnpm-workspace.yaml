@@ -1,0 +1,43 @@
+# Rendara uses Nx's classic layout: internal projects are linked via TypeScript
+# path aliases (tsconfig.base.json "paths"), NOT pnpm package workspaces.
+#
+# The only exception is the two PUBLISHABLE packages, registered below so
+# Changesets can discover and version them (E0-S7). They still carry no build
+# config yet — packaging (ng-packagr/APF, exports, peer ranges) lands in E9;
+# until then `pnpm -r publish --dry-run` is the wired release check.
+packages:
+  - 'libs/report-schema'
+  - 'libs/report-viewer'
+
+# allowBuilds lists dependencies permitted to run install/postinstall scripts
+# under pnpm's secure-by-default policy.
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  esbuild: true
+  less: false
+  lmdb: true
+  msgpackr-extract: true
+  nx: true
+minimumReleaseAgeExclude:
+  - '@nx/angular@23.0.0'
+  - '@nx/devkit@23.0.0'
+  - '@nx/eslint-plugin@23.0.0'
+  - '@nx/eslint@23.0.0'
+  - '@nx/js@23.0.0'
+  - '@nx/module-federation@23.0.0'
+  - '@nx/nx-darwin-arm64@23.0.0'
+  - '@nx/nx-darwin-x64@23.0.0'
+  - '@nx/nx-freebsd-x64@23.0.0'
+  - '@nx/nx-linux-arm-gnueabihf@23.0.0'
+  - '@nx/nx-linux-arm64-gnu@23.0.0'
+  - '@nx/nx-linux-arm64-musl@23.0.0'
+  - '@nx/nx-linux-x64-gnu@23.0.0'
+  - '@nx/nx-linux-x64-musl@23.0.0'
+  - '@nx/nx-win32-arm64-msvc@23.0.0'
+  - '@nx/nx-win32-x64-msvc@23.0.0'
+  - '@nx/rspack@23.0.0'
+  - '@nx/web@23.0.0'
+  - '@nx/webpack@23.0.0'
+  - '@nx/workspace@23.0.0'
+  - nx@23.0.0

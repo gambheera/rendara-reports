@@ -1,0 +1,137 @@
+/**
+ * Rendara design tokens — the single source of truth for designer-app theming
+ * (E0-S8). Authored from docs/ui-mockups/.../design.md, with brief §12.3 applied
+ * (accent indigo #4F46E5, quiet grayscale chrome).
+ *
+ * Tokens are plain CSS custom properties, all prefixed `--rdr-*`, so they work
+ * with scoped component CSS today and can back a Tailwind theme later (Epic 5)
+ * without changing the contract. `:root` carries the authoritative LIGHT theme;
+ * `.rdr-theme-dark` overrides the surface/text ramp for a provisional DARK theme
+ * (design.md specifies light only — see ADR 0004; dark is derived and may change
+ * once a dark spec is authored). The accent, semantic, geometry, typography,
+ * elevation and motion tokens are theme-agnostic and defined once.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ---- Color: surfaces & chrome (light) ---------------------------------- */
+  --rdr-color-surface: #ffffff; /* cards, modals, primary background */
+  --rdr-color-recessed: #f9fafb; /* sidebars, secondary headers */
+  --rdr-color-backdrop: #f3f4f6; /* workspace behind the "paper" */
+  --rdr-color-paper: #ffffff; /* report canvas */
+  --rdr-color-border-hairline: #e5e7eb; /* default separators */
+  --rdr-color-border-input: #d1d5db; /* form controls, active regions */
+
+  /* ---- Color: text (light) ----------------------------------------------- */
+  --rdr-color-text-primary: #111827; /* headings, primary content */
+  --rdr-color-text-secondary: #6b7280; /* labels, metadata, icons */
+  --rdr-color-text-placeholder: #9ca3af; /* input hints */
+  --rdr-color-text-on-accent: #ffffff; /* text on the indigo accent */
+
+  /* ---- Color: accent (theme-agnostic) ------------------------------------ */
+  --rdr-color-accent: #4f46e5; /* primary actions, selection */
+  --rdr-color-accent-hover: #4338ca;
+  --rdr-color-accent-subtle: #eef2ff; /* selection/badge backgrounds */
+
+  /* ---- Color: semantic (theme-agnostic) ---------------------------------- */
+  --rdr-color-success: #16a34a;
+  --rdr-color-warning: #d97706;
+  --rdr-color-danger: #dc2626;
+
+  /* ---- Typography -------------------------------------------------------- */
+  --rdr-font-ui:
+    'Inter', system-ui, -apple-system, 'Segoe UI', roboto, helvetica, arial, sans-serif;
+  --rdr-font-mono:
+    'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', consolas, 'Liberation Mono',
+    monospace;
+
+  --rdr-font-size-title: 20px; /* page/section titles */
+  --rdr-font-size-section: 14px; /* section headers (with semibold) */
+  --rdr-font-size-body: 14px; /* body & inputs */
+  --rdr-font-size-label: 13px; /* dense labels, list rows */
+  --rdr-font-size-caption: 12px; /* captions */
+
+  --rdr-line-height-title: 24px;
+  --rdr-line-height-body: 20px;
+  --rdr-line-height-label: 18px;
+  --rdr-line-height-caption: 16px;
+
+  --rdr-font-weight-regular: 400;
+  --rdr-font-weight-medium: 500;
+  --rdr-font-weight-semibold: 600;
+
+  /* Tabular numerals for all data-driven components (design.md). */
+  --rdr-font-numeric: tabular-nums;
+
+  /* ---- Spacing: 8px base grid -------------------------------------------- */
+  --rdr-space-0: 0;
+  --rdr-space-1: 4px;
+  --rdr-space-2: 8px;
+  --rdr-space-3: 12px;
+  --rdr-space-4: 16px;
+  --rdr-space-5: 20px;
+  --rdr-space-6: 24px;
+  --rdr-space-8: 32px;
+  --rdr-space-panel: 16px; /* standard panel padding */
+
+  /* ---- Sizing: control heights ------------------------------------------- */
+  --rdr-size-control: 32px; /* buttons, inputs, toggles */
+  --rdr-size-row: 28px; /* tree-view & list rows */
+  --rdr-size-icon-button: 32px; /* square icon buttons */
+  --rdr-size-icon-inline: 16px; /* inline icon */
+  --rdr-size-icon-toolbar: 20px; /* toolbar icon */
+
+  /* ---- Radii ------------------------------------------------------------- */
+  --rdr-radius-control: 6px; /* buttons, inputs, selects */
+  --rdr-radius-panel: 8px; /* cards, panels, dialogs, menus */
+  --rdr-radius-full: 9999px;
+
+  /* ---- Elevation: soft shadows (derived; design.md asks for "soft shadow") */
+  --rdr-elevation-0: none;
+  --rdr-elevation-1:
+    0 1px 2px rgba(17, 24, 39, 0.06), 0 1px 1px rgba(17, 24, 39, 0.04); /* raised controls, cards */
+  --rdr-elevation-2:
+    0 4px 12px rgba(17, 24, 39, 0.1), 0 1px 3px rgba(17, 24, 39, 0.06); /* menus, popovers, dialogs */
+  --rdr-elevation-paper:
+    0 1px 3px rgba(17, 24, 39, 0.12), 0 1px 2px rgba(17, 24, 39, 0.06); /* the report "paper" */
+
+  /* ---- Focus ring: indigo 3px (design.md inputs) ------------------------- */
+  --rdr-focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.4);
+
+  /* ---- Motion: subtle, ease-out (design.md) ------------------------------ */
+  --rdr-motion-duration: 140ms;
+  --rdr-motion-easing: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/**
+ * Provisional DARK theme. Opt in by adding `rdr-theme-dark` to a container (or
+ * <html>). Only the surface/text ramp inverts; accent + semantic colors stay
+ * legible on dark and are intentionally left as-is, with the accent lightened
+ * for AA contrast on dark surfaces. Derived — pending a real dark spec (ADR 0004).
+ */
+.rdr-theme-dark {
+  color-scheme: dark;
+
+  --rdr-color-surface: #1f2937;
+  --rdr-color-recessed: #111827;
+  --rdr-color-backdrop: #0b1120;
+  --rdr-color-paper: #1f2937;
+  --rdr-color-border-hairline: #374151;
+  --rdr-color-border-input: #4b5563;
+
+  --rdr-color-text-primary: #f3f4f6;
+  --rdr-color-text-secondary: #9ca3af;
+  --rdr-color-text-placeholder: #6b7280;
+  --rdr-color-text-on-accent: #ffffff;
+
+  --rdr-color-accent: #818cf8; /* lightened indigo for AA on dark */
+  --rdr-color-accent-hover: #a5b4fc;
+  --rdr-color-accent-subtle: #312e81;
+
+  --rdr-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 1px 1px rgba(0, 0, 0, 0.4);
+  --rdr-elevation-2: 0 4px 12px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --rdr-elevation-paper: 0 1px 3px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
+
+  --rdr-focus-ring: 0 0 0 3px rgba(129, 140, 248, 0.5);
+}

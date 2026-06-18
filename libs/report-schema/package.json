@@ -1,0 +1,10 @@
+{
+  "name": "@rendara/report-schema",
+  "version": "0.0.0",
+  "description": "Framework-agnostic Template JSON types, JSON Schema, validator, and migrations for Rendara Reports.",
+  "license": "MIT",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

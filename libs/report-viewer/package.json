@@ -1,0 +1,10 @@
+{
+  "name": "@rendara/report-viewer",
+  "version": "0.0.0",
+  "description": "Embeddable Angular report viewer for Rendara Reports (renderer + toolbar + public API).",
+  "license": "MIT",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}

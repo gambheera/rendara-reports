@@ -1,0 +1,41 @@
+{
+  "name": "report-viewer",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/report-viewer/src",
+  "prefix": "rdr",
+  "projectType": "library",
+  "tags": ["scope:viewer", "type:publishable"],
+  "targets": {
+    "test": {
+      "outputs": [
+        "{projectRoot}/{options.coverage.reportsDirectory}",
+        "{workspaceRoot}/coverage/libs/report-viewer"
+      ],
+      "options": {
+        "coverage.reportsDirectory": "../../coverage/libs/report-viewer"
+      }
+    },
+    "storybook": {
+      "executor": "@storybook/angular:start-storybook",
+      "options": {
+        "configDir": "libs/report-viewer/.storybook",
+        "tsConfig": "libs/report-viewer/.storybook/tsconfig.json",
+        "browserTarget": "report-viewer:build-storybook",
+        "port": 4402,
+        "compodoc": false,
+        "experimentalZoneless": true
+      }
+    },
+    "build-storybook": {
+      "executor": "@storybook/angular:build-storybook",
+      "outputs": ["{options.outputDir}"],
+      "options": {
+        "outputDir": "dist/storybook/report-viewer",
+        "configDir": "libs/report-viewer/.storybook",
+        "tsConfig": "libs/report-viewer/.storybook/tsconfig.json",
+        "compodoc": false,
+        "experimentalZoneless": true
+      }
+    }
+  }
+}

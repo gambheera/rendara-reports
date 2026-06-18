@@ -1,0 +1,61 @@
+/* rdr-button — painted entirely from `--rdr-*` design tokens (E0-S8). */
+:host {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rdr-space-2);
+  box-sizing: border-box;
+  height: var(--rdr-size-control);
+  padding: 0 var(--rdr-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--rdr-radius-control);
+  font-family: var(--rdr-font-ui);
+  font-size: var(--rdr-font-size-body);
+  font-weight: var(--rdr-font-weight-medium);
+  line-height: var(--rdr-line-height-body);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--rdr-motion-duration) var(--rdr-motion-easing),
+    border-color var(--rdr-motion-duration) var(--rdr-motion-easing),
+    color var(--rdr-motion-duration) var(--rdr-motion-easing);
+}
+
+:host(:focus-visible) {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+:host(:disabled) {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Primary — indigo fill, white text. */
+:host(.rdr-button--primary) {
+  background-color: var(--rdr-color-accent);
+  color: var(--rdr-color-text-on-accent);
+}
+:host(.rdr-button--primary:hover:not(:disabled)) {
+  background-color: var(--rdr-color-accent-hover);
+}
+
+/* Secondary — hairline outline, primary text. */
+:host(.rdr-button--secondary) {
+  background-color: var(--rdr-color-surface);
+  border-color: var(--rdr-color-border-input);
+  color: var(--rdr-color-text-primary);
+}
+:host(.rdr-button--secondary:hover:not(:disabled)) {
+  background-color: var(--rdr-color-recessed);
+}
+
+/* Ghost — no chrome, secondary text. */
+:host(.rdr-button--ghost) {
+  background-color: transparent;
+  color: var(--rdr-color-text-secondary);
+}
+:host(.rdr-button--ghost:hover:not(:disabled)) {
+  background-color: var(--rdr-color-accent-subtle);
+  color: var(--rdr-color-accent);
+}

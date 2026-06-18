@@ -1,0 +1,34 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "@rendara/report-schema": ["./libs/report-schema/src/index.ts"],
+      "@rendara/report-engine": ["./libs/report-engine/src/index.ts"],
+      "@rendara/report-renderer": ["./libs/report-renderer/src/index.ts"],
+      "@rendara/report-viewer": ["./libs/report-viewer/src/index.ts"],
+      "@rendara/ui-kit": ["./libs/ui-kit/src/index.ts"]
+    },
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2022",
+    "module": "esnext",
+    "lib": ["es2022", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "exclude": ["node_modules", "tmp"]
+}
