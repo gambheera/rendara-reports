@@ -21,8 +21,15 @@ Built incrementally across Epic 1:
   `keepTogether`); a stubbed `ElementBinding` slot (filled out in E1-S5); type
   guards, an `assertNever` exhaustiveness guard, and a focused
   `validateElement`.
-- E1-S4 style model · E1-S5 binding model · E1-S6 JSON Schema + validator ·
-  E1-S7 versioning & migrations · E1-S8 golden fixtures — _to come._
+- **E1-S4 ✅ Style model** — concrete `ElementStyle`: `font`
+  (family/sizePt/weight/style), `color`, `fill`, per-side `border`
+  (widthMm/style/color), `align` (horizontal/vertical), `padding`, `stroke`,
+  and a number/date `format` token slot. Runtime literal mirrors
+  (`FONT_WEIGHTS`/`FONT_STYLES`/`LINE_STYLES`/`HORIZONTAL_ALIGNS`/
+  `VERTICAL_ALIGNS`) and a focused `validateStyle` (folded into
+  `validateElement`).
+- E1-S5 binding model · E1-S6 JSON Schema + validator · E1-S7 versioning &
+  migrations · E1-S8 golden fixtures — _to come._
 
 ```ts
 import type { RendaraTemplate } from '@rendara/report-schema';

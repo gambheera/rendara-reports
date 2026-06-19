@@ -14,3 +14,6 @@ export * from './lib/page-settings';
 // Per-type element models: binding slot, guards, validation (E1-S3).
 export * from './lib/binding';
 export * from './lib/element-validation';
+
+// Style model: literal mirrors and focused validation (E1-S4).
+export * from './lib/style-validation';
