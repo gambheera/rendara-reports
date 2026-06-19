@@ -5,6 +5,13 @@
   "projectType": "library",
   "tags": ["scope:schema", "type:util"],
   "targets": {
+    "generate-schema": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r @swc-node/register tools/generate-schema.ts",
+        "cwd": "{workspaceRoot}"
+      }
+    },
     "test": {
       "outputs": [
         "{projectRoot}/{options.coverage.reportsDirectory}",

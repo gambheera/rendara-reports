@@ -20,3 +20,7 @@ export * from './lib/style-validation';
 
 // Binding model: structured binding validation (E1-S5).
 export * from './lib/binding-validation';
+
+// Generated JSON Schema + ajv-backed validator API: validate()/parse() (E1-S6).
+export * from './lib/json-schema';
+export * from './lib/validate';

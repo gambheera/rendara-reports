@@ -34,12 +34,37 @@ Built incrementally across Epic 1:
   `GroupBand`s carrying a `label` and per-column `GroupAggregate` subtotals;
   `visibleWhen` boolean expression. A focused `validateBinding` (folded into
   `validateElement`, with a column-key referential check on group aggregates).
-- E1-S6 JSON Schema + validator · E1-S7 versioning & migrations · E1-S8 golden
-  fixtures — _to come._
+- **E1-S6 ✅ JSON Schema + validator API** — a generated `TEMPLATE_JSON_SCHEMA`
+  (the machine-readable mirror of the E1-S1…S5 types, also emitted to
+  `schema/rendara-template.schema.json`), an ajv-backed
+  `validate(template): Result<RendaraTemplate, RendaraValidationError[]>` with
+  human-readable, path-pointed errors, and `parse(stringOrObject)`. Validation
+  is layered: ajv handles structure (shape/required/enums/ranges, the element
+  discriminated union via the `discriminator` keyword), and the focused
+  semantic validators (`validatePageSettings`, `validateElement`) fold in the
+  cross-field/referential rules JSON Schema can't express.
+- E1-S7 versioning & migrations · E1-S8 golden fixtures — _to come._
 
 ```ts
-import type { RendaraTemplate } from '@rendara/report-schema';
-import { SCHEMA_VERSION } from '@rendara/report-schema';
+import { parse, validate, type RendaraTemplate } from '@rendara/report-schema';
+
+const result = validate(templateJson); // or parse(jsonStringOrObject)
+if (result.ok) {
+  const template: RendaraTemplate = result.value;
+} else {
+  for (const { path, message } of result.errors) {
+    console.error(`${path}: ${message}`);
+  }
+}
+```
+
+## Schema artifact
+
+`schema/rendara-template.schema.json` is **generated** from `TEMPLATE_JSON_SCHEMA`.
+Re-run after any schema change (a test fails if it drifts):
+
+```sh
+pnpm schema:generate            # or: npx nx run report-schema:generate-schema
 ```
 
 ## Test
