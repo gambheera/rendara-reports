@@ -336,3 +336,17 @@ describe('dataTable element validation (E1-S3)', () => {
     expect(isValidElement(table)).toBe(true);
   });
 });
+
+describe('element style validation (E1-S4 wiring)', () => {
+  it('accepts a styled element', () => {
+    expect(isValidElement({ ...text, style: { color: '#111827', font: { sizePt: 12 } } })).toBe(
+      true,
+    );
+  });
+
+  it('surfaces a bad style under the element id and `style` path', () => {
+    expect(validateElement({ ...text, style: { font: { sizePt: -1 } } })).toContainEqual(
+      expect.objectContaining({ path: 'el_title.style.font.sizePt' }),
+    );
+  });
+});

@@ -9,8 +9,9 @@
  * Scope note (same as `page-settings.ts`): this is **not** the general template
  * validator. The ajv-backed `validate()`/`RendaraValidationError` API is
  * **E1-S6** and will fold these checks in; the binding model these checks lean on
- * is **E1-S4** (style) / **E1-S5** (binding). Here we ship just enough to prove
- * each element type's structure (brief §5).
+ * is **E1-S5** (binding). The concrete style model (**E1-S4**) is validated via
+ * `validateStyle`, folded in here. Here we ship just enough to prove each element
+ * type's structure (brief §5).
  */
 
 import type { ElementBinding } from './binding';
@@ -26,6 +27,7 @@ import type {
   TemplateElement,
   TextElement,
 } from './element';
+import { validateStyle } from './style-validation';
 
 /** The shape sub-kinds recognised at runtime (mirrors {@link ShapeKind}). */
 export const SHAPE_KINDS: readonly ShapeKind[] = ['line', 'rect', 'ellipse'];
@@ -264,6 +266,11 @@ export function validateElement(element: TemplateElement): ElementError[] {
     });
   }
   validateFrame(element, at, errors);
+  if (element.style !== undefined) {
+    // StyleError shares ElementError's shape; fold its problems in under
+    // `<id>.style.…` so the style model is validated alongside the structure.
+    errors.push(...validateStyle(element.style, at('style')));
+  }
 
   switch (element.type) {
     case 'text':
