@@ -1,3 +1,43 @@
 # report-schema
 
-This library was generated with [Nx](https://nx.dev).
+`@rendara/report-schema` — the framework-agnostic Template JSON contract for
+Rendara Reports: TypeScript types, (later) JSON Schema, ajv validator, and
+migrations. Depends on nothing internal (brief §4).
+
+## Status
+
+Built incrementally across Epic 1:
+
+- **E1-S1 ✅ Core document & element-base types** — `RendaraTemplate`, `Page`
+  (structural), band containers (`header`/`body`/`footer`), `ElementBase`, and
+  the stubbed `TemplateElement` discriminated union (`text` / `shape` / `image`
+  / `dataTable`). Plus `SCHEMA_VERSION` (E0-S2).
+- **E1-S2 ✅ Page & document settings** — defaults, named-size → mm resolution,
+  `resolvePage`, and focused `validatePageSettings`.
+- **E1-S3 ✅ Per-type element models** — concrete `TextElement`,
+  `ShapeElement` (`line`/`rect`/`ellipse`), `ImageElement` (`src`/`binding`,
+  `fit`), `DataTableElement` (`source.arrayExpr`, columns with
+  header/cell/footer, optional groups, `repeatHeaderOnEachPage`,
+  `keepTogether`); a stubbed `ElementBinding` slot (filled out in E1-S5); type
+  guards, an `assertNever` exhaustiveness guard, and a focused
+  `validateElement`.
+- **E1-S4 ✅ Style model** — concrete `ElementStyle`: `font`
+  (family/sizePt/weight/style), `color`, `fill`, per-side `border`
+  (widthMm/style/color), `align` (horizontal/vertical), `padding`, `stroke`,
+  and a number/date `format` token slot. Runtime literal mirrors
+  (`FONT_WEIGHTS`/`FONT_STYLES`/`LINE_STYLES`/`HORIZONTAL_ALIGNS`/
+  `VERTICAL_ALIGNS`) and a focused `validateStyle` (folded into
+  `validateElement`).
+- E1-S5 binding model · E1-S6 JSON Schema + validator · E1-S7 versioning &
+  migrations · E1-S8 golden fixtures — _to come._
+
+```ts
+import type { RendaraTemplate } from '@rendara/report-schema';
+import { SCHEMA_VERSION } from '@rendara/report-schema';
+```
+
+## Test
+
+```sh
+npx nx test report-schema
+```
