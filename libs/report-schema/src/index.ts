@@ -10,3 +10,7 @@ export * from './lib/template';
 
 // Page & document settings: defaults, resolution, validation (E1-S2).
 export * from './lib/page-settings';
+
+// Per-type element models: binding slot, guards, validation (E1-S3).
+export * from './lib/binding';
+export * from './lib/element-validation';

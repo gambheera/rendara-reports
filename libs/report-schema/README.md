@@ -12,9 +12,17 @@ Built incrementally across Epic 1:
   (structural), band containers (`header`/`body`/`footer`), `ElementBase`, and
   the stubbed `TemplateElement` discriminated union (`text` / `shape` / `image`
   / `dataTable`). Plus `SCHEMA_VERSION` (E0-S2).
-- E1-S2 page settings & defaults · E1-S3 per-type element models · E1-S4 style
-  model · E1-S5 binding model · E1-S6 JSON Schema + validator · E1-S7 versioning
-  & migrations · E1-S8 golden fixtures — _to come._
+- **E1-S2 ✅ Page & document settings** — defaults, named-size → mm resolution,
+  `resolvePage`, and focused `validatePageSettings`.
+- **E1-S3 ✅ Per-type element models** — concrete `TextElement`,
+  `ShapeElement` (`line`/`rect`/`ellipse`), `ImageElement` (`src`/`binding`,
+  `fit`), `DataTableElement` (`source.arrayExpr`, columns with
+  header/cell/footer, optional groups, `repeatHeaderOnEachPage`,
+  `keepTogether`); a stubbed `ElementBinding` slot (filled out in E1-S5); type
+  guards, an `assertNever` exhaustiveness guard, and a focused
+  `validateElement`.
+- E1-S4 style model · E1-S5 binding model · E1-S6 JSON Schema + validator ·
+  E1-S7 versioning & migrations · E1-S8 golden fixtures — _to come._
 
 ```ts
 import type { RendaraTemplate } from '@rendara/report-schema';
