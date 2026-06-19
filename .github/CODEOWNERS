@@ -1,0 +1,32 @@
+# CODEOWNERS — who is requested for review on changed paths.
+# Syntax: <path glob>  <owner...>. The LAST matching pattern wins.
+# Docs: https://docs.github.com/articles/about-code-owners
+
+# Default owner for everything.
+*                                   @gambheera
+
+# --- High-sensitivity areas (the hard rules in CLAUDE.md / brief §3) ---
+
+# The Template JSON schema is a versioned contract: any change needs a
+# schemaVersion bump + migration + explicit sign-off.
+/libs/report-schema/                @gambheera
+
+# The published viewer's public API surface and packaging.
+/libs/report-viewer/                @gambheera
+
+# The contract docs that drive the build (brief, backlog, prompts).
+/docs/claude_prompts/               @gambheera
+
+# Architecture decisions, governance, and the source of truth for "how we work".
+/docs/adr/                          @gambheera
+/ARCHITECTURE.md                    @gambheera
+/CONTRIBUTING.md                    @gambheera
+/CLAUDE.md                          @gambheera
+
+# Repo automation, CI, and these ownership rules themselves.
+/.github/                           @gambheera
+
+# Release + boundary configuration.
+/.changeset/                        @gambheera
+/nx.json                            @gambheera
+/eslint.config.mjs                  @gambheera
