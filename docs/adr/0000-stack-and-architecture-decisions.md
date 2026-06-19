@@ -1,15 +1,16 @@
-# ADR 0005 — Foundational stack & architecture decisions
+# ADR 0000 — Foundational stack & architecture decisions
 
 - **Status:** Accepted
 - **Date:** 2026-06-18
 - **Story:** E0-S9 · Repo governance docs (records decisions taken across Epic 0,
   per **brief §3–§4**)
 
-> This is the **foundational ADR**. ADRs [0001](0001-visual-regression-determinism.md)–[0004](0004-design-tokens-theming.md)
-> were written first (each recording one Epic 0 tooling decision) and are
-> **downstream refinements** of the platform choices captured here. The formal
-> ADR [template](template.md), `ARCHITECTURE.md`, and `CONTRIBUTING.md` land
-> alongside this ADR in E0-S9; from here on every significant architectural
+> This is the **foundational ADR**, numbered **0000** so it sorts first as the
+> baseline the rest build on. ADRs [0001](0001-visual-regression-determinism.md)–[0004](0004-design-tokens-theming.md)
+> were written first chronologically (each recording one Epic 0 tooling decision)
+> and are **downstream refinements** of the platform choices captured here. The
+> formal ADR [template](template.md), `ARCHITECTURE.md`, and `CONTRIBUTING.md`
+> land alongside this ADR in E0-S9; from here on every significant architectural
 > decision gets its own ADR.
 
 ## Context

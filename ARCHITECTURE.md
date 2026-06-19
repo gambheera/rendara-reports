@@ -7,7 +7,7 @@ It summarises and links the authoritative sources — it does not duplicate them
   (vision §1, stack §3, monorepo §4, schema §5, binding §6, rendering §7, viewer
   API §8, Definition of Done §9).
 - **The "why" behind the choices:** [`docs/adr/`](docs/adr/README.md) — Architecture
-  Decision Records, starting with the foundational [ADR 0005](docs/adr/0005-stack-and-architecture-decisions.md).
+  Decision Records, starting with the foundational [ADR 0000](docs/adr/0000-stack-and-architecture-decisions.md).
 - **How to work in the repo:** [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## 1. What it is
@@ -69,7 +69,7 @@ viewer-demo → report-viewer ONLY  (proves the npm integration story)
 A deliberate illegal import (e.g. `schema → renderer`) **fails lint**. Tag scheme,
 the legal/illegal-edge QA, and reproduction steps live in
 [`docs/architecture/module-boundaries.md`](docs/architecture/module-boundaries.md).
-The rationale for Nx + this layering is [ADR 0005](docs/adr/0005-stack-and-architecture-decisions.md).
+The rationale for Nx + this layering is [ADR 0000](docs/adr/0000-stack-and-architecture-decisions.md).
 
 ## 3. The core pieces
 
