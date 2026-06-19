@@ -14,6 +14,11 @@ that share one codebase:
 See [`docs/claude_prompts/RENDARA_PROJECT_BRIEF.md`](docs/claude_prompts/RENDARA_PROJECT_BRIEF.md)
 for the full vision, architecture, and the Definition of Done.
 
+**New here?** Read [`ARCHITECTURE.md`](ARCHITECTURE.md) for how the pieces fit
+together, [`CONTRIBUTING.md`](CONTRIBUTING.md) for how we work (one story at a
+time, the DoD, the hard rules), and [`docs/adr/`](docs/adr/README.md) for the
+decisions behind the stack.
+
 ## Tech stack
 
 Nx · Angular 21 (standalone, signals, zoneless) · TypeScript (strict) ·
