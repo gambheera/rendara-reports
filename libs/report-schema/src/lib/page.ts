@@ -2,9 +2,9 @@
  * Page & document settings (brief §5).
  *
  * E1-S1 declares the structural shape of {@link Page} so {@link
- * RendaraTemplate} is a complete, assignable type. The *behavior* — sensible
- * default resolution and custom-size/validation — is owned by **E1-S2**; this
- * file stays type-only.
+ * RendaraTemplate} is a complete, assignable type. This file stays type-only;
+ * the *behavior* — sensible defaults, named-size resolution and
+ * custom-size/validation — lives in `./page-settings` (**E1-S2**).
  */
 
 /** Named paper sizes recognised without explicit dimensions. */

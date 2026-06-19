@@ -7,3 +7,6 @@ export * from './lib/style';
 export * from './lib/element';
 export * from './lib/page';
 export * from './lib/template';
+
+// Page & document settings: defaults, resolution, validation (E1-S2).
+export * from './lib/page-settings';
