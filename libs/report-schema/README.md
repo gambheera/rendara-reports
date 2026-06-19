@@ -18,7 +18,7 @@ Built incrementally across Epic 1:
   `ShapeElement` (`line`/`rect`/`ellipse`), `ImageElement` (`src`/`binding`,
   `fit`), `DataTableElement` (`source.arrayExpr`, columns with
   header/cell/footer, optional groups, `repeatHeaderOnEachPage`,
-  `keepTogether`); a stubbed `ElementBinding` slot (filled out in E1-S5); type
+  `keepTogether`); an `ElementBinding` slot (completed in E1-S5); type
   guards, an `assertNever` exhaustiveness guard, and a focused
   `validateElement`.
 - **E1-S4 ✅ Style model** — concrete `ElementStyle`: `font`
@@ -28,8 +28,14 @@ Built incrementally across Epic 1:
   (`FONT_WEIGHTS`/`FONT_STYLES`/`LINE_STYLES`/`HORIZONTAL_ALIGNS`/
   `VERTICAL_ALIGNS`) and a focused `validateStyle` (folded into
   `validateElement`).
-- E1-S5 binding model · E1-S6 JSON Schema + validator · E1-S7 versioning &
-  migrations · E1-S8 golden fixtures — _to come._
+- **E1-S5 ✅ Binding model** — structured `ElementBinding` (`expr` +
+  optional `format` token + `fallback`), reused at every binding location
+  (element `binding`, column `cell`/`footer`); grouping with header/footer
+  `GroupBand`s carrying a `label` and per-column `GroupAggregate` subtotals;
+  `visibleWhen` boolean expression. A focused `validateBinding` (folded into
+  `validateElement`, with a column-key referential check on group aggregates).
+- E1-S6 JSON Schema + validator · E1-S7 versioning & migrations · E1-S8 golden
+  fixtures — _to come._
 
 ```ts
 import type { RendaraTemplate } from '@rendara/report-schema';
