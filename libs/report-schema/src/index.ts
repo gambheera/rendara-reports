@@ -17,3 +17,6 @@ export * from './lib/element-validation';
 
 // Style model: literal mirrors and focused validation (E1-S4).
 export * from './lib/style-validation';
+
+// Binding model: structured binding validation (E1-S5).
+export * from './lib/binding-validation';

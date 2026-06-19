@@ -8,18 +8,19 @@
  *
  * Scope note (same as `page-settings.ts`): this is **not** the general template
  * validator. The ajv-backed `validate()`/`RendaraValidationError` API is
- * **E1-S6** and will fold these checks in; the binding model these checks lean on
- * is **E1-S5** (binding). The concrete style model (**E1-S4**) is validated via
- * `validateStyle`, folded in here. Here we ship just enough to prove each element
- * type's structure (brief §5).
+ * **E1-S6** and will fold these checks in. The binding model (**E1-S5**) is
+ * validated via `validateBinding` and the concrete style model (**E1-S4**) via
+ * `validateStyle`, both folded in here. Here we ship just enough to prove each
+ * element type's structure (brief §5).
  */
 
-import type { ElementBinding } from './binding';
+import { validateBinding } from './binding-validation';
 import type {
   ColumnAlign,
   DataTableColumn,
   DataTableElement,
   DataTableGroup,
+  GroupBand,
   ImageElement,
   ImageFit,
   ShapeElement,
@@ -86,20 +87,6 @@ function isNonNegativeFinite(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
-/**
- * Validates a binding slot: it must carry a non-empty JSONata `expr`. The
- * richer binding rules (`format`, `fallback`, etc.) arrive with the binding
- * model in **E1-S5**.
- */
-function validateBinding(binding: ElementBinding, path: string, errors: ElementError[]): void {
-  if (!isNonEmptyString(binding.expr)) {
-    errors.push({
-      path: `${path}.expr`,
-      message: `Binding '${path}' must have a non-empty expression string.`,
-    });
-  }
-}
-
 function validateFrame(
   element: TemplateElement,
   at: (rel: string) => string,
@@ -147,7 +134,7 @@ function validateText(
     });
   }
   if (element.binding !== undefined) {
-    validateBinding(element.binding, at('binding'), errors);
+    errors.push(...validateBinding(element.binding, at('binding')));
   }
 }
 
@@ -176,7 +163,7 @@ function validateImage(
     });
   }
   if (element.binding !== undefined) {
-    validateBinding(element.binding, at('binding'), errors);
+    errors.push(...validateBinding(element.binding, at('binding')));
   }
   if (!IMAGE_FITS.includes(element.fit)) {
     errors.push({
@@ -193,9 +180,9 @@ function validateColumn(column: DataTableColumn, path: string, errors: ElementEr
   if (typeof column.header !== 'string') {
     errors.push({ path: `${path}.header`, message: 'Column `header` must be a string.' });
   }
-  validateBinding(column.cell, `${path}.cell`, errors);
+  errors.push(...validateBinding(column.cell, `${path}.cell`));
   if (column.footer !== undefined) {
-    validateBinding(column.footer, `${path}.footer`, errors);
+    errors.push(...validateBinding(column.footer, `${path}.footer`));
   }
   if (!isPositiveFinite(column.widthMm)) {
     errors.push({
@@ -211,12 +198,55 @@ function validateColumn(column: DataTableColumn, path: string, errors: ElementEr
   }
 }
 
-function validateGroup(group: DataTableGroup, path: string, errors: ElementError[]): void {
+/**
+ * Validates a group's header/footer {@link GroupBand}: the optional `label`
+ * binding and each per-column aggregate. An aggregate's `columnKey` must be a
+ * non-empty string *and* reference a real column (`columnKeys`); its `binding`
+ * is delegated to `validateBinding`.
+ */
+function validateGroupBand(
+  band: GroupBand,
+  path: string,
+  columnKeys: ReadonlySet<string>,
+  errors: ElementError[],
+): void {
+  if (band.label !== undefined) {
+    errors.push(...validateBinding(band.label, `${path}.label`));
+  }
+  band.aggregates?.forEach((aggregate, index) => {
+    const aggregatePath = `${path}.aggregates[${index}]`;
+    if (!isNonEmptyString(aggregate.columnKey)) {
+      errors.push({
+        path: `${aggregatePath}.columnKey`,
+        message: 'Group aggregate `columnKey` must be a non-empty string.',
+      });
+    } else if (!columnKeys.has(aggregate.columnKey)) {
+      errors.push({
+        path: `${aggregatePath}.columnKey`,
+        message: `Group aggregate \`columnKey\` references unknown column ${JSON.stringify(aggregate.columnKey)}.`,
+      });
+    }
+    errors.push(...validateBinding(aggregate.binding, `${aggregatePath}.binding`));
+  });
+}
+
+function validateGroup(
+  group: DataTableGroup,
+  path: string,
+  columnKeys: ReadonlySet<string>,
+  errors: ElementError[],
+): void {
   if (!isNonEmptyString(group.groupBy)) {
     errors.push({
       path: `${path}.groupBy`,
       message: 'Group `groupBy` must be a non-empty expression string.',
     });
+  }
+  if (group.header !== undefined) {
+    validateGroupBand(group.header, `${path}.header`, columnKeys, errors);
+  }
+  if (group.footer !== undefined) {
+    validateGroupBand(group.footer, `${path}.footer`, columnKeys, errors);
   }
 }
 
@@ -237,8 +267,11 @@ function validateDataTable(
   element.columns.forEach((column, index) => {
     validateColumn(column, at(`columns[${index}]`), errors);
   });
+  // Column keys for the group-aggregate referential check; an aggregate's
+  // `columnKey` must align under a real column.
+  const columnKeys = new Set(element.columns.map((column) => column.key));
   element.groups?.forEach((group, index) => {
-    validateGroup(group, at(`groups[${index}]`), errors);
+    validateGroup(group, at(`groups[${index}]`), columnKeys, errors);
   });
 }
 
@@ -270,6 +303,18 @@ export function validateElement(element: TemplateElement): ElementError[] {
     // StyleError shares ElementError's shape; fold its problems in under
     // `<id>.style.…` so the style model is validated alongside the structure.
     errors.push(...validateStyle(element.style, at('style')));
+  }
+  // `visibleWhen` is a bare boolean expression (brief §6): `null`/absent means
+  // always visible; a present value must be a non-empty string. Evaluation is E2-S3.
+  if (
+    element.visibleWhen !== undefined &&
+    element.visibleWhen !== null &&
+    !isNonEmptyString(element.visibleWhen)
+  ) {
+    errors.push({
+      path: at('visibleWhen'),
+      message: `Element \`visibleWhen\` must be null or a non-empty expression string, got ${JSON.stringify(element.visibleWhen)}.`,
+    });
   }
 
   switch (element.type) {

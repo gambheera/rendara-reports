@@ -16,8 +16,11 @@ export type ElementType = 'text' | 'shape' | 'image' | 'dataTable';
  * ref, a z-order, and an optional `visibleWhen` condition.
  *
  * `visibleWhen` is a JSONata boolean expression (or `null`) that controls
- * conditional visibility. It is carried as a raw expression string here; the
- * structured binding model that surrounds it lands in **E1-S5**.
+ * conditional visibility (brief §6). It is a bare expression string — it
+ * produces a boolean, not a formatted display value, so it is *not* an
+ * {@link ElementBinding}. Its truthy/falsy evaluation is **E2-S3**;
+ * `validateElement` checks only that a present value is a non-empty string or
+ * `null`.
  */
 export interface ElementBase {
   readonly id: string;
@@ -38,7 +41,7 @@ export interface TextElement extends ElementBase {
   readonly type: 'text';
   /** Static literal text, used when there is no dynamic binding. */
   readonly text?: string;
-  /** Dynamic value binding; binding model fleshed out in **E1-S5**. */
+  /** Dynamic value binding ({@link ElementBinding}: expr/format/fallback). */
   readonly binding?: ElementBinding;
 }
 
@@ -71,7 +74,7 @@ export interface ImageElement extends ElementBase {
   readonly type: 'image';
   /** Static image source: a URL or data URI. */
   readonly src?: string;
-  /** Dynamic source binding (e.g. a logo URL from data); binding model in **E1-S5**. */
+  /** Dynamic source binding (e.g. a logo URL from data); see {@link ElementBinding}. */
   readonly binding?: ElementBinding;
   /** How the image is fitted into its frame. */
   readonly fit: ImageFit;
@@ -109,15 +112,50 @@ export interface DataTableColumn {
 }
 
 /**
- * An optional grouping band of a {@link DataTableElement} (brief §5).
+ * A single aggregate shown in a {@link GroupBand}, aligned under one table
+ * column (brief §5, §6). Used for per-group subtotals such as a sum of the
+ * `amount` column within each group.
+ */
+export interface GroupAggregate {
+  /** Key of the {@link DataTableColumn} this aggregate aligns under. */
+  readonly columnKey: string;
+  /**
+   * Aggregate {@link ElementBinding} evaluated over the group's rows (e.g.
+   * `{ expr: '$sum($.amount)', format: 'currency:USD' }`). The aggregation
+   * itself is computed by the engine (**E2-S5**).
+   */
+  readonly binding: ElementBinding;
+}
+
+/**
+ * A group's header or footer band (brief §5): an optional {@link label} binding
+ * (e.g. the group title) and optional per-column {@link aggregates} (subtotals).
+ * Both slots are optional, so a header can be label-only and a footer
+ * aggregates-only.
+ */
+export interface GroupBand {
+  /** Optional label binding for the band (e.g. `"Category: " & $.category`). */
+  readonly label?: ElementBinding;
+  /** Per-column aggregate bindings aligned under the table's columns. */
+  readonly aggregates?: readonly GroupAggregate[];
+}
+
+/**
+ * An optional grouping band of a {@link DataTableElement} (brief §5): detail
+ * rows are grouped by {@link groupBy}, with an optional {@link header} above and
+ * {@link footer} (subtotals) below each group.
  *
- * STUB (E1-S3): only the grouping key is modelled here so the `groups` slot
- * exists. The group header/footer **aggregate bindings** are detailed in
- * **E1-S5**, and cross-page group continuation/subtotals in **E3-S6**.
+ * Cross-page group continuation (repeating a group header after a break,
+ * carry-over subtotals) is a *pagination* concern handled in **E3-S6**; this
+ * model only defines the bands and their aggregate bindings.
  */
 export interface DataTableGroup {
   /** JSONata expression the detail rows are grouped by. */
   readonly groupBy: string;
+  /** Optional band rendered above each group's rows. */
+  readonly header?: GroupBand;
+  /** Optional band rendered below each group's rows (subtotals). */
+  readonly footer?: GroupBand;
 }
 
 /**
@@ -129,7 +167,7 @@ export interface DataTableElement extends ElementBase {
   /** The bound array that supplies detail rows. */
   readonly source: DataTableSource;
   readonly columns: readonly DataTableColumn[];
-  /** Optional grouping bands; aggregates detailed in **E1-S5** / **E3-S6**. */
+  /** Optional grouping bands with header/footer aggregate bindings ({@link DataTableGroup}). */
   readonly groups?: readonly DataTableGroup[];
   /** Repeat the header row at the top of every page the table spans. */
   readonly repeatHeaderOnEachPage: boolean;

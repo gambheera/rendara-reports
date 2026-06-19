@@ -350,3 +350,156 @@ describe('element style validation (E1-S4 wiring)', () => {
     );
   });
 });
+
+/**
+ * E1-S5 binding model: every binding location (element `binding` with
+ * format/fallback, column `cell`/`footer`, table `source.arrayExpr`, group-band
+ * `label` and aggregates, and `visibleWhen`) validates when well-formed and is
+ * rejected with a path-pointed error when malformed.
+ */
+const richText: TextElement = {
+  id: 'el_total',
+  type: 'text',
+  frame,
+  z: 1,
+  binding: { expr: 'invoice.total', format: 'currency:USD', fallback: '$0.00' },
+  visibleWhen: 'invoice.total > 0',
+};
+
+const groupedTableWithBands: DataTableElement = {
+  ...table,
+  groups: [
+    {
+      groupBy: '$.category',
+      header: { label: { expr: '"Category: " & $.category' } },
+      footer: {
+        label: { expr: '"Subtotal"' },
+        aggregates: [
+          { columnKey: 'amt', binding: { expr: '$sum($.amount)', format: 'currency:USD' } },
+        ],
+      },
+    },
+  ],
+};
+
+describe('binding locations validate (E1-S5 QA)', () => {
+  it('a text element with binding format/fallback and visibleWhen validates', () => {
+    expect(validateElement(richText)).toEqual([]);
+    expect(isValidElement(richText)).toBe(true);
+  });
+
+  it('a grouped table exercises cell, footer, source, group label and aggregates', () => {
+    expect(validateElement(groupedTableWithBands)).toEqual([]);
+    expect(isValidElement(groupedTableWithBands)).toBe(true);
+  });
+});
+
+describe('binding format/fallback validation flows through element & column bindings (E1-S5)', () => {
+  it('rejects a bad format token on a text element binding', () => {
+    expect(validateElement({ ...boundText, binding: { expr: 'x', format: '' } })).toContainEqual(
+      expect.objectContaining({ path: 'el_customer.binding.format' }),
+    );
+  });
+
+  it('rejects a non-string fallback on a column cell binding', () => {
+    const broken: DataTableElement = {
+      ...table,
+      columns: [
+        {
+          key: 'desc',
+          header: 'Description',
+          cell: { expr: '$.description', fallback: 0 as never },
+          widthMm: 140,
+        },
+      ],
+    };
+    expect(validateElement(broken)).toContainEqual(
+      expect.objectContaining({ path: 'el_table.columns[0].cell.fallback' }),
+    );
+  });
+});
+
+describe('visibleWhen validation (E1-S5)', () => {
+  it('accepts a null visibleWhen (always visible)', () => {
+    expect(isValidElement({ ...text, visibleWhen: null })).toBe(true);
+  });
+
+  it('accepts a non-empty visibleWhen expression', () => {
+    expect(isValidElement({ ...text, visibleWhen: 'invoice.total > 0' })).toBe(true);
+  });
+
+  it('rejects an empty visibleWhen string', () => {
+    expect(validateElement({ ...text, visibleWhen: '' })).toContainEqual(
+      expect.objectContaining({ path: 'el_title.visibleWhen' }),
+    );
+  });
+
+  it('rejects a non-string visibleWhen', () => {
+    const bad = { ...text, visibleWhen: 1 as never };
+    expect(validateElement(bad)).toContainEqual(
+      expect.objectContaining({ path: 'el_title.visibleWhen' }),
+    );
+  });
+});
+
+describe('group band & aggregate validation (E1-S5)', () => {
+  it('accepts a group with bands omitted (groupBy only)', () => {
+    expect(isValidElement({ ...table, groups: [{ groupBy: '$.category' }] })).toBe(true);
+  });
+
+  it('rejects an aggregate referencing an unknown column', () => {
+    const broken: DataTableElement = {
+      ...table,
+      groups: [
+        {
+          groupBy: '$.category',
+          footer: { aggregates: [{ columnKey: 'nope', binding: { expr: '$sum($.amount)' } }] },
+        },
+      ],
+    };
+    const error = validateElement(broken).find(
+      (problem) => problem.path === 'el_table.groups[0].footer.aggregates[0].columnKey',
+    );
+    expect(error?.message).toContain('unknown column');
+  });
+
+  it('rejects an aggregate with an empty columnKey', () => {
+    const broken: DataTableElement = {
+      ...table,
+      groups: [
+        {
+          groupBy: '$.category',
+          footer: { aggregates: [{ columnKey: '', binding: { expr: '$sum($.amount)' } }] },
+        },
+      ],
+    };
+    expect(validateElement(broken)).toContainEqual(
+      expect.objectContaining({ path: 'el_table.groups[0].footer.aggregates[0].columnKey' }),
+    );
+  });
+
+  it('rejects an aggregate binding with an empty expression', () => {
+    const broken: DataTableElement = {
+      ...table,
+      groups: [
+        {
+          groupBy: '$.category',
+          footer: { aggregates: [{ columnKey: 'amt', binding: { expr: '' } }] },
+        },
+      ],
+    };
+    expect(validateElement(broken)).toContainEqual(
+      expect.objectContaining({ path: 'el_table.groups[0].footer.aggregates[0].binding.expr' }),
+    );
+  });
+
+  it('rejects a group-header label binding with an empty expression', () => {
+    const broken: DataTableElement = {
+      ...table,
+      groups: [{ groupBy: '$.category', header: { label: { expr: '' } } }],
+    };
+    expect(validateElement(broken)).toContainEqual(
+      expect.objectContaining({ path: 'el_table.groups[0].header.label.expr' }),
+    );
+  });
+});
