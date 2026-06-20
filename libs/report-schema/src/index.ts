@@ -27,3 +27,7 @@ export * from './lib/validate';
 
 // Schema versioning & migration runner: migrate() to current (E1-S7).
 export * from './lib/migrate';
+
+// Canonical golden fixtures: reference templates + sample data, reused across
+// the test suite (E1-S8).
+export * from './lib/fixtures';

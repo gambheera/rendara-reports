@@ -43,7 +43,15 @@ Built incrementally across Epic 1:
   discriminated union via the `discriminator` keyword), and the focused
   semantic validators (`validatePageSettings`, `validateElement`) fold in the
   cross-field/referential rules JSON Schema can't express.
-- E1-S7 versioning & migrations · E1-S8 golden fixtures — _to come._
+- **E1-S7 ✅ Versioning & migrations** — a `migrate(template)` runner that chains
+  registered version→version migrations up to `CURRENT_SCHEMA_VERSION` (with an
+  identity migration for the current version), handling missing/unknown versions
+  gracefully.
+- **E1-S8 ✅ Canonical golden fixtures** — three reference templates, each paired
+  with sample data (`GOLDEN_FIXTURES`): `invoice` (text + table + total),
+  `certificate` (absolute layout + image + shapes), and `tabular-report` (large
+  grouped table with subtotals + grand total). Reused as the basis for tests
+  across the monorepo. See _Golden fixtures_ below.
 
 ```ts
 import { parse, validate, type RendaraTemplate } from '@rendara/report-schema';
@@ -65,6 +73,18 @@ Re-run after any schema change (a test fails if it drifts):
 
 ```sh
 pnpm schema:generate            # or: npx nx run report-schema:generate-schema
+```
+
+## Golden fixtures
+
+`src/lib/fixtures.ts` is the single source of truth for the canonical golden
+templates + sample data (`GOLDEN_FIXTURES`, plus the individual
+`golden*Template` / `golden*Data` exports). They are committed as JSON under
+`fixtures/<name>/{template.json,data.json}` for use as raw test inputs. Re-run
+after any fixture change (a test fails if the committed JSON drifts):
+
+```sh
+pnpm fixtures:generate          # or: npx nx run report-schema:generate-fixtures
 ```
 
 ## Test

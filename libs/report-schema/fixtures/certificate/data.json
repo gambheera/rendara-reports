@@ -1,0 +1,9 @@
+{
+  "certificate": {
+    "recipient": "Jane A. Smith",
+    "course": "Advanced Report Design",
+    "completedOn": "2026-06-17",
+    "issuer": "Rendara Academy",
+    "signatory": "Dr. A. Turing, Director"
+  }
+}

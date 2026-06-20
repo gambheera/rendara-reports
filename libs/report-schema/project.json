@@ -12,6 +12,13 @@
         "cwd": "{workspaceRoot}"
       }
     },
+    "generate-fixtures": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r @swc-node/register tools/generate-fixtures.ts",
+        "cwd": "{workspaceRoot}"
+      }
+    },
     "test": {
       "outputs": [
         "{projectRoot}/{options.coverage.reportsDirectory}",
