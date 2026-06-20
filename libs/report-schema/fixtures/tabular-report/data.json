@@ -1,0 +1,119 @@
+{
+  "salesReport": {
+    "period": "Q2 2026 (Apr–Jun)",
+    "rows": [
+      {
+        "region": "North",
+        "product": "Aurora Desk Lamp",
+        "category": "Lighting",
+        "units": 120,
+        "unitPrice": 45,
+        "revenue": 5400
+      },
+      {
+        "region": "North",
+        "product": "Borealis Floor Lamp",
+        "category": "Lighting",
+        "units": 64,
+        "unitPrice": 110,
+        "revenue": 7040
+      },
+      {
+        "region": "North",
+        "product": "Cedar Side Table",
+        "category": "Furniture",
+        "units": 38,
+        "unitPrice": 130,
+        "revenue": 4940
+      },
+      {
+        "region": "North",
+        "product": "Dune Lounge Chair",
+        "category": "Furniture",
+        "units": 22,
+        "unitPrice": 320,
+        "revenue": 7040
+      },
+      {
+        "region": "South",
+        "product": "Ember Pendant",
+        "category": "Lighting",
+        "units": 95,
+        "unitPrice": 75,
+        "revenue": 7125
+      },
+      {
+        "region": "South",
+        "product": "Fjord Bookshelf",
+        "category": "Furniture",
+        "units": 30,
+        "unitPrice": 210,
+        "revenue": 6300
+      },
+      {
+        "region": "South",
+        "product": "Grove Coffee Table",
+        "category": "Furniture",
+        "units": 41,
+        "unitPrice": 160,
+        "revenue": 6560
+      },
+      {
+        "region": "South",
+        "product": "Harbor Wall Sconce",
+        "category": "Lighting",
+        "units": 150,
+        "unitPrice": 38,
+        "revenue": 5700
+      },
+      {
+        "region": "South",
+        "product": "Isle Bar Stool",
+        "category": "Furniture",
+        "units": 88,
+        "unitPrice": 95,
+        "revenue": 8360
+      },
+      {
+        "region": "West",
+        "product": "Juniper Reading Lamp",
+        "category": "Lighting",
+        "units": 110,
+        "unitPrice": 52,
+        "revenue": 5720
+      },
+      {
+        "region": "West",
+        "product": "Kelp Dining Chair",
+        "category": "Furniture",
+        "units": 76,
+        "unitPrice": 140,
+        "revenue": 10640
+      },
+      {
+        "region": "West",
+        "product": "Larch Console",
+        "category": "Furniture",
+        "units": 19,
+        "unitPrice": 290,
+        "revenue": 5510
+      },
+      {
+        "region": "West",
+        "product": "Maple Task Light",
+        "category": "Lighting",
+        "units": 134,
+        "unitPrice": 48,
+        "revenue": 6432
+      },
+      {
+        "region": "West",
+        "product": "Nimbus Accent Lamp",
+        "category": "Lighting",
+        "units": 57,
+        "unitPrice": 89,
+        "revenue": 5073
+      }
+    ]
+  }
+}
