@@ -1,0 +1,195 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "name": "Regional Sales Report",
+    "id": "fixture-tabular-report-0001",
+    "createdAt": "2026-06-17T00:00:00.000Z",
+    "locale": "en-US"
+  },
+  "page": {
+    "size": "A4",
+    "orientation": "landscape",
+    "marginsMm": {
+      "top": 20,
+      "right": 15,
+      "bottom": 20,
+      "left": 15
+    },
+    "units": "mm",
+    "defaultFont": {
+      "family": "Inter",
+      "sizePt": 9
+    },
+    "background": null
+  },
+  "header": {
+    "elements": []
+  },
+  "body": {
+    "elements": [
+      {
+        "id": "el_rpt_title",
+        "type": "text",
+        "frame": {
+          "xMm": 15,
+          "yMm": 16,
+          "wMm": 200,
+          "hMm": 10
+        },
+        "text": "Regional Sales Report",
+        "style": {
+          "font": {
+            "family": "Inter",
+            "sizePt": 20,
+            "weight": "bold",
+            "style": "normal"
+          },
+          "color": "#4F46E5",
+          "align": {
+            "horizontal": "left",
+            "vertical": "middle"
+          }
+        },
+        "z": 1
+      },
+      {
+        "id": "el_rpt_period",
+        "type": "text",
+        "frame": {
+          "xMm": 15,
+          "yMm": 27,
+          "wMm": 200,
+          "hMm": 6
+        },
+        "binding": {
+          "expr": "salesReport.period",
+          "format": null,
+          "fallback": ""
+        },
+        "z": 1
+      },
+      {
+        "id": "el_rpt_table",
+        "type": "dataTable",
+        "frame": {
+          "xMm": 15,
+          "yMm": 38,
+          "wMm": 267,
+          "hMm": null
+        },
+        "source": {
+          "arrayExpr": "salesReport.rows"
+        },
+        "columns": [
+          {
+            "key": "product",
+            "header": "Product",
+            "cell": {
+              "expr": "$.product"
+            },
+            "widthMm": 90
+          },
+          {
+            "key": "category",
+            "header": "Category",
+            "cell": {
+              "expr": "$.category"
+            },
+            "widthMm": 60
+          },
+          {
+            "key": "units",
+            "header": "Units",
+            "cell": {
+              "expr": "$.units",
+              "format": "number:0"
+            },
+            "footer": {
+              "expr": "$sum(salesReport.rows.units)",
+              "format": "number:0"
+            },
+            "widthMm": 35,
+            "align": "right"
+          },
+          {
+            "key": "unitPrice",
+            "header": "Unit Price",
+            "cell": {
+              "expr": "$.unitPrice",
+              "format": "currency:USD"
+            },
+            "widthMm": 41,
+            "align": "right"
+          },
+          {
+            "key": "revenue",
+            "header": "Revenue",
+            "cell": {
+              "expr": "$.revenue",
+              "format": "currency:USD"
+            },
+            "footer": {
+              "expr": "$sum(salesReport.rows.revenue)",
+              "format": "currency:USD"
+            },
+            "widthMm": 41,
+            "align": "right"
+          }
+        ],
+        "groups": [
+          {
+            "groupBy": "$.region",
+            "header": {
+              "label": {
+                "expr": "\"Region: \" & $.region"
+              }
+            },
+            "footer": {
+              "aggregates": [
+                {
+                  "columnKey": "units",
+                  "binding": {
+                    "expr": "$sum($.units)",
+                    "format": "number:0"
+                  }
+                },
+                {
+                  "columnKey": "revenue",
+                  "binding": {
+                    "expr": "$sum($.revenue)",
+                    "format": "currency:USD"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "repeatHeaderOnEachPage": true,
+        "keepTogether": false,
+        "z": 1
+      }
+    ]
+  },
+  "footer": {
+    "elements": [
+      {
+        "id": "el_rpt_page",
+        "type": "text",
+        "frame": {
+          "xMm": 15,
+          "yMm": 200,
+          "wMm": 267,
+          "hMm": 6
+        },
+        "text": "Page {{pageNumber}} of {{pageCount}}",
+        "style": {
+          "align": {
+            "horizontal": "center",
+            "vertical": "middle"
+          }
+        },
+        "z": 1
+      }
+    ]
+  }
+}

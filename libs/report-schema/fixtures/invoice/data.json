@@ -1,0 +1,37 @@
+{
+  "invoice": {
+    "number": "INV-2042",
+    "date": "2026-06-17",
+    "issuer": {
+      "name": "Acme Corp",
+      "email": "billing@acme.example"
+    },
+    "customer": {
+      "name": "Northwind Trading Ltd",
+      "address": "42 Commerce Way\nPortland, OR 97201"
+    },
+    "lineItems": [
+      {
+        "description": "Design consultation",
+        "quantity": 8,
+        "unitPrice": 120,
+        "amount": 960
+      },
+      {
+        "description": "Template implementation",
+        "quantity": 1,
+        "unitPrice": 1500,
+        "amount": 1500
+      },
+      {
+        "description": "Priority support (monthly)",
+        "quantity": 3,
+        "unitPrice": 200,
+        "amount": 600
+      }
+    ],
+    "subtotal": 3060,
+    "tax": 244.8,
+    "total": 3304.8
+  }
+}

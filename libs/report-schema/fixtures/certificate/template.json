@@ -1,0 +1,296 @@
+{
+  "schemaVersion": "1.0.0",
+  "metadata": {
+    "name": "Certificate of Completion",
+    "id": "fixture-certificate-0001",
+    "createdAt": "2026-06-17T00:00:00.000Z",
+    "locale": "en-US"
+  },
+  "page": {
+    "size": "A4",
+    "orientation": "landscape",
+    "marginsMm": {
+      "top": 20,
+      "right": 15,
+      "bottom": 20,
+      "left": 15
+    },
+    "units": "mm",
+    "defaultFont": {
+      "family": "Inter",
+      "sizePt": 12
+    },
+    "background": null
+  },
+  "header": {
+    "elements": []
+  },
+  "body": {
+    "elements": [
+      {
+        "id": "el_cert_border",
+        "type": "shape",
+        "shape": "rect",
+        "frame": {
+          "xMm": 10,
+          "yMm": 10,
+          "wMm": 277,
+          "hMm": 190
+        },
+        "style": {
+          "stroke": {
+            "color": "#4F46E5",
+            "widthMm": 1.5,
+            "style": "solid"
+          }
+        },
+        "z": 0
+      },
+      {
+        "id": "el_cert_rule",
+        "type": "shape",
+        "shape": "line",
+        "frame": {
+          "xMm": 40,
+          "yMm": 74,
+          "wMm": 217,
+          "hMm": 0
+        },
+        "style": {
+          "stroke": {
+            "color": "#4F46E5",
+            "widthMm": 0.4,
+            "style": "solid"
+          }
+        },
+        "z": 1
+      },
+      {
+        "id": "el_cert_seal",
+        "type": "shape",
+        "shape": "ellipse",
+        "frame": {
+          "xMm": 128,
+          "yMm": 150,
+          "wMm": 40,
+          "hMm": 40
+        },
+        "style": {
+          "fill": "#EEF2FF",
+          "stroke": {
+            "color": "#4F46E5",
+            "widthMm": 0.6,
+            "style": "solid"
+          }
+        },
+        "z": 1
+      },
+      {
+        "id": "el_cert_logo",
+        "type": "image",
+        "frame": {
+          "xMm": 128,
+          "yMm": 22,
+          "wMm": 40,
+          "hMm": 14
+        },
+        "src": "https://assets.rendara.dev/rendara-academy.png",
+        "fit": "contain",
+        "z": 2
+      },
+      {
+        "id": "el_cert_title",
+        "type": "text",
+        "frame": {
+          "xMm": 40,
+          "yMm": 44,
+          "wMm": 217,
+          "hMm": 16
+        },
+        "text": "Certificate of Completion",
+        "style": {
+          "font": {
+            "family": "Inter",
+            "sizePt": 32,
+            "weight": "bold",
+            "style": "normal"
+          },
+          "color": "#4F46E5",
+          "align": {
+            "horizontal": "center",
+            "vertical": "middle"
+          }
+        },
+        "z": 2
+      },
+      {
+        "id": "el_cert_presented",
+        "type": "text",
+        "frame": {
+          "xMm": 40,
+          "yMm": 82,
+          "wMm": 217,
+          "hMm": 8
+        },
+        "text": "This certificate is proudly presented to",
+        "style": {
+          "align": {
+            "horizontal": "center",
+            "vertical": "middle"
+          }
+        },
+        "z": 2
+      },
+      {
+        "id": "el_cert_recipient",
+        "type": "text",
+        "frame": {
+          "xMm": 40,
+          "yMm": 92,
+          "wMm": 217,
+          "hMm": 14
+        },
+        "binding": {
+          "expr": "certificate.recipient",
+          "format": null,
+          "fallback": ""
+        },
+        "style": {
+          "font": {
+            "family": "Inter",
+            "sizePt": 28,
+            "weight": "normal",
+            "style": "italic"
+          },
+          "align": {
+            "horizontal": "center",
+            "vertical": "middle"
+          }
+        },
+        "z": 2
+      },
+      {
+        "id": "el_cert_course_intro",
+        "type": "text",
+        "frame": {
+          "xMm": 40,
+          "yMm": 110,
+          "wMm": 217,
+          "hMm": 8
+        },
+        "text": "for successfully completing",
+        "style": {
+          "align": {
+            "horizontal": "center",
+            "vertical": "middle"
+          }
+        },
+        "z": 2
+      },
+      {
+        "id": "el_cert_course",
+        "type": "text",
+        "frame": {
+          "xMm": 40,
+          "yMm": 120,
+          "wMm": 217,
+          "hMm": 10
+        },
+        "binding": {
+          "expr": "certificate.course",
+          "format": null,
+          "fallback": ""
+        },
+        "style": {
+          "font": {
+            "family": "Inter",
+            "sizePt": 18,
+            "weight": "bold",
+            "style": "normal"
+          },
+          "align": {
+            "horizontal": "center",
+            "vertical": "middle"
+          }
+        },
+        "z": 2
+      },
+      {
+        "id": "el_cert_date",
+        "type": "text",
+        "frame": {
+          "xMm": 40,
+          "yMm": 138,
+          "wMm": 110,
+          "hMm": 8
+        },
+        "binding": {
+          "expr": "certificate.completedOn",
+          "format": "date:long",
+          "fallback": ""
+        },
+        "style": {
+          "align": {
+            "horizontal": "left",
+            "vertical": "middle"
+          }
+        },
+        "z": 2
+      },
+      {
+        "id": "el_cert_signatory",
+        "type": "text",
+        "frame": {
+          "xMm": 147,
+          "yMm": 138,
+          "wMm": 110,
+          "hMm": 8
+        },
+        "binding": {
+          "expr": "certificate.signatory",
+          "format": null,
+          "fallback": ""
+        },
+        "style": {
+          "align": {
+            "horizontal": "right",
+            "vertical": "middle"
+          }
+        },
+        "z": 2
+      },
+      {
+        "id": "el_cert_seal_label",
+        "type": "text",
+        "frame": {
+          "xMm": 128,
+          "yMm": 166,
+          "wMm": 40,
+          "hMm": 8
+        },
+        "binding": {
+          "expr": "certificate.issuer",
+          "format": null,
+          "fallback": ""
+        },
+        "style": {
+          "font": {
+            "family": "Inter",
+            "sizePt": 8,
+            "weight": "bold",
+            "style": "normal"
+          },
+          "color": "#4F46E5",
+          "align": {
+            "horizontal": "center",
+            "vertical": "middle"
+          }
+        },
+        "z": 3
+      }
+    ]
+  },
+  "footer": {
+    "elements": []
+  }
+}

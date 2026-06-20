@@ -24,3 +24,10 @@ export * from './lib/binding-validation';
 // Generated JSON Schema + ajv-backed validator API: validate()/parse() (E1-S6).
 export * from './lib/json-schema';
 export * from './lib/validate';
+
+// Schema versioning & migration runner: migrate() to current (E1-S7).
+export * from './lib/migrate';
+
+// Canonical golden fixtures: reference templates + sample data, reused across
+// the test suite (E1-S8).
+export * from './lib/fixtures';
