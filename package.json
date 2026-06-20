@@ -21,6 +21,7 @@
     "storybook:compose": "storybook dev -p 4500 --no-open -c .storybook",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "schema:generate": "node -r @swc-node/register tools/generate-schema.ts",
     "smoke": "nx report && nx graph --file=tmp/graph.json && nx run-many -t lint && prettier --check .",
     "changeset": "changeset",
     "release:status": "changeset status --verbose",

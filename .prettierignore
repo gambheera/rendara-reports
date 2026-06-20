@@ -6,6 +6,9 @@
 /.nx/self-healing
 .angular
 pnpm-lock.yaml
+# Generated from TEMPLATE_JSON_SCHEMA by tools/generate-schema.ts (E1-S6);
+# the drift-guard test keeps it in sync, so the generator owns its formatting.
+/libs/report-schema/schema
 
 # Authored documentation maintained outside the formatter:
 # the project brief/backlog, Stitch UI mockups, and Claude Code project config.
