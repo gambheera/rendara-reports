@@ -37,6 +37,7 @@
     "@angular/forms": "21.2.9",
     "@angular/platform-browser": "21.2.9",
     "@angular/router": "21.2.9",
+    "jsonata": "2.2.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
