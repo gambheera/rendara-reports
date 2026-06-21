@@ -15,3 +15,7 @@ export * from './lib/conditional';
 // Sample-data introspection: walk arbitrary JSON into a typed field tree with
 // array element shapes for table sources, bounded by depth/size limits (E2-S4).
 export * from './lib/introspect';
+
+// Binding resolver & aggregates: resolve element values, table rows (row scope
+// `$`), column/group/grand-total aggregates, with deterministic ordering (E2-S5).
+export * from './lib/resolve';
