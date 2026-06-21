@@ -11,3 +11,7 @@ export * from './lib/format';
 // Conditional visibility (`visibleWhen`) + conditional style rules resolved to a
 // concrete style, with a documented fail-safe-on-error default (E2-S3).
 export * from './lib/conditional';
+
+// Sample-data introspection: walk arbitrary JSON into a typed field tree with
+// array element shapes for table sources, bounded by depth/size limits (E2-S4).
+export * from './lib/introspect';
