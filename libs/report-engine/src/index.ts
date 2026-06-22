@@ -23,3 +23,11 @@ export * from './lib/resolve';
 // Missing/invalid-data diagnostics: the host-facing errors/warnings report
 // (missing values, type/format mismatches) surfaced by the resolver (E2-S6).
 export * from './lib/diagnostics';
+
+// Units & coordinate system: mm/pt/in <-> px conversion at a configurable DPI,
+// the deterministic base the layout engine and renderer share (E3-S1).
+export * from './lib/units';
+
+// Page & printable-area geometry: a resolved Page + margins -> page box and
+// printable (content) area in both mm and px (E3-S1).
+export * from './lib/geometry';
