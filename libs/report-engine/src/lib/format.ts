@@ -31,8 +31,9 @@
  *   {@link FormatOptions.timeZone}.
  * - **Percent** values are ratios — `0.15 → "15%"` (standard `Intl` behaviour).
  * - **Fail-soft:** a missing value (`null`/`undefined`) or one that can't be
- *   coerced to the format's expected type yields `fallback`. Richer
- *   missing-data warnings are E2-S6's job; here the rule is simply "never crash".
+ *   coerced to the format's expected type yields `fallback`. {@link formatValue}
+ *   simply returns that string; {@link formatValueDetailed} additionally reports
+ *   *why* (a {@link FormatStatus}), which E2-S6 turns into a diagnostic.
  */
 
 /** Caller-facing options for {@link formatValue}. All optional. */
@@ -60,8 +61,32 @@ interface ResolvedOptions {
 }
 
 /**
+ * Why a {@link formatValueDetailed} call produced the string it did — the signal
+ * E2-S6 uses to turn a fallback substitution into a diagnostic:
+ *
+ * - `ok` — the value formatted cleanly (including the raw-stringify path for an
+ *   absent/unknown token).
+ * - `empty` — the value was `null`/`undefined`; the `fallback` was used (a
+ *   *missing* value, not a format problem).
+ * - `mismatch` — the value was present but couldn't be coerced to the format's
+ *   expected type (e.g. a non-numeric value under `currency:USD`); fallback used.
+ * - `bad-token` — the token's *type* is known but its *argument* is invalid (e.g.
+ *   `currency:US`, `date:bogus`); fallback used.
+ */
+export type FormatStatus = 'ok' | 'empty' | 'mismatch' | 'bad-token';
+
+/** A formatted display string plus the {@link FormatStatus} explaining it. */
+export interface FormatResult {
+  readonly formatted: string;
+  readonly status: FormatStatus;
+}
+
+/**
  * Formats `value` according to `token` in the given locale, returning a display
  * string. Total — see the module doc for the token grammar and fail-soft rules.
+ *
+ * Thin wrapper over {@link formatValueDetailed} that discards the status; use the
+ * detailed form when you need to know *why* a fallback was substituted (E2-S6).
  *
  * @param value   The resolved value (typically the output of `evaluate`).
  * @param token   A format token (e.g. `currency:USD`), or `null`/`undefined`/`''`
@@ -73,6 +98,20 @@ export function formatValue(
   token?: string | null,
   options?: FormatOptions,
 ): string {
+  return formatValueDetailed(value, token, options).formatted;
+}
+
+/**
+ * Like {@link formatValue}, but also reports a {@link FormatStatus} so callers
+ * can distinguish a clean format from a fallback caused by a missing value
+ * (`empty`), a type mismatch (`mismatch`), or an invalid token argument
+ * (`bad-token`). Total — never throws.
+ */
+export function formatValueDetailed(
+  value: unknown,
+  token?: string | null,
+  options?: FormatOptions,
+): FormatResult {
   const ctx: ResolvedOptions = {
     locale: options?.locale ?? DEFAULT_LOCALE,
     fallback: options?.fallback ?? DEFAULT_FALLBACK,
@@ -80,13 +119,13 @@ export function formatValue(
   };
 
   if (value === null || value === undefined) {
-    return ctx.fallback;
+    return { formatted: ctx.fallback, status: 'empty' };
   }
 
   const { type, arg } = splitToken(token);
   const resolver = type === '' ? undefined : registry[type];
   if (resolver === undefined) {
-    return rawFormat(value);
+    return { formatted: rawFormat(value), status: 'ok' };
   }
   return resolver(value, arg, ctx);
 }
@@ -205,68 +244,93 @@ function countChar(s: string, ch: string): number {
 
 // --- formatters (the registry) ----------------------------------------------
 
-type Resolver = (value: unknown, arg: string, ctx: ResolvedOptions) => string;
+type Resolver = (value: unknown, arg: string, ctx: ResolvedOptions) => FormatResult;
 
-function formatCurrency(value: unknown, arg: string, ctx: ResolvedOptions): string {
+/** A value-not-coercible-for-its-format outcome: fallback with `mismatch` status. */
+function mismatch(ctx: ResolvedOptions): FormatResult {
+  return { formatted: ctx.fallback, status: 'mismatch' };
+}
+
+/** An invalid-token-argument outcome: fallback with `bad-token` status. */
+function badToken(ctx: ResolvedOptions): FormatResult {
+  return { formatted: ctx.fallback, status: 'bad-token' };
+}
+
+function formatCurrency(value: unknown, arg: string, ctx: ResolvedOptions): FormatResult {
   const n = coerceNumber(value);
   if (n === undefined) {
-    return ctx.fallback;
+    return mismatch(ctx);
   }
   const code = arg.trim().toUpperCase();
   // ISO 4217 codes are three letters; guard so an invalid token fails soft.
   if (!/^[A-Z]{3}$/.test(code)) {
-    return ctx.fallback;
+    return badToken(ctx);
   }
-  return new Intl.NumberFormat(ctx.locale, { style: 'currency', currency: code }).format(n);
+  return {
+    formatted: new Intl.NumberFormat(ctx.locale, { style: 'currency', currency: code }).format(n),
+    status: 'ok',
+  };
 }
 
-function formatNumber(value: unknown, arg: string, ctx: ResolvedOptions): string {
+function formatNumber(value: unknown, arg: string, ctx: ResolvedOptions): FormatResult {
   const n = coerceNumber(value);
   if (n === undefined) {
-    return ctx.fallback;
+    return mismatch(ctx);
   }
   const p = parseNumberPattern(arg);
-  return new Intl.NumberFormat(ctx.locale, {
-    minimumIntegerDigits: p.minimumIntegerDigits,
-    minimumFractionDigits: p.minimumFractionDigits,
-    maximumFractionDigits: p.maximumFractionDigits,
-    useGrouping: p.useGrouping,
-  }).format(n);
+  return {
+    formatted: new Intl.NumberFormat(ctx.locale, {
+      minimumIntegerDigits: p.minimumIntegerDigits,
+      minimumFractionDigits: p.minimumFractionDigits,
+      maximumFractionDigits: p.maximumFractionDigits,
+      useGrouping: p.useGrouping,
+    }).format(n),
+    status: 'ok',
+  };
 }
 
-function formatPercent(value: unknown, arg: string, ctx: ResolvedOptions): string {
+function formatPercent(value: unknown, arg: string, ctx: ResolvedOptions): FormatResult {
   const n = coerceNumber(value);
   if (n === undefined) {
-    return ctx.fallback;
+    return mismatch(ctx);
   }
   const p = parseNumberPattern(arg);
-  return new Intl.NumberFormat(ctx.locale, {
-    style: 'percent',
-    minimumFractionDigits: p.minimumFractionDigits,
-    maximumFractionDigits: p.maximumFractionDigits,
-    useGrouping: p.useGrouping,
-  }).format(n);
+  return {
+    formatted: new Intl.NumberFormat(ctx.locale, {
+      style: 'percent',
+      minimumFractionDigits: p.minimumFractionDigits,
+      maximumFractionDigits: p.maximumFractionDigits,
+      useGrouping: p.useGrouping,
+    }).format(n),
+    status: 'ok',
+  };
 }
 
 const DATE_STYLES = new Set(['short', 'medium', 'long', 'full']);
 const CUSTOM_PREFIX = 'custom:';
 
-function formatDate(value: unknown, arg: string, ctx: ResolvedOptions): string {
+function formatDate(value: unknown, arg: string, ctx: ResolvedOptions): FormatResult {
   const d = coerceDate(value);
   if (d === undefined) {
-    return ctx.fallback;
+    return mismatch(ctx);
   }
   if (arg.startsWith(CUSTOM_PREFIX)) {
-    return formatCustomDate(d, arg.slice(CUSTOM_PREFIX.length), ctx);
+    return {
+      formatted: formatCustomDate(d, arg.slice(CUSTOM_PREFIX.length), ctx),
+      status: 'ok',
+    };
   }
   const style = arg === '' ? 'medium' : arg;
   if (!DATE_STYLES.has(style)) {
-    return ctx.fallback;
+    return badToken(ctx);
   }
-  return new Intl.DateTimeFormat(ctx.locale, {
-    dateStyle: style as 'short' | 'medium' | 'long' | 'full',
-    timeZone: ctx.timeZone,
-  }).format(d);
+  return {
+    formatted: new Intl.DateTimeFormat(ctx.locale, {
+      dateStyle: style as 'short' | 'medium' | 'long' | 'full',
+      timeZone: ctx.timeZone,
+    }).format(d),
+    status: 'ok',
+  };
 }
 
 const registry: Record<string, Resolver> = {

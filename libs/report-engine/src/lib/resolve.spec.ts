@@ -8,6 +8,7 @@ import {
 } from '@rendara/report-schema';
 import { describe, expect, it } from 'vitest';
 
+import { summarizeDiagnostics, type Diagnostic } from './diagnostics';
 import {
   resolveBinding,
   resolveDataTable,
@@ -428,5 +429,184 @@ describe('resolveDataTable — determinism', () => {
     const a = await resolveDataTable(reportTable, goldenTabularReportData);
     const b = await resolveDataTable(reportTable, goldenTabularReportData);
     expect(a).toEqual(b);
+  });
+});
+
+// --- E2-S6: missing/invalid-data diagnostics ---------------------------------
+
+/** Finds the single diagnostic with the given code (asserting there is exactly one). */
+function only(diagnostics: readonly Diagnostic[], code: Diagnostic['code']): Diagnostic {
+  const found = diagnostics.filter((d) => d.code === code);
+  if (found.length !== 1) {
+    throw new Error(`expected exactly one '${code}', found ${found.length}`);
+  }
+  return found[0];
+}
+
+describe('resolveBinding — diagnostics (E2-S6)', () => {
+  it('emits no diagnostics when the value resolves and formats cleanly', async () => {
+    const res = await resolveBinding({ expr: 'price', format: 'currency:USD' }, { price: 10 });
+    expect(res.diagnostics).toBeUndefined();
+  });
+
+  it('emits a missing-value warning (with location) when the path resolves to nothing', async () => {
+    const res = await resolveBinding(
+      { expr: 'nope', fallback: 'N/A' },
+      {},
+      undefined,
+      { elementId: 'el_1', role: 'element' },
+    );
+    expect(res.formatted).toBe('N/A');
+    expect(res.error).toBeUndefined();
+    const d = only(res.diagnostics ?? [], 'missing-value');
+    expect(d.severity).toBe('warning');
+    expect(d.expr).toBe('nope');
+    expect(d.location).toEqual({ elementId: 'el_1', role: 'element' });
+  });
+
+  it('emits a format-mismatch warning when a present value is the wrong type', async () => {
+    const res = await resolveBinding({ expr: 'amount', format: 'currency:USD' }, { amount: 'oops' });
+    expect(res.formatted).toBe('');
+    const d = only(res.diagnostics ?? [], 'format-mismatch');
+    expect(d.severity).toBe('warning');
+    expect(d.expr).toBe('amount');
+  });
+
+  it('emits an invalid-format warning for a bad format token argument', async () => {
+    const res = await resolveBinding({ expr: 'amount', format: 'currency:US' }, { amount: 10 });
+    const d = only(res.diagnostics ?? [], 'invalid-format');
+    expect(d.severity).toBe('warning');
+  });
+
+  it('emits an expression-error diagnostic (and keeps error) on a bad expression', async () => {
+    const res = await resolveBinding({ expr: '1 +' }, {}, undefined, {
+      elementId: 'el_1',
+      columnKey: 'amt',
+      role: 'cell',
+    });
+    const d = only(res.diagnostics ?? [], 'expression-error');
+    expect(d.severity).toBe('error');
+    expect(d.error).toBe(res.error);
+    expect(d.location?.role).toBe('cell');
+  });
+});
+
+describe('resolveElement — diagnostics (E2-S6)', () => {
+  it('tags a bound element’s warning with its element id and role', async () => {
+    const el: TemplateElement = {
+      id: 'el_x',
+      type: 'text',
+      frame: { xMm: 0, yMm: 0, wMm: 10, hMm: 5 },
+      binding: { expr: 'missing.path' },
+      z: 1,
+    };
+    const res = await resolveElement(el, {});
+    const d = only(res?.diagnostics ?? [], 'missing-value');
+    expect(d.location).toEqual({ elementId: 'el_x', role: 'element' });
+  });
+
+  it('produces no diagnostics for a static (unbound) element', async () => {
+    const el: TemplateElement = {
+      id: 'el_lit',
+      type: 'text',
+      frame: { xMm: 0, yMm: 0, wMm: 10, hMm: 5 },
+      text: 'INVOICE',
+      z: 1,
+    };
+    const res = await resolveElement(el, {});
+    expect(res?.diagnostics).toBeUndefined();
+  });
+});
+
+describe('resolveDataTable — diagnostics (E2-S6)', () => {
+  it('aggregates per-cell warnings with row/column locations; errors stays the error subset', async () => {
+    const table = makeTable({
+      columns: [{ key: 'amt', header: 'Amount', cell: { expr: '$.amount', format: 'currency:USD' }, widthMm: 40 }],
+    });
+    const res = await resolveDataTable(table, { items: [{ amount: 10 }, {}, { amount: 'bad' }] });
+
+    const missing = only(res.diagnostics, 'missing-value');
+    expect(missing.location).toEqual({ elementId: 'el_t', columnKey: 'amt', rowIndex: 1, role: 'cell' });
+    const mismatch = only(res.diagnostics, 'format-mismatch');
+    expect(mismatch.location?.rowIndex).toBe(2);
+    // Both are warnings, so the back-compat errors list stays empty.
+    expect(res.errors).toEqual([]);
+  });
+
+  it('tags a source-expression failure with the source role and surfaces it as an error', async () => {
+    const res = await resolveDataTable(makeTable({ source: { arrayExpr: '1 +' } }), {});
+    const d = only(res.diagnostics, 'expression-error');
+    expect(d.location).toEqual({ elementId: 'el_t', role: 'source' });
+    expect(res.errors).toHaveLength(1);
+  });
+
+  it('tags group label / aggregate / groupBy diagnostics with the group key and role', async () => {
+    const grouped = makeTable({
+      groups: [
+        {
+          groupBy: '$.region',
+          header: { label: { expr: '$.missingLabel' } },
+          footer: { aggregates: [{ columnKey: 'amt', binding: { expr: '$sum($.amount)', format: 'currency:US' } }] },
+        },
+      ],
+      columns: [{ key: 'amt', header: 'Amount', cell: { expr: '$.amount' }, widthMm: 40 }],
+    });
+    const res = await resolveDataTable(grouped, { items: [{ region: 'North', amount: 10 }] });
+
+    const labelWarn = res.diagnostics.find((d) => d.location?.role === 'groupLabel');
+    expect(labelWarn?.code).toBe('missing-value');
+    expect(labelWarn?.location?.groupKey).toBe('North');
+
+    const aggWarn = res.diagnostics.find((d) => d.location?.role === 'groupAggregate');
+    expect(aggWarn?.code).toBe('invalid-format');
+    expect(aggWarn?.location).toEqual({
+      elementId: 'el_t',
+      columnKey: 'amt',
+      groupKey: 'North',
+      role: 'groupAggregate',
+    });
+  });
+});
+
+describe('partial data (E2-S6) — values where present, fallback elsewhere', () => {
+  /** A deep clone of the golden invoice data with selected fields removed. */
+  function partialInvoiceData() {
+    const data = structuredClone(goldenInvoiceData) as {
+      invoice: {
+        customer: { name?: string };
+        lineItems: { amount?: number }[];
+      };
+    };
+    delete data.invoice.customer.name; // a missing scalar binding
+    delete data.invoice.lineItems[1].amount; // a missing cell within one row
+    return data;
+  }
+
+  it('resolves present values and falls back on the missing customer name', async () => {
+    const data = partialInvoiceData();
+    const customer = goldenInvoiceTemplate.body.elements.find((e) => e.id === 'el_inv_customer');
+    const res = await resolveElement(customer as TemplateElement, data);
+    expect(res?.formatted).toBe(''); // fallback, no crash
+    expect(only(res?.diagnostics ?? [], 'missing-value').location?.elementId).toBe('el_inv_customer');
+  });
+
+  it('falls back on the one missing amount cell but renders the rest, and the grand total skips it', async () => {
+    const data = partialInvoiceData();
+    const res = await resolveDataTable(invoiceTable, data);
+
+    // Row 0 present, row 1 amount missing → blank, row 2 present.
+    expect(cell(res.rows[0], 'amt').value.formatted).toBe('$960.00');
+    expect(cell(res.rows[1], 'amt').value.formatted).toBe('');
+    expect(cell(res.rows[2], 'amt').value.formatted).toBe('$600.00');
+
+    // The one warning is for the missing cell; nothing crashed and no hard errors.
+    const report = summarizeDiagnostics(res.diagnostics);
+    expect(report.hasErrors).toBe(false);
+    expect(report.warnings.some((w) => w.code === 'missing-value' && w.location?.rowIndex === 1)).toBe(
+      true,
+    );
+
+    // $sum skips the missing field, so the grand total is the sum of the present amounts.
+    expect(agg(res.columnFooters, 'amt').value.raw).toBe(960 + 600);
   });
 });

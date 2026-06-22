@@ -19,3 +19,7 @@ export * from './lib/introspect';
 // Binding resolver & aggregates: resolve element values, table rows (row scope
 // `$`), column/group/grand-total aggregates, with deterministic ordering (E2-S5).
 export * from './lib/resolve';
+
+// Missing/invalid-data diagnostics: the host-facing errors/warnings report
+// (missing values, type/format mismatches) surfaced by the resolver (E2-S6).
+export * from './lib/diagnostics';

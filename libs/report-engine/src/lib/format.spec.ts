@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatValue, parseNumberPattern } from './format';
+import { formatValue, formatValueDetailed, parseNumberPattern } from './format';
 
 /**
  * Normalizes the non-breaking / narrow-no-break spaces ICU inserts (e.g. between
@@ -266,5 +266,44 @@ describe('parseNumberPattern', () => {
 describe('formatValue — default locale', () => {
   it('uses en-US when no locale is supplied', () => {
     expect(formatValue(1234.5, 'number:#,##0.0')).toBe('1,234.5');
+  });
+});
+
+describe('formatValueDetailed — status (E2-S6)', () => {
+  it('reports ok for a clean format', () => {
+    const r = formatValueDetailed(1234.5, 'currency:USD');
+    expect(r.formatted).toBe('$1,234.50');
+    expect(r.status).toBe('ok');
+  });
+
+  it('reports ok for the raw-stringify path (absent / unknown token)', () => {
+    expect(formatValueDetailed('Acme', null).status).toBe('ok');
+    expect(formatValueDetailed(42, 'frobnicate').status).toBe('ok');
+  });
+
+  it('reports empty for a null/undefined value (a missing value, not a format fault)', () => {
+    expect(formatValueDetailed(null, 'number:0.00', { fallback: '—' })).toEqual({
+      formatted: '—',
+      status: 'empty',
+    });
+    expect(formatValueDetailed(undefined, null).status).toBe('empty');
+  });
+
+  it('reports mismatch when a present value cannot be coerced to the format type', () => {
+    expect(formatValueDetailed('abc', 'currency:USD').status).toBe('mismatch');
+    expect(formatValueDetailed('abc', 'number:0.00').status).toBe('mismatch');
+    expect(formatValueDetailed('abc', 'percent').status).toBe('mismatch');
+    expect(formatValueDetailed('not-a-date', 'date:medium').status).toBe('mismatch');
+    expect(formatValueDetailed({}, 'currency:USD').status).toBe('mismatch');
+  });
+
+  it('reports bad-token for a known type with an invalid argument', () => {
+    expect(formatValueDetailed(10, 'currency:US').status).toBe('bad-token');
+    expect(formatValueDetailed('2026-06-17T00:00:00Z', 'date:bogus').status).toBe('bad-token');
+  });
+
+  it('keeps formatValue behaviour identical (delegates and drops status)', () => {
+    expect(formatValue(10, 'currency:US', { fallback: 'X' })).toBe('X');
+    expect(formatValueDetailed(10, 'currency:US', { fallback: 'X' }).formatted).toBe('X');
   });
 });

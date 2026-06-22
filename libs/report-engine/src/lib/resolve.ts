@@ -39,16 +39,25 @@
  * order of their `groupBy` value; columns and band aggregates follow declared
  * order. Re-running the resolver on the same inputs yields an identical model.
  *
- * ## Missing data & errors (fail-soft)
+ * ## Missing data, errors & warnings (fail-soft)
  * Every entry point is **total** — it never throws. A binding whose expression
  * fails to compile/evaluate yields its `fallback` (or blank) as the formatted
  * string, an `undefined` raw value, and a structured {@link ExpressionError} on
  * the value *and* collected into {@link ResolvedDataTable.errors} for the host.
  * Per JSONata semantics an aggregate over an **empty** array is `undefined` (→
  * fallback), **missing** fields are skipped, and an explicit **null** in a numeric
- * aggregate raises a typed error that is captured rather than thrown. Richer
- * missing-data warnings (a structured report) are E2-S6's job; here the rule is
- * simply "resolve what's present, fall back for the rest, never crash".
+ * aggregate raises a typed error that is captured rather than thrown.
+ *
+ * On top of that, **E2-S6** adds a host-facing {@link Diagnostic} stream so the
+ * resolver doesn't just fall back silently but says *why* it did: a missing path
+ * (→ `missing-value`), a present value that didn't fit its format (→
+ * `format-mismatch`), or an invalid format token (→ `invalid-format`) each emit a
+ * warning, while a compile/evaluate failure emits an `expression-error`. These
+ * appear on every {@link ResolvedBinding.diagnostics} and are aggregated onto
+ * {@link ResolvedDataTable.diagnostics}; the legacy {@link ResolvedDataTable.errors}
+ * list is retained as the error-severity subset that carries an
+ * {@link ExpressionError}. Partition a stream for display with
+ * {@link summarizeDiagnostics}.
  *
  * ## Grouping scope
  * A single (primary) grouping level — `element.groups[0]` — is resolved here.
@@ -64,8 +73,15 @@ import type {
   TemplateElement,
 } from '@rendara/report-schema';
 
+import {
+  type Diagnostic,
+  type DiagnosticLocation,
+  expressionDiagnostic,
+  formatDiagnostic,
+  missingValueDiagnostic,
+} from './diagnostics';
 import { evaluate, type ExpressionError } from './expression';
-import { formatValue } from './format';
+import { formatValueDetailed } from './format';
 
 /** Locale/time-zone context for formatting resolved values (passed to {@link formatValue}). */
 export interface ResolveOptions {
@@ -88,6 +104,13 @@ export interface ResolvedBinding {
   readonly formatted: string;
   /** Present iff the expression failed to compile or evaluate. */
   readonly error?: ExpressionError;
+  /**
+   * Diagnostics raised while resolving this binding (E2-S6): an `expression-error`
+   * when {@link error} is set, otherwise a `missing-value` / `format-mismatch` /
+   * `invalid-format` warning when a fallback was substituted. Absent when the
+   * value resolved and formatted cleanly. See {@link Diagnostic}.
+   */
+  readonly diagnostics?: readonly Diagnostic[];
 }
 
 /** One resolved table cell: the column it belongs to and its {@link ResolvedBinding}. */
@@ -165,8 +188,19 @@ export interface ResolvedDataTable {
   readonly groups?: readonly ResolvedGroup[];
   /** Column-footer aggregates (grand totals), one per column that declares a footer. */
   readonly columnFooters: readonly ResolvedAggregate[];
-  /** Every error encountered while resolving cells, footers, and group bands. */
+  /**
+   * Every {@link ExpressionError} encountered while resolving cells, footers,
+   * group bands, the source, and `groupBy` (E2-S5). Retained as the error-severity
+   * subset of {@link diagnostics} — the entries whose code is `expression-error`.
+   */
   readonly errors: readonly ExpressionError[];
+  /**
+   * The full host-facing diagnostic stream (E2-S6): every error *and* warning
+   * (`missing-value` / `format-mismatch` / `invalid-format`) collected across the
+   * whole table, each tagged with its {@link DiagnosticLocation}. Partition for
+   * display with {@link summarizeDiagnostics}.
+   */
+  readonly diagnostics: readonly Diagnostic[];
 }
 
 /**
@@ -177,25 +211,43 @@ export interface ResolvedDataTable {
  *
  * `scope` is whatever the expression should see as the data root / `$` (the
  * whole Data JSON for an element binding, a single row for a table cell, a rows
- * array for a group aggregate — see the module doc's scope table).
+ * array for a group aggregate — see the module doc's scope table). `location`
+ * tags any emitted {@link Diagnostic} with where the binding sits (E2-S6); it is
+ * optional, so a standalone call can omit context.
  */
 export async function resolveBinding(
   binding: ElementBinding,
   scope: unknown,
   options?: ResolveOptions,
+  location?: DiagnosticLocation,
 ): Promise<ResolvedBinding> {
   const fallback = binding.fallback ?? undefined;
   const result = await evaluate(binding.expr, scope);
+
   if (!result.ok) {
+    const formatted = formatValueDetailed(undefined, binding.format, { ...options, fallback })
+      .formatted;
     return {
       raw: undefined,
-      formatted: formatValue(undefined, binding.format, { ...options, fallback }),
+      formatted,
       error: result.error,
+      diagnostics: [expressionDiagnostic(result.error, location)],
     };
   }
+
+  const { formatted, status } = formatValueDetailed(result.value, binding.format, {
+    ...options,
+    fallback,
+  });
+  const diagnostic =
+    status === 'empty'
+      ? missingValueDiagnostic(binding.expr, location)
+      : formatDiagnostic(status, binding.expr, binding.format, location);
+
   return {
     raw: result.value,
-    formatted: formatValue(result.value, binding.format, { ...options, fallback }),
+    formatted,
+    ...(diagnostic ? { diagnostics: [diagnostic] } : {}),
   };
 }
 
@@ -216,14 +268,15 @@ export async function resolveElement(
   data: unknown,
   options?: ResolveOptions,
 ): Promise<ResolvedBinding | undefined> {
+  const location: DiagnosticLocation = { elementId: element.id, role: 'element' };
   switch (element.type) {
     case 'text':
       return element.binding
-        ? resolveBinding(element.binding, data, options)
+        ? resolveBinding(element.binding, data, options, location)
         : staticValue(element.text);
     case 'image':
       return element.binding
-        ? resolveBinding(element.binding, data, options)
+        ? resolveBinding(element.binding, data, options, location)
         : staticValue(element.src);
     case 'shape':
     case 'dataTable':
@@ -244,13 +297,15 @@ export async function resolveDataTable(
   data: unknown,
   options?: ResolveOptions,
 ): Promise<ResolvedDataTable> {
-  const errors: ExpressionError[] = [];
+  const diagnostics: Diagnostic[] = [];
 
   // Source array: evaluated over root, then normalized so a single value or a
   // missing path can't break row expansion (JSONata may collapse singletons).
   const sourceResult = await evaluate(element.source.arrayExpr, data);
   if (!sourceResult.ok) {
-    errors.push(sourceResult.error);
+    diagnostics.push(
+      expressionDiagnostic(sourceResult.error, { elementId: element.id, role: 'source' }),
+    );
   }
   const rowData = normalizeArray(sourceResult.ok ? sourceResult.value : undefined);
 
@@ -260,8 +315,13 @@ export async function resolveDataTable(
     const datum = rowData[index];
     const cells: ResolvedCell[] = [];
     for (const column of element.columns) {
-      const value = await resolveBinding(column.cell, datum, options);
-      collectError(errors, value);
+      const value = await resolveBinding(column.cell, datum, options, {
+        elementId: element.id,
+        columnKey: column.key,
+        rowIndex: index,
+        role: 'cell',
+      });
+      collect(diagnostics, value);
       cells.push({ columnKey: column.key, value });
     }
     rows.push({ index, data: datum, cells });
@@ -272,18 +332,23 @@ export async function resolveDataTable(
   const columnFooters: ResolvedAggregate[] = [];
   for (const column of element.columns) {
     if (column.footer) {
-      const value = await resolveBinding(column.footer, data, options);
-      collectError(errors, value);
+      const value = await resolveBinding(column.footer, data, options, {
+        elementId: element.id,
+        columnKey: column.key,
+        role: 'columnFooter',
+      });
+      collect(diagnostics, value);
       columnFooters.push({ columnKey: column.key, value });
     }
   }
 
   const primaryGroup = element.groups?.[0];
   const groups = primaryGroup
-    ? await resolveGroups(primaryGroup, rows, options, errors)
+    ? await resolveGroups(primaryGroup, rows, element.id, options, diagnostics)
     : undefined;
 
-  return { rows, ...(groups ? { groups } : {}), columnFooters, errors };
+  const errors = errorsOf(diagnostics);
+  return { rows, ...(groups ? { groups } : {}), columnFooters, errors, diagnostics };
 }
 
 // --- grouping ----------------------------------------------------------------
@@ -296,15 +361,22 @@ export async function resolveDataTable(
 async function resolveGroups(
   group: NonNullable<DataTableElement['groups']>[number],
   rows: readonly ResolvedRow[],
+  elementId: string,
   options: ResolveOptions | undefined,
-  errors: ExpressionError[],
+  diagnostics: Diagnostic[],
 ): Promise<readonly ResolvedGroup[]> {
   const buckets = new Map<string, { keyValue: unknown; rows: ResolvedRow[] }>();
 
   for (const row of rows) {
     const keyResult = await evaluate(group.groupBy, row.data);
     if (!keyResult.ok) {
-      errors.push(keyResult.error);
+      diagnostics.push(
+        expressionDiagnostic(keyResult.error, {
+          elementId,
+          rowIndex: row.index,
+          role: 'groupBy',
+        }),
+      );
     }
     const keyValue = keyResult.ok ? keyResult.value : undefined;
     const key = groupKey(keyValue);
@@ -318,14 +390,15 @@ async function resolveGroups(
 
   const result: ResolvedGroup[] = [];
   for (const bucket of buckets.values()) {
+    const groupKeyStr = displayKey(bucket.keyValue);
     const header = group.header
-      ? await resolveBand(group.header, bucket.rows, options, errors)
+      ? await resolveBand(group.header, bucket.rows, elementId, groupKeyStr, options, diagnostics)
       : undefined;
     const footer = group.footer
-      ? await resolveBand(group.footer, bucket.rows, options, errors)
+      ? await resolveBand(group.footer, bucket.rows, elementId, groupKeyStr, options, diagnostics)
       : undefined;
     result.push({
-      key: displayKey(bucket.keyValue),
+      key: groupKeyStr,
       keyValue: bucket.keyValue,
       rows: bucket.rows,
       ...(header ? { header } : {}),
@@ -343,21 +416,32 @@ async function resolveGroups(
 async function resolveBand(
   band: GroupBand,
   groupRows: readonly ResolvedRow[],
+  elementId: string,
+  groupKeyStr: string,
   options: ResolveOptions | undefined,
-  errors: ExpressionError[],
+  diagnostics: Diagnostic[],
 ): Promise<ResolvedBand> {
   const label = band.label
-    ? await resolveBinding(band.label, groupRows[0]?.data, options)
+    ? await resolveBinding(band.label, groupRows[0]?.data, options, {
+        elementId,
+        groupKey: groupKeyStr,
+        role: 'groupLabel',
+      })
     : undefined;
   if (label) {
-    collectError(errors, label);
+    collect(diagnostics, label);
   }
 
   const rowsData = groupRows.map((row) => row.data);
   const aggregates: ResolvedAggregate[] = [];
   for (const aggregate of band.aggregates ?? []) {
-    const value = await resolveBinding(aggregate.binding, rowsData, options);
-    collectError(errors, value);
+    const value = await resolveBinding(aggregate.binding, rowsData, options, {
+      elementId,
+      columnKey: aggregate.columnKey,
+      groupKey: groupKeyStr,
+      role: 'groupAggregate',
+    });
+    collect(diagnostics, value);
     aggregates.push({ columnKey: aggregate.columnKey, value });
   }
 
@@ -371,11 +455,26 @@ function staticValue(literal: string | undefined): ResolvedBinding {
   return { raw: literal, formatted: literal ?? '' };
 }
 
-/** Pushes a binding's error (if any) onto the shared error list. */
-function collectError(errors: ExpressionError[], value: ResolvedBinding): void {
-  if (value.error) {
-    errors.push(value.error);
+/** Appends a resolved binding's diagnostics (if any) to the shared stream. */
+function collect(diagnostics: Diagnostic[], value: ResolvedBinding): void {
+  if (value.diagnostics) {
+    diagnostics.push(...value.diagnostics);
   }
+}
+
+/**
+ * The error-severity subset of a diagnostic stream as raw {@link ExpressionError}s
+ * — the back-compat {@link ResolvedDataTable.errors} view (E2-S5). Every
+ * `expression-error` diagnostic carries its underlying error.
+ */
+function errorsOf(diagnostics: readonly Diagnostic[]): ExpressionError[] {
+  const errors: ExpressionError[] = [];
+  for (const d of diagnostics) {
+    if (d.error) {
+      errors.push(d.error);
+    }
+  }
+  return errors;
 }
 
 /**
