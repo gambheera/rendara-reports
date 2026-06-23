@@ -158,7 +158,7 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
           ],
           "elementId": "el_rpt_table",
           "headerRepeated": false,
-          "heightPx": 351.344881889764,
+          "heightPx": 483.0992125984252,
           "isFirstSlice": true,
           "isLastSlice": true,
           "overflowsPage": false,
@@ -206,6 +206,55 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "align": "left",
                   "columnKey": "product",
                   "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "left",
+                  "columnKey": "category",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "units",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "unitPrice",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "revenue",
+                  "lineCount": 1,
+                  "text": "",
+                },
+              ],
+              "continuedHeightPx": 21.959055118110236,
+              "continuedLabel": {
+                "align": "left",
+                "lineCount": 1,
+                "text": "Region: North (continued)",
+              },
+              "groupIndex": 0,
+              "heightPx": 21.959055118110236,
+              "kind": "groupHeader",
+              "label": {
+                "align": "left",
+                "lineCount": 1,
+                "text": "Region: North",
+              },
+              "yPx": 165.58110236220472,
+            },
+            {
+              "cells": [
+                {
+                  "align": "left",
+                  "columnKey": "product",
+                  "lineCount": 1,
                   "text": "Aurora Desk Lamp",
                 },
                 {
@@ -233,10 +282,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$5,400.00",
                 },
               ],
+              "groupIndex": 0,
               "heightPx": 21.959055118110236,
               "index": 0,
               "kind": "detail",
-              "yPx": 165.58110236220472,
+              "yPx": 187.54015748031495,
             },
             {
               "cells": [
@@ -271,10 +321,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$7,040.00",
                 },
               ],
+              "groupIndex": 0,
               "heightPx": 21.959055118110236,
               "index": 1,
               "kind": "detail",
-              "yPx": 187.54015748031495,
+              "yPx": 209.49921259842517,
             },
             {
               "cells": [
@@ -309,10 +360,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$4,940.00",
                 },
               ],
+              "groupIndex": 0,
               "heightPx": 21.959055118110236,
               "index": 2,
               "kind": "detail",
-              "yPx": 209.49921259842517,
+              "yPx": 231.4582677165354,
             },
             {
               "cells": [
@@ -347,10 +399,98 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$7,040.00",
                 },
               ],
+              "groupIndex": 0,
               "heightPx": 21.959055118110236,
               "index": 3,
               "kind": "detail",
-              "yPx": 231.4582677165354,
+              "yPx": 253.41732283464563,
+            },
+            {
+              "cells": [
+                {
+                  "align": "left",
+                  "columnKey": "product",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "left",
+                  "columnKey": "category",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "units",
+                  "lineCount": 1,
+                  "text": "244",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "unitPrice",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "revenue",
+                  "lineCount": 1,
+                  "text": "$24,420.00",
+                },
+              ],
+              "groupIndex": 0,
+              "heightPx": 21.959055118110236,
+              "kind": "groupFooter",
+              "yPx": 275.3763779527559,
+            },
+            {
+              "cells": [
+                {
+                  "align": "left",
+                  "columnKey": "product",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "left",
+                  "columnKey": "category",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "units",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "unitPrice",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "revenue",
+                  "lineCount": 1,
+                  "text": "",
+                },
+              ],
+              "continuedHeightPx": 21.959055118110236,
+              "continuedLabel": {
+                "align": "left",
+                "lineCount": 1,
+                "text": "Region: South (continued)",
+              },
+              "groupIndex": 1,
+              "heightPx": 21.959055118110236,
+              "kind": "groupHeader",
+              "label": {
+                "align": "left",
+                "lineCount": 1,
+                "text": "Region: South",
+              },
+              "yPx": 297.33543307086615,
             },
             {
               "cells": [
@@ -385,10 +525,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$7,125.00",
                 },
               ],
+              "groupIndex": 1,
               "heightPx": 21.959055118110236,
               "index": 4,
               "kind": "detail",
-              "yPx": 253.41732283464563,
+              "yPx": 319.2944881889764,
             },
             {
               "cells": [
@@ -423,10 +564,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$6,300.00",
                 },
               ],
+              "groupIndex": 1,
               "heightPx": 21.959055118110236,
               "index": 5,
               "kind": "detail",
-              "yPx": 275.3763779527559,
+              "yPx": 341.25354330708666,
             },
             {
               "cells": [
@@ -461,10 +603,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$6,560.00",
                 },
               ],
+              "groupIndex": 1,
               "heightPx": 21.959055118110236,
               "index": 6,
               "kind": "detail",
-              "yPx": 297.33543307086615,
+              "yPx": 363.2125984251969,
             },
             {
               "cells": [
@@ -499,10 +642,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$5,700.00",
                 },
               ],
+              "groupIndex": 1,
               "heightPx": 21.959055118110236,
               "index": 7,
               "kind": "detail",
-              "yPx": 319.2944881889764,
+              "yPx": 385.1716535433072,
             },
             {
               "cells": [
@@ -537,10 +681,98 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$8,360.00",
                 },
               ],
+              "groupIndex": 1,
               "heightPx": 21.959055118110236,
               "index": 8,
               "kind": "detail",
-              "yPx": 341.25354330708666,
+              "yPx": 407.13070866141743,
+            },
+            {
+              "cells": [
+                {
+                  "align": "left",
+                  "columnKey": "product",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "left",
+                  "columnKey": "category",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "units",
+                  "lineCount": 1,
+                  "text": "404",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "unitPrice",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "revenue",
+                  "lineCount": 1,
+                  "text": "$34,045.00",
+                },
+              ],
+              "groupIndex": 1,
+              "heightPx": 21.959055118110236,
+              "kind": "groupFooter",
+              "yPx": 429.0897637795277,
+            },
+            {
+              "cells": [
+                {
+                  "align": "left",
+                  "columnKey": "product",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "left",
+                  "columnKey": "category",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "units",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "unitPrice",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "revenue",
+                  "lineCount": 1,
+                  "text": "",
+                },
+              ],
+              "continuedHeightPx": 21.959055118110236,
+              "continuedLabel": {
+                "align": "left",
+                "lineCount": 1,
+                "text": "Region: West (continued)",
+              },
+              "groupIndex": 2,
+              "heightPx": 21.959055118110236,
+              "kind": "groupHeader",
+              "label": {
+                "align": "left",
+                "lineCount": 1,
+                "text": "Region: West",
+              },
+              "yPx": 451.04881889763794,
             },
             {
               "cells": [
@@ -575,10 +807,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$5,720.00",
                 },
               ],
+              "groupIndex": 2,
               "heightPx": 21.959055118110236,
               "index": 9,
               "kind": "detail",
-              "yPx": 363.2125984251969,
+              "yPx": 473.0078740157482,
             },
             {
               "cells": [
@@ -613,10 +846,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$10,640.00",
                 },
               ],
+              "groupIndex": 2,
               "heightPx": 21.959055118110236,
               "index": 10,
               "kind": "detail",
-              "yPx": 385.1716535433072,
+              "yPx": 494.96692913385846,
             },
             {
               "cells": [
@@ -651,10 +885,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$5,510.00",
                 },
               ],
+              "groupIndex": 2,
               "heightPx": 21.959055118110236,
               "index": 11,
               "kind": "detail",
-              "yPx": 407.13070866141743,
+              "yPx": 516.9259842519687,
             },
             {
               "cells": [
@@ -689,10 +924,11 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$6,432.00",
                 },
               ],
+              "groupIndex": 2,
               "heightPx": 21.959055118110236,
               "index": 12,
               "kind": "detail",
-              "yPx": 429.0897637795277,
+              "yPx": 538.8850393700789,
             },
             {
               "cells": [
@@ -727,10 +963,49 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
                   "text": "$5,073.00",
                 },
               ],
+              "groupIndex": 2,
               "heightPx": 21.959055118110236,
               "index": 13,
               "kind": "detail",
-              "yPx": 451.04881889763794,
+              "yPx": 560.8440944881891,
+            },
+            {
+              "cells": [
+                {
+                  "align": "left",
+                  "columnKey": "product",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "left",
+                  "columnKey": "category",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "units",
+                  "lineCount": 1,
+                  "text": "396",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "unitPrice",
+                  "lineCount": 1,
+                  "text": "",
+                },
+                {
+                  "align": "right",
+                  "columnKey": "revenue",
+                  "lineCount": 1,
+                  "text": "$33,375.00",
+                },
+              ],
+              "groupIndex": 2,
+              "heightPx": 21.959055118110236,
+              "kind": "groupFooter",
+              "yPx": 582.8031496062993,
             },
             {
               "cells": [
@@ -767,7 +1042,7 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
               ],
               "heightPx": 21.959055118110236,
               "kind": "columnFooter",
-              "yPx": 473.0078740157482,
+              "yPx": 604.7622047244095,
             },
           ],
           "yPx": 143.6220472440945,

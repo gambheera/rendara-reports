@@ -12,13 +12,23 @@
  * adds only the **geometry** — wrapping, row heights, and column offsets — that
  * the pagination algorithm (E3-S4) and the table renderer (E4-S3) consume.
  *
+ * ## Grouping (E3-S6)
+ * When the resolver partitioned the rows into {@link ResolvedDataTable.groups},
+ * this pass interleaves each group's bands into the measured row list:
+ * `header → [ groupHeader? → detail… → groupFooter? ]× → columnFooter?`. A group
+ * band's per-column **aggregates** (subtotals) are measured as ordinary cells
+ * under their columns, while a band **label** (e.g. `"Region: North"`) is a
+ * **full-table-width** {@link MeasuredLabel}. Each detail/band row is tagged with
+ * its {@link MeasuredRow.groupIndex}, and every `groupHeader` carries a
+ * pre-measured `(continued)` label variant ({@link MeasuredRow.continuedLabel} /
+ * {@link MeasuredRow.continuedHeightPx}) so the paginator (E3-S4) can repeat the
+ * header when a group spans a page break — this pass never re-wraps text later.
+ * Where to break the interleaved list across pages remains E3-S4's concern.
+ *
  * ## What this pass does NOT do
  * - **Pagination / page breaks / repeat-header-per-page** — E3-S4. This produces
- *   one continuous table block; how it is sliced across pages is not decided here.
- * - **Grouping band layout** — E3-S6. The resolver may have partitioned the rows
- *   into {@link ResolvedDataTable.groups}, but this pass lays out the *flat* row
- *   list (header → detail rows → optional column footer). Placing per-group
- *   header/footer rows is E3-S6's concern.
+ *   one continuous (grouped) table block; how it is sliced across pages, and where
+ *   a `(continued)` group header is re-emitted, is decided there.
  * - **DOM rendering** — E4. The measurer here is a deterministic *estimate*; the
  *   renderer paints the real glyphs.
  *
@@ -63,7 +73,12 @@ import type {
   DataTableElement,
 } from '@rendara/report-schema';
 
-import type { ResolvedAggregate, ResolvedDataTable, ResolvedRow } from './resolve';
+import type {
+  ResolvedAggregate,
+  ResolvedBand,
+  ResolvedDataTable,
+  ResolvedRow,
+} from './resolve';
 import { DEFAULT_DPI, mmToPx, ptToPx } from './units';
 
 /**
@@ -113,6 +128,12 @@ export const DEFAULT_CELL_PADDING_MM: CellPaddingMm = {
  */
 export const DEFAULT_FONT_SIZE_PT = 10;
 
+/**
+ * Default suffix appended to a group header's label when it is repeated on a
+ * continuation page (E3-S6), e.g. `"Region: North (continued)"`.
+ */
+export const DEFAULT_GROUP_CONTINUED_SUFFIX = ' (continued)';
+
 /** Inputs that tune the measurement; all optional with documented defaults. */
 export interface TableLayoutOptions {
   /** Dots-per-inch for pt/mm → px (defaults to {@link DEFAULT_DPI} = 96). */
@@ -123,6 +144,12 @@ export interface TableLayoutOptions {
   readonly metrics?: TextMetrics;
   /** Inner cell padding in mm (defaults to {@link DEFAULT_CELL_PADDING_MM}). */
   readonly cellPaddingMm?: CellPaddingMm;
+  /**
+   * Suffix appended to a group header's label when it is **repeated on a
+   * continuation page** because the group spans a page break (E3-S6). Defaults to
+   * {@link DEFAULT_GROUP_CONTINUED_SUFFIX}; set to `''` for a plain repeat.
+   */
+  readonly groupContinuedSuffix?: string;
 }
 
 /** One column placed within the table: its left offset, width, and alignment. */
@@ -146,8 +173,32 @@ export interface MeasuredCell {
   readonly align: ColumnAlign;
 }
 
-/** The kind of row a {@link MeasuredRow} represents. */
-export type MeasuredRowKind = 'header' | 'detail' | 'columnFooter';
+/**
+ * The kind of row a {@link MeasuredRow} represents. Grouped tables (E3-S6) add
+ * `groupHeader` (a group's title/label band) and `groupFooter` (its subtotal
+ * band) between the table `header` and the optional grand-total `columnFooter`.
+ */
+export type MeasuredRowKind =
+  | 'header'
+  | 'detail'
+  | 'columnFooter'
+  | 'groupHeader'
+  | 'groupFooter';
+
+/**
+ * A measured **full-table-width** band label (E3-S6) — e.g. a group header's
+ * `"Region: North"`. Unlike a {@link MeasuredCell} (which is column-bound), a
+ * label spans the whole table content width, so its {@link lineCount} is wrapped
+ * against that width. The renderer (E4-S3) paints it across the row.
+ */
+export interface MeasuredLabel {
+  /** The display string (already resolved & formatted by E2-S5). */
+  readonly text: string;
+  /** Number of wrapped lines across the table content width (≥ 1). */
+  readonly lineCount: number;
+  /** Horizontal alignment (defaults to `left`). */
+  readonly align: ColumnAlign;
+}
 
 /**
  * One measured row of the table: its kind, top offset and height (table-relative
@@ -156,14 +207,39 @@ export type MeasuredRowKind = 'header' | 'detail' | 'columnFooter';
  */
 export interface MeasuredRow {
   readonly kind: MeasuredRowKind;
-  /** Source-array index for a `detail` row; absent for `header`/`columnFooter`. */
+  /** Source-array index for a `detail` row; absent for the other kinds. */
   readonly index?: number;
+  /**
+   * 0-based group ordinal (first-seen order) for a `groupHeader`/`groupFooter`
+   * band and for the `detail` rows inside a group (E3-S6); absent for ungrouped
+   * tables and for the table `header`/`columnFooter`.
+   */
+  readonly groupIndex?: number;
   /** Top offset from the table's top edge, in px. */
   readonly yPx: number;
   /** Measured row height in px. */
   readonly heightPx: number;
   /** Cells in declared column order. */
   readonly cells: readonly MeasuredCell[];
+  /**
+   * Full-table-width band label for a `groupHeader`/`groupFooter` (E3-S6), if the
+   * band declares one. On a paginator-synthesized *continued* header this holds the
+   * already-suffixed `(continued)` text.
+   */
+  readonly label?: MeasuredLabel;
+  /**
+   * For a `groupHeader` with a {@link label}: the pre-measured `(continued)` label
+   * variant the paginator uses when the group spans a page break (E3-S6). Absent on
+   * the continuation row itself (whose {@link label} already carries the suffix).
+   */
+  readonly continuedLabel?: MeasuredLabel;
+  /**
+   * For a `groupHeader` with a {@link continuedLabel}: the row height (px) of its
+   * continuation variant, pre-measured so the paginator never re-wraps text.
+   */
+  readonly continuedHeightPx?: number;
+  /** `true` on a paginator-synthesized continuation group header (E3-S6). */
+  readonly continued?: boolean;
 }
 
 /**
@@ -247,6 +323,7 @@ export function layoutTable(
   const fontSizePt = options?.fontSizePt ?? DEFAULT_FONT_SIZE_PT;
   const metrics = options?.metrics ?? DEFAULT_TEXT_METRICS;
   const padding = options?.cellPaddingMm ?? DEFAULT_CELL_PADDING_MM;
+  const continuedSuffix = options?.groupContinuedSuffix ?? DEFAULT_GROUP_CONTINUED_SUFFIX;
 
   const fontSizePx = ptToPx(fontSizePt, dpi);
   const avgCharWidthPx = fontSizePx * metrics.avgCharWidthEm;
@@ -272,6 +349,8 @@ export function layoutTable(
     xPx += widthPx;
   }
   const widthPx = xPx;
+  // Per-line character budget for a full-table-width band label (E3-S6).
+  const labelMaxChars = (widthPx - padLeftPx - padRightPx) / avgCharWidthPx;
 
   /** Measures one row of cell texts into a {@link MeasuredRow}. */
   const measureRow = (
@@ -279,6 +358,7 @@ export function layoutTable(
     yPx: number,
     cellText: (column: DataTableColumn) => string,
     index?: number,
+    groupIndex?: number,
   ): MeasuredRow => {
     let maxLines = 1;
     const cells: MeasuredCell[] = element.columns.map((column) => {
@@ -290,7 +370,71 @@ export function layoutTable(
       return { columnKey: column.key, text, lineCount, align: column.align ?? 'left' };
     });
     const heightPx = maxLines * lineHeightPx + verticalPadPx;
-    return { kind, ...(index === undefined ? {} : { index }), yPx, heightPx, cells };
+    return {
+      kind,
+      ...(index === undefined ? {} : { index }),
+      ...(groupIndex === undefined ? {} : { groupIndex }),
+      yPx,
+      heightPx,
+      cells,
+    };
+  };
+
+  /**
+   * Measures a group header/footer band (E3-S6): each column shows its aggregate
+   * (subtotal) when the band declares one, and the optional {@link ResolvedBand.label}
+   * spans the full table width. For a `groupHeader`, the `(continued)` label
+   * variant and its row height are pre-measured for the paginator.
+   */
+  const measureBandRow = (
+    kind: 'groupHeader' | 'groupFooter',
+    yPx: number,
+    band: ResolvedBand,
+    groupIndex: number,
+  ): MeasuredRow => {
+    let maxLines = 1;
+    const cells: MeasuredCell[] = element.columns.map((column) => {
+      const aggregate = band.aggregates.find((a) => a.columnKey === column.key);
+      const text = aggregate ? aggregate.value.formatted : '';
+      const lineCount = wrapLineCount(text, maxCharsByKey.get(column.key) ?? 0);
+      if (lineCount > maxLines) {
+        maxLines = lineCount;
+      }
+      return { columnKey: column.key, text, lineCount, align: column.align ?? 'left' };
+    });
+
+    let label: MeasuredLabel | undefined;
+    let continuedLabel: MeasuredLabel | undefined;
+    let continuedHeightPx: number | undefined;
+    if (band.label) {
+      const text = band.label.formatted;
+      const lineCount = wrapLineCount(text, labelMaxChars);
+      if (lineCount > maxLines) {
+        maxLines = lineCount;
+      }
+      label = { text, lineCount, align: 'left' };
+
+      // Pre-measure the continuation variant so the paginator never re-wraps text.
+      if (kind === 'groupHeader') {
+        const continuedText = text + continuedSuffix;
+        const continuedLines = wrapLineCount(continuedText, labelMaxChars);
+        continuedLabel = { text: continuedText, lineCount: continuedLines, align: 'left' };
+        const continuedMaxLines = Math.max(continuedLines, ...cells.map((c) => c.lineCount));
+        continuedHeightPx = continuedMaxLines * lineHeightPx + verticalPadPx;
+      }
+    }
+
+    const heightPx = maxLines * lineHeightPx + verticalPadPx;
+    return {
+      kind,
+      groupIndex,
+      yPx,
+      heightPx,
+      cells,
+      ...(label ? { label } : {}),
+      ...(continuedLabel ? { continuedLabel } : {}),
+      ...(continuedHeightPx === undefined ? {} : { continuedHeightPx }),
+    };
   };
 
   const rows: MeasuredRow[] = [];
@@ -303,12 +447,37 @@ export function layoutTable(
   // Header row: the static column header labels.
   push(measureRow('header', cursorY, (column) => column.header));
 
-  // Detail rows: one per resolved data row, in source order, using the cell's
-  // already-formatted display string.
-  for (const dataRow of resolved.rows) {
-    push(
-      measureRow('detail', cursorY, (column) => cellTextFor(dataRow, column.key), dataRow.index),
-    );
+  if (resolved.groups) {
+    // Grouped layout (E3-S6): each group contributes an optional header band, its
+    // detail rows (tagged with the group ordinal, in source order), then an
+    // optional footer band — interleaved into one measured row list.
+    resolved.groups.forEach((group, groupIndex) => {
+      if (group.header) {
+        push(measureBandRow('groupHeader', cursorY, group.header, groupIndex));
+      }
+      for (const dataRow of group.rows) {
+        push(
+          measureRow(
+            'detail',
+            cursorY,
+            (column) => cellTextFor(dataRow, column.key),
+            dataRow.index,
+            groupIndex,
+          ),
+        );
+      }
+      if (group.footer) {
+        push(measureBandRow('groupFooter', cursorY, group.footer, groupIndex));
+      }
+    });
+  } else {
+    // Flat layout: one detail row per resolved data row, in source order, using the
+    // cell's already-formatted display string.
+    for (const dataRow of resolved.rows) {
+      push(
+        measureRow('detail', cursorY, (column) => cellTextFor(dataRow, column.key), dataRow.index),
+      );
+    }
   }
 
   // Column-footer (grand-total) row: only when at least one column has a footer.
