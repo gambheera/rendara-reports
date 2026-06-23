@@ -1,3 +1,4 @@
-<!-- E0-S2 skeleton: renders the shared renderer to exercise the legal
-     viewer -> renderer dependency. Real toolbar + paged output land in Epic 7+. -->
-<rdr-report-renderer />
+<!-- E0-S2 skeleton: composes the shared renderer over an empty default page to
+     exercise the legal viewer -> {renderer, engine, schema} dependencies. Real
+     toolbar + paged output land in Epic 7+. -->
+<rdr-report-renderer [page]="page" [geometry]="geometry" />

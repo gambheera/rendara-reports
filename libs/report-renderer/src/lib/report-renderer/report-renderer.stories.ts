@@ -1,21 +1,37 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { goldenCertificateTemplate } from '@rendara/report-schema';
+import { paginate } from '@rendara/report-engine';
 
 import { ReportRenderer } from './report-renderer';
 
 /**
- * Example story (E0-S6). `report-renderer` is still the E0-S2 skeleton; this
- * story proves the per-project Storybook host renders it. The real
- * template+data -> paginated DOM renderer (with design/view modes) arrives in
- * Epic 4, where stories mount real rendered output.
+ * E4-S1 single-page renderer stories. They mount real rendered output: the
+ * certificate golden paginated by the engine, rendered as an absolutely
+ * positioned page sheet at a chosen zoom. Element content (text/shape/image)
+ * arrives in E4-S2, so boxes are positioned host frames for now.
  */
+const certificate = paginate(goldenCertificateTemplate, new Map());
+
 const meta: Meta<ReportRenderer> = {
   title: 'report-renderer/ReportRenderer',
   component: ReportRenderer,
   tags: ['autodocs'],
+  args: {
+    page: certificate.pages[0],
+    geometry: certificate.geometry,
+    zoom: 0.6,
+    background: null,
+  },
 };
 
 export default meta;
 
 type Story = StoryObj<ReportRenderer>;
 
-export const Default: Story = {};
+/** The certificate page at 60% zoom. */
+export const Certificate: Story = {};
+
+/** A tinted page background. */
+export const TintedBackground: Story = {
+  args: { background: '#fafaf5' },
+};
