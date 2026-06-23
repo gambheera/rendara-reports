@@ -4,10 +4,13 @@ import {
   type DataTableElement,
   goldenInvoiceData,
   goldenInvoiceTemplate,
+  goldenTabularReportData,
+  goldenTabularReportTemplate,
 } from '@rendara/report-schema';
 
 import { resolveDataTable, type ResolvedDataTable } from './resolve';
 import {
+  DEFAULT_GROUP_CONTINUED_SUFFIX,
   DEFAULT_TEXT_METRICS,
   layoutTable,
   type TableLayoutOptions,
@@ -246,5 +249,160 @@ describe('layoutTable — options & determinism', () => {
     const a = layoutTable(invoiceTable, resolved);
     const b = layoutTable(invoiceTable, resolved);
     expect(a).toEqual(b);
+  });
+});
+
+// --- layoutTable: grouping (E3-S6) ------------------------------------------
+
+/** The tabular-report golden's grouped data-table element (groups by region). */
+function tabularTableElement(): DataTableElement {
+  const el = goldenTabularReportTemplate.body.elements.find(
+    (e): e is DataTableElement => e.type === 'dataTable',
+  );
+  if (!el) {
+    throw new Error('tabular-report golden is expected to contain a data table');
+  }
+  return el;
+}
+const tabularTable = tabularTableElement();
+
+/** Resolves the tabular-report golden's grouped table. */
+function resolveTabularTable(): Promise<ResolvedDataTable> {
+  return resolveDataTable(tabularTable, goldenTabularReportData);
+}
+
+describe('layoutTable — grouping (E3-S6)', () => {
+  it('interleaves group header/footer bands around each group, then the grand total', async () => {
+    const resolved = await resolveTabularTable();
+    const layout = layoutTable(tabularTable, resolved);
+
+    // North(4) / South(5) / West(5), each wrapped in a header + footer band, with
+    // the table header first and the grand-total column footer last.
+    expect(layout.rows.map((r) => r.kind)).toEqual([
+      'header',
+      'groupHeader', 'detail', 'detail', 'detail', 'detail', 'groupFooter',
+      'groupHeader', 'detail', 'detail', 'detail', 'detail', 'detail', 'groupFooter',
+      'groupHeader', 'detail', 'detail', 'detail', 'detail', 'detail', 'groupFooter',
+      'columnFooter',
+    ]);
+  });
+
+  it('tags every group band and detail row with its group ordinal', async () => {
+    const resolved = await resolveTabularTable();
+    const layout = layoutTable(tabularTable, resolved);
+
+    // Group bands and the detail rows between them share one ordinal per group.
+    const grouped = layout.rows.filter(
+      (r) => r.kind === 'groupHeader' || r.kind === 'detail' || r.kind === 'groupFooter',
+    );
+    expect(grouped.every((r) => r.groupIndex !== undefined)).toBe(true);
+    // First-seen order: North=0, South=1, West=2.
+    expect(layout.rows.filter((r) => r.kind === 'groupHeader').map((r) => r.groupIndex)).toEqual([
+      0, 1, 2,
+    ]);
+    // The table header and grand total are not part of any group.
+    expect(layout.rows[0].groupIndex).toBeUndefined();
+    expect(layout.rows.at(-1)?.groupIndex).toBeUndefined();
+  });
+
+  it('measures the group-header label across the full table width with a (continued) variant', async () => {
+    const resolved = await resolveTabularTable();
+    const layout = layoutTable(tabularTable, resolved);
+
+    const firstGroupHeader = layout.rows.find((r) => r.kind === 'groupHeader');
+    expect(firstGroupHeader?.label?.text).toBe('Region: North');
+    expect(firstGroupHeader?.continuedLabel?.text).toBe(
+      'Region: North' + DEFAULT_GROUP_CONTINUED_SUFFIX,
+    );
+    expect(firstGroupHeader?.continuedHeightPx).toBeGreaterThan(0);
+    // A label-only header carries no aggregate cell text.
+    expect(firstGroupHeader?.cells.every((c) => c.text === '')).toBe(true);
+  });
+
+  it('honours a custom continuation suffix', async () => {
+    const resolved = await resolveTabularTable();
+    const layout = layoutTable(tabularTable, resolved, { groupContinuedSuffix: ' (cont.)' });
+    const firstGroupHeader = layout.rows.find((r) => r.kind === 'groupHeader');
+    expect(firstGroupHeader?.continuedLabel?.text).toBe('Region: North (cont.)');
+  });
+
+  it('aligns group-footer subtotals under their columns using resolved aggregates', async () => {
+    const resolved = await resolveTabularTable();
+    const layout = layoutTable(tabularTable, resolved);
+
+    const northFooter = layout.rows.find((r) => r.kind === 'groupFooter');
+    const northGroup = resolved.groups?.[0];
+    // The measured cell text matches the resolver's formatted subtotal, column for column.
+    for (const aggregate of northGroup?.footer?.aggregates ?? []) {
+      const cell = northFooter?.cells.find((c) => c.columnKey === aggregate.columnKey);
+      expect(cell?.text).toBe(aggregate.value.formatted);
+    }
+    // Columns without a subtotal stay blank (e.g. "product").
+    expect(northFooter?.cells.find((c) => c.columnKey === 'product')?.text).toBe('');
+    // A footer-only band has no label.
+    expect(northFooter?.label).toBeUndefined();
+  });
+
+  it('reconciles group subtotals to the grand total (units & revenue)', async () => {
+    const resolved = await resolveTabularTable();
+
+    for (const columnKey of ['units', 'revenue'] as const) {
+      const grand = resolved.columnFooters.find((f) => f.columnKey === columnKey);
+      const subtotalSum = (resolved.groups ?? []).reduce((sum, group) => {
+        const agg = group.footer?.aggregates.find((a) => a.columnKey === columnKey);
+        return sum + (typeof agg?.value.raw === 'number' ? agg.value.raw : 0);
+      }, 0);
+      expect(subtotalSum).toBe(grand?.value.raw);
+    }
+  });
+
+  it('is deterministic for a grouped table', async () => {
+    const resolved = await resolveTabularTable();
+    expect(layoutTable(tabularTable, resolved)).toEqual(layoutTable(tabularTable, resolved));
+  });
+
+  it('grows a band row when its label or aggregate wraps across lines', async () => {
+    // A narrow single-column table forces a long group label and a long joined
+    // string subtotal to wrap, so both band rows exceed a single line.
+    const narrowGrouped: DataTableElement = {
+      id: 'el_narrow_grp',
+      type: 'dataTable',
+      frame: { xMm: 0, yMm: 0, wMm: 25, hMm: null },
+      source: { arrayExpr: 'items' },
+      columns: [{ key: 'name', header: 'Name', cell: { expr: '$.name' }, widthMm: 25 }],
+      groups: [
+        {
+          groupBy: '$.region',
+          header: { label: { expr: '$.region' } },
+          footer: {
+            aggregates: [{ columnKey: 'name', binding: { expr: '$join($.name, ", ")' } }],
+          },
+        },
+      ],
+      repeatHeaderOnEachPage: true,
+      keepTogether: false,
+      z: 1,
+    };
+    const region = 'A very long region name that cannot fit on a single narrow line';
+    const data = {
+      items: [
+        { region, name: 'Alpha' },
+        { region, name: 'Beta' },
+        { region, name: 'Gamma' },
+        { region, name: 'Delta' },
+        { region, name: 'Epsilon' },
+      ],
+    };
+    const resolved = await resolveDataTable(narrowGrouped, data);
+    const layout = layoutTable(narrowGrouped, resolved);
+
+    const groupHeader = layout.rows.find((r) => r.kind === 'groupHeader');
+    const groupFooter = layout.rows.find((r) => r.kind === 'groupFooter');
+    const tableHeader = layout.rows[0];
+    // The wrapped label/aggregate make their band rows taller than a 1-line header.
+    expect(groupHeader?.label?.lineCount).toBeGreaterThan(1);
+    expect(groupHeader?.heightPx).toBeGreaterThan(tableHeader.heightPx);
+    expect(groupFooter?.cells[0].lineCount).toBeGreaterThan(1);
+    expect(groupFooter?.heightPx).toBeGreaterThan(tableHeader.heightPx);
   });
 });

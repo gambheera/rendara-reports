@@ -138,6 +138,67 @@ function rows(n: number): { items: { v: string }[] } {
   return { items: Array.from({ length: n }, (_, i) => ({ v: `Row ${i}` })) };
 }
 
+/** A two-column grouped table (grouped by `region`) with a header label + subtotal. */
+function groupedTable(opts: {
+  topMm: number;
+  widthMm: number;
+  withGroupFooter?: boolean;
+  repeat?: boolean;
+}): DataTableElement {
+  return {
+    id: 'el_grp',
+    type: 'dataTable',
+    frame: { xMm: 10, yMm: opts.topMm, wMm: opts.widthMm, hMm: null },
+    source: { arrayExpr: 'items' },
+    columns: [
+      { key: 'name', header: 'Name', cell: { expr: '$.name' }, widthMm: opts.widthMm * 0.6 },
+      {
+        key: 'amt',
+        header: 'Amount',
+        cell: { expr: '$.amt', format: 'number:0' },
+        footer: { expr: '$sum(items.amt)', format: 'number:0' },
+        widthMm: opts.widthMm * 0.4,
+        align: 'right',
+      },
+    ],
+    groups: [
+      {
+        groupBy: '$.region',
+        header: { label: { expr: '"Region: " & $.region' } },
+        ...(opts.withGroupFooter
+          ? {
+              footer: {
+                aggregates: [
+                  { columnKey: 'amt', binding: { expr: '$sum($.amt)', format: 'number:0' } },
+                ],
+              },
+            }
+          : {}),
+      },
+    ],
+    repeatHeaderOnEachPage: opts.repeat ?? true,
+    keepTogether: false,
+    z: 1,
+  };
+}
+
+/** `n` rows all in one `region`, so the single group spans pages when `n` is large. */
+function oneRegion(n: number, region = 'North'): { items: { region: string; name: string; amt: number }[] } {
+  return { items: Array.from({ length: n }, (_, i) => ({ region, name: `Item ${i}`, amt: i + 1 })) };
+}
+
+/** Three regions of four rows each, in source (grouped) order. */
+function multiRegion(): { items: { region: string; name: string; amt: number }[] } {
+  const make = (region: string, base: number) =>
+    Array.from({ length: 4 }, (_, i) => ({ region, name: `${region} ${i}`, amt: base + i }));
+  return { items: [...make('North', 1), ...make('South', 10), ...make('West', 20)] };
+}
+
+/** Every measured row across the whole document, in page → slice → row order. */
+function allRows(doc: PaginatedDocument) {
+  return doc.pages.flatMap((page) => page.tables.flatMap((t) => t.rows));
+}
+
 /** The detail-row source indices carried by a paginated document, page by page. */
 function detailIndicesByPage(doc: PaginatedDocument): number[][] {
   return doc.pages.map((page) =>
@@ -483,6 +544,111 @@ describe('paginate — page chrome (E3-S5)', () => {
   it('reports a null watermark when none is configured', () => {
     const doc = paginate(goldenInvoiceTemplate, new Map());
     expect(doc.watermark).toBeNull();
+  });
+});
+
+// --- grouping across pages (E3-S6) -------------------------------------------
+
+describe('paginate — grouping (E3-S6)', () => {
+  it('emits group headers/footers and the grand total for the grouped golden', async () => {
+    const { doc } = await paginateTemplate(goldenTabularReportTemplate);
+    const rowsOut = allRows(doc);
+
+    expect(rowsOut.filter((r) => r.kind === 'groupHeader').map((r) => r.label?.text)).toEqual([
+      'Region: North',
+      'Region: South',
+      'Region: West',
+    ]);
+    expect(rowsOut.filter((r) => r.kind === 'groupFooter')).toHaveLength(3);
+    // The grand-total column footer survives alongside the per-group subtotals.
+    expect(rowsOut.some((r) => r.kind === 'columnFooter')).toBe(true);
+  });
+
+  it('reconciles per-group subtotals to the grand total in the page model', async () => {
+    const { doc, resolved } = await paginateTemplate(goldenTabularReportTemplate);
+    const groupFooters = allRows(doc).filter((r) => r.kind === 'groupFooter');
+
+    // Each group's footer cell text equals the resolver's subtotal for that column.
+    (resolved.groups ?? []).forEach((group, g) => {
+      for (const aggregate of group.footer?.aggregates ?? []) {
+        const cell = groupFooters[g].cells.find((c) => c.columnKey === aggregate.columnKey);
+        expect(cell?.text).toBe(aggregate.value.formatted);
+      }
+    });
+    // Numeric reconciliation: Σ subtotals === grand total, column by column.
+    for (const columnKey of ['units', 'revenue'] as const) {
+      const grand = resolved.columnFooters.find((f) => f.columnKey === columnKey)?.value.raw;
+      const sum = (resolved.groups ?? []).reduce((acc, group) => {
+        const raw = group.footer?.aggregates.find((a) => a.columnKey === columnKey)?.value.raw;
+        return acc + (typeof raw === 'number' ? raw : 0);
+      }, 0);
+      expect(sum).toBe(grand);
+    }
+  });
+
+  it('repeats a (continued) group header when a group spans a page break', async () => {
+    const table = groupedTable({ topMm: 10, widthMm: 100, withGroupFooter: true });
+    const template = makeTemplate(SMALL, [table]);
+    const resolved = await resolveDataTable(table, oneRegion(10));
+    const doc = paginate(template, new Map([[table.id, resolved]]));
+
+    expect(doc.pageCount).toBeGreaterThan(1);
+
+    // The first slice owns the original (non-continued) group header.
+    const firstHeader = doc.pages[0].tables[0].rows.find((r) => r.kind === 'groupHeader');
+    expect(firstHeader?.continued).toBeFalsy();
+    expect(firstHeader?.label?.text).toBe('Region: North');
+
+    // A continuation slice repeats the header — flagged, with the `(continued)`
+    // label, directly under the repeated table header.
+    const continuation = doc.pages
+      .slice(1)
+      .flatMap((p) => p.tables)
+      .find((s) => s.rows.some((r) => r.kind === 'detail'));
+    expect(continuation?.rows[0].kind).toBe('header');
+    expect(continuation?.rows[1].kind).toBe('groupHeader');
+    expect(continuation?.rows[1].continued).toBe(true);
+    expect(continuation?.rows[1].label?.text).toBe('Region: North (continued)');
+
+    // No row is lost: every detail appears once, in source order.
+    expect(detailIndicesByPage(doc).flat()).toEqual([...Array(10).keys()]);
+  });
+
+  it('never strands a group header as the last row of a slice (orphan control)', async () => {
+    const table = groupedTable({ topMm: 10, widthMm: 100, withGroupFooter: true });
+    const template = makeTemplate(SMALL, [table]);
+    const resolved = await resolveDataTable(table, multiRegion());
+    const doc = paginate(template, new Map([[table.id, resolved]]));
+
+    expect(doc.pageCount).toBeGreaterThan(1);
+    for (const page of doc.pages) {
+      for (const slice of page.tables) {
+        // A group header always keeps company with at least one of its rows.
+        expect(slice.rows.at(-1)?.kind).not.toBe('groupHeader');
+      }
+    }
+    // Every region's detail rows are present exactly once across the document.
+    expect(detailIndicesByPage(doc).flat()).toEqual([...Array(12).keys()]);
+  });
+
+  it('keeps every grouped row within the page content band', async () => {
+    const table = groupedTable({ topMm: 10, widthMm: 100, withGroupFooter: true });
+    const template = makeTemplate(SMALL, [table]);
+    const resolved = await resolveDataTable(table, oneRegion(10));
+    const doc = paginate(template, new Map([[table.id, resolved]]));
+
+    const contentBottomPx = doc.geometry.pagePx.heightPx - doc.geometry.printable.bottomPx;
+    for (const row of allRows(doc)) {
+      expect(row.yPx + row.heightPx).toBeLessThanOrEqual(contentBottomPx + 1e-6);
+    }
+  });
+
+  it('is deterministic for a grouped, page-spanning table', async () => {
+    const table = groupedTable({ topMm: 10, widthMm: 100, withGroupFooter: true });
+    const template = makeTemplate(SMALL, [table]);
+    const resolved = await resolveDataTable(table, oneRegion(10));
+    const tables = new Map([[table.id, resolved]]);
+    expect(paginate(template, tables)).toEqual(paginate(template, tables));
   });
 });
 

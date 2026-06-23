@@ -20,19 +20,30 @@
  *  - **E3-S2 {@link layoutStaticPage}** gives the page geometry and every
  *    element's absolute-px box; this pass reuses it both to place the fixed body
  *    elements and to read each table's authored top edge.
- *  - **E3-S3 {@link layoutTable}** measures the table into `header → detail… →
- *    optional columnFooter` rows; this pass only *slices* that row list across
- *    pages — it never re-measures text.
+ *  - **E3-S3 {@link layoutTable}** measures the table into its row list — for a
+ *    grouped table `header → [ groupHeader? → detail… → groupFooter? ]× →
+ *    optional columnFooter` (E3-S6) — this pass only *slices* that list across
+ *    pages and re-emits `(continued)` group headers; it never re-measures text.
  *  - Resolution (E2-S5 {@link resolveDataTable}) is async, so the paginator takes
  *    **already-resolved** tables (a {@link ReadonlyMap} keyed by element id) and
  *    stays **synchronous and deterministic** — re-running on the same inputs
  *    yields a deeply-equal document, exactly what the snapshot suite (E3-S7)
  *    needs.
  *
+ * ## Grouping across pages (E3-S6, ADR 0008)
+ * When E3-S3 interleaved group bands into the measured rows, this pass slices them
+ * like any other rows, with two group-aware additions:
+ *  - **Continued headers:** when a slice resumes *inside* a group whose header
+ *    already rendered on an earlier page, that group's header is re-emitted at the
+ *    slice top (after any repeated table header) using its pre-measured
+ *    `(continued)` label — see {@link TableSlice} rows tagged `continued`.
+ *  - **Group-header orphan control:** a slice never ends on a group header whose
+ *    first following row would not also fit; the header is carried forward so it
+ *    stays with at least one of its rows.
+ * Per-group **subtotals** and the **grand total** are ordinary `groupFooter` /
+ * `columnFooter` rows that ride through the slicer unchanged.
+ *
  * ## What this pass does NOT do (deferred, see ADR 0006 / 0007)
- *  - **Grouping bands across pages** — E3-S6. The flat measured row list (header /
- *    detail / columnFooter) is sliced here; group header/footer rows and
- *    carry-over subtotals are E3-S6's concern.
  *  - **DOM rendering** — E4.
  *
  * ## The page content band
@@ -204,7 +215,12 @@ interface SlicePlan {
   page: number;
   startY: number;
   showHeader: boolean;
-  /** The content (detail / columnFooter) rows assigned to this slice, in order. */
+  /**
+   * Continuation group header (E3-S6) re-emitted below the table header when this
+   * slice resumes inside a group; `null` otherwise.
+   */
+  continued: MeasuredRow | null;
+  /** The content (group/detail/columnFooter) rows assigned to this slice, in order. */
   rows: MeasuredRow[];
   /** `true` when a single row overflowed the content band on this slice. */
   overflow: boolean;
@@ -353,6 +369,15 @@ function sliceTable(
   // below which a row is "huge" and can never share a page with the header.
   const freshContentAvail = contentBottomPx - contentTopPx - headerHeightPx;
 
+  // Index group headers by ordinal so a continuation slice that resumes mid-group
+  // can re-emit that group's `(continued)` header at its top (E3-S6).
+  const groupHeaderByIndex = new Map<number, MeasuredRow>();
+  for (const row of contentRows) {
+    if (row.kind === 'groupHeader' && row.groupIndex !== undefined) {
+      groupHeaderByIndex.set(row.groupIndex, row);
+    }
+  }
+
   let page = startPage;
   let sliceStartY = startY;
 
@@ -375,12 +400,23 @@ function sliceTable(
     const showHeader = firstSlice || repeat;
     const headerH = showHeader ? headerHeightPx : 0;
 
-    // Orphan / near-page-end guard: if a header would sit here with no room for
-    // its first detail row, and that row would fit on a fresh page, defer the
-    // whole start to the next page instead of emitting a header-only slice.
-    if (i < contentRows.length) {
+    // Continuation (E3-S6): when a continuation slice resumes *inside* a group
+    // whose header already rendered on an earlier slice, repeat that header with
+    // its `(continued)` label at the slice top, below any repeated table header.
+    const continued =
+      !firstSlice && i < contentRows.length
+        ? continuedHeaderFor(contentRows[i], groupHeaderByIndex)
+        : null;
+    const topH = headerH + (continued ? continued.heightPx : 0);
+
+    // Orphan / near-page-end guard: if the chrome (table header + any continued
+    // group header) plus the first row won't fit here, and that row would fit on a
+    // fresh page, defer the whole start to the next page instead of emitting a
+    // chrome-only slice. Skipped at the top of a fresh page (the row is then "huge"
+    // and handled by the packer), which also bounds the loop.
+    if (i < contentRows.length && sliceStartY > contentTopPx + 1e-6) {
       const next = contentRows[i];
-      const fitsHere = sliceStartY + headerH + next.heightPx <= contentBottomPx;
+      const fitsHere = sliceStartY + topH + next.heightPx <= contentBottomPx;
       const huge = next.heightPx > freshContentAvail;
       if (!fitsHere && !huge) {
         page += 1;
@@ -390,12 +426,21 @@ function sliceTable(
     }
 
     const planRows: MeasuredRow[] = [];
-    let y = sliceStartY + headerH;
+    let y = sliceStartY + topH;
     let placed = 0;
     let overflow = false;
     while (i < contentRows.length) {
       const row = contentRows[i];
       if (y + row.heightPx <= contentBottomPx) {
+        // Group-header orphan (E3-S6): never end a slice on a group header whose
+        // first following row would not also fit here — carry the header forward so
+        // it stays with at least one of its rows.
+        if (row.kind === 'groupHeader' && placed > 0) {
+          const follow = contentRows[i + 1];
+          if (follow && y + row.heightPx + follow.heightPx > contentBottomPx) {
+            break;
+          }
+        }
         planRows.push(row);
         y += row.heightPx;
         i += 1;
@@ -412,7 +457,7 @@ function sliceTable(
       }
     }
 
-    plans.push({ page, startY: sliceStartY, showHeader, rows: planRows, overflow });
+    plans.push({ page, startY: sliceStartY, showHeader, continued, rows: planRows, overflow });
     firstSlice = false;
     if (i >= contentRows.length) {
       break;
@@ -460,7 +505,8 @@ function applyWidowControl(
   }
 
   const moved = prev.rows[movedIdx];
-  const headerH = last.showHeader ? headerHeightPx : 0;
+  const headerH =
+    (last.showHeader ? headerHeightPx : 0) + (last.continued ? last.continued.heightPx : 0);
   const movedAndFooterHeight =
     moved.heightPx + last.rows.reduce((sum, r) => sum + r.heightPx, 0);
   if (last.startY + headerH + movedAndFooterHeight > contentBottomPx) {
@@ -481,6 +527,42 @@ function lastDetailIndex(rows: readonly MeasuredRow[]): number {
   return -1;
 }
 
+/**
+ * The continued group header to repeat at the top of a continuation slice when
+ * `nextRow` resumes a group whose header already rendered on an earlier slice
+ * (E3-S6). Returns `null` when `nextRow` is itself a group header (the real header
+ * renders) or carries no resolvable group header.
+ */
+function continuedHeaderFor(
+  nextRow: MeasuredRow,
+  groupHeaderByIndex: ReadonlyMap<number, MeasuredRow>,
+): MeasuredRow | null {
+  if (nextRow.kind === 'groupHeader' || nextRow.groupIndex === undefined) {
+    return null;
+  }
+  const header = groupHeaderByIndex.get(nextRow.groupIndex);
+  return header ? makeContinuedHeader(header) : null;
+}
+
+/**
+ * Builds the continuation variant of a group header (E3-S6): its pre-measured
+ * `(continued)` {@link MeasuredRow.continuedLabel} and {@link MeasuredRow.continuedHeightPx},
+ * tagged `continued: true`. Falls back to the original label/height for a header
+ * that declares no label. The `yPx` is set when the slice is stacked.
+ */
+function makeContinuedHeader(header: MeasuredRow): MeasuredRow {
+  const label = header.continuedLabel ?? header.label;
+  return {
+    kind: 'groupHeader',
+    ...(header.groupIndex === undefined ? {} : { groupIndex: header.groupIndex }),
+    yPx: 0,
+    heightPx: header.continuedHeightPx ?? header.heightPx,
+    cells: header.cells,
+    ...(label ? { label } : {}),
+    continued: true,
+  };
+}
+
 /** Stacks a slice plan's rows into page-absolute positions and tags its flags. */
 function finalizeSlice(
   plan: SlicePlan,
@@ -495,6 +577,11 @@ function finalizeSlice(
   if (plan.showHeader) {
     rows.push({ ...headerRow, yPx: y });
     y += headerRow.heightPx;
+  }
+  // Continued group header (E3-S6) sits directly under the (repeated) table header.
+  if (plan.continued) {
+    rows.push({ ...plan.continued, yPx: y });
+    y += plan.continued.heightPx;
   }
   for (const row of plan.rows) {
     rows.push({ ...row, yPx: y });
