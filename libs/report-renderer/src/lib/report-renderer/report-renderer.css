@@ -1,0 +1,24 @@
+/*
+ * Single-page renderer styles (E4-S1). Deliberately minimal: the sheet's size,
+ * background and zoom transform are inline (data-driven from the view-model);
+ * these rules supply only the static chrome — the page drop shadow and the
+ * printable-area guide. Element host boxes carry no visible styling yet
+ * (content + per-type visuals are E4-S2). Full style isolation is E4-S5.
+ */
+
+:host {
+  display: block;
+}
+
+.rdr-page {
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.18),
+    0 4px 12px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.rdr-printable {
+  /* A faint, non-printing guide marking the content area. */
+  outline: 1px dashed rgba(79, 70, 229, 0.25);
+  pointer-events: none;
+}

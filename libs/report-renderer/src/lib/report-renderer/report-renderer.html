@@ -1,1 +1,12 @@
-<p>ReportRenderer works!</p>
+@let model = vm();
+<div class="rdr-page" [style]="sheetStyle()" [attr.data-page-number]="model.pageNumber">
+  <div class="rdr-printable" [style]="printableStyle()"></div>
+  @for (box of model.elements; track box.id) {
+  <div
+    class="rdr-element"
+    [style]="elementStyle(box)"
+    [attr.data-element-id]="box.id"
+    [attr.data-element-type]="box.type"
+  ></div>
+  }
+</div>

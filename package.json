@@ -23,6 +23,7 @@
     "format:check": "prettier --check .",
     "schema:generate": "node -r @swc-node/register tools/generate-schema.ts",
     "fixtures:generate": "node -r @swc-node/register tools/generate-fixtures.ts",
+    "render-fixtures:generate": "node -r ./tools/register-swc-paths.cjs tools/generate-render-fixtures.ts",
     "smoke": "nx report && nx graph --file=tmp/graph.json && nx run-many -t lint && prettier --check .",
     "changeset": "changeset",
     "release:status": "changeset status --verbose",

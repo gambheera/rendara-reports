@@ -3,5 +3,5 @@
   <h1>Rendara Reports — Designer</h1>
   <p>Schema contract: {{ schemaVersion }} · engine targets {{ engineSchemaVersion }}</p>
   <button rdr-button variant="primary">Create new report</button>
-  <rdr-report-renderer />
+  <rdr-report-renderer [page]="page" [geometry]="geometry" />
 </main>
