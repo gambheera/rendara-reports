@@ -26,6 +26,7 @@ have the context behind the code.
 | [0002](0002-storybook-per-project-zoneless.md)        | Per-project, zoneless Storybook composition                      | Accepted | E0-S6 |
 | [0003](0003-release-tooling-changesets-commitlint.md) | Release tooling: Changesets + commitlint                         | Accepted | E0-S7 |
 | [0004](0004-design-tokens-theming.md)                 | Design tokens as CSS custom properties; provisional dark theme   | Accepted | E0-S8 |
+| [0005](0005-headless-text-measurement.md)             | Headless, deterministic text measurement for table row heights   | Accepted | E3-S3 |
 
 > **Numbering note:** ADRs 0001–0004 were written first, during E0-S5…S8, each
 > recording one Epic 0 tooling decision. The foundational stack/architecture ADR

@@ -35,3 +35,8 @@ export * from './lib/geometry';
 // Static single-page layout: fixed element frames -> absolute px boxes with
 // z-order and page-sheet clipping, over the E3-S1 geometry (E3-S2).
 export * from './lib/layout';
+
+// Data-table expansion & row measurement: a resolved data table -> measured
+// rows (header/detail/column-footer) and honoured column widths, via a
+// deterministic headless text-wrap strategy (E3-S3).
+export * from './lib/table-layout';
