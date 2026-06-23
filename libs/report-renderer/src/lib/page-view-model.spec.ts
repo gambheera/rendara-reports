@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { goldenCertificateTemplate, goldenInvoiceTemplate } from '@rendara/report-schema';
+import {
+  goldenCertificateData,
+  goldenCertificateTemplate,
+  goldenInvoiceTemplate,
+} from '@rendara/report-schema';
 import {
   mmToPx,
   paginate,
+  ptToPx,
+  resolveElement,
   type PaginatedDocument,
   type ResolvedDataTable,
 } from '@rendara/report-engine';
@@ -10,12 +16,26 @@ import { resolveDataTable } from '@rendara/report-engine';
 import { isDataTableElement } from '@rendara/report-schema';
 
 import {
+  boxDecorationStyle,
   buildPageViewModel,
   DEFAULT_PAGE_BACKGROUND,
   elementStyle,
   printableStyle,
+  sanitizeImageUrl,
   sheetStyle,
+  type ElementBoxView,
+  type ImageContentView,
+  type PageViewModel,
+  type ShapeContentView,
+  type TextContentView,
 } from './page-view-model';
+
+/** Finds a box by id, throwing (not returning undefined) when absent. */
+function boxById(vm: PageViewModel, id: string): ElementBoxView {
+  const found = vm.elements.find((e) => e.id === id);
+  if (!found) throw new Error(`expected an element box with id "${id}"`);
+  return found;
+}
 
 /**
  * Pure view-model tests (E4-S1). These are the authoritative position-correctness
@@ -180,6 +200,26 @@ describe('shared style helpers (E4-S1)', () => {
     expect(style['top']).toBe(`${mmToPx(20)}px`);
   });
 
+  it('adds the flex column + box decoration for a text box', () => {
+    const style = elementStyle({
+      id: 't',
+      type: 'text',
+      leftPx: 0,
+      topPx: 0,
+      widthPx: 50,
+      heightPx: 20,
+      zIndex: 1,
+      content: { kind: 'text', text: 'hi', textStyle: {} },
+      boxStyle: { 'justify-content': 'center', background: '#eee' },
+    });
+    expect(style['display']).toBe('flex');
+    expect(style['flex-direction']).toBe('column');
+    expect(style['box-sizing']).toBe('border-box');
+    // Box decoration is merged in.
+    expect(style['justify-content']).toBe('center');
+    expect(style['background']).toBe('#eee');
+  });
+
   it('emits absolute element styles, with auto height for a growing box', () => {
     const fixed = elementStyle({
       id: 'a',
@@ -189,6 +229,8 @@ describe('shared style helpers (E4-S1)', () => {
       widthPx: 30,
       heightPx: 40,
       zIndex: 3,
+      content: { kind: 'empty' },
+      boxStyle: {},
     });
     expect(fixed).toMatchObject({
       position: 'absolute',
@@ -207,7 +249,214 @@ describe('shared style helpers (E4-S1)', () => {
       widthPx: 100,
       heightPx: null,
       zIndex: 1,
+      content: { kind: 'empty' },
+      boxStyle: {},
     });
     expect(growing['height']).toBe('auto');
+  });
+});
+
+/**
+ * Element content + per-type style (E4-S2). Drives the certificate golden with
+ * its bindings resolved (so data-bound text carries real values) and asserts the
+ * text/shape/image content views and their styles.
+ */
+async function resolveCertificateValues(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  for (const element of goldenCertificateTemplate.body.elements) {
+    const resolved = await resolveElement(element, goldenCertificateData);
+    if (resolved) map.set(element.id, resolved.formatted);
+  }
+  return map;
+}
+
+describe('buildPageViewModel content (E4-S2)', () => {
+  it('leaves boxes empty when no template is supplied (E4-S1 behaviour)', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry);
+    expect(vm.elements.every((e) => e.content.kind === 'empty')).toBe(true);
+  });
+
+  it('renders a static text element with its font, colour and alignment', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+    });
+    const title = boxById(vm, 'el_cert_title');
+    const content = title.content as TextContentView;
+
+    expect(content.kind).toBe('text');
+    expect(content.text).toBe('Certificate of Completion');
+    expect(content.textStyle['font-family']).toBe('Inter');
+    expect(content.textStyle['font-size']).toBe(`${ptToPx(32)}px`);
+    expect(content.textStyle['font-weight']).toBe('bold');
+    expect(content.textStyle['color']).toBe('#4F46E5');
+    expect(content.textStyle['text-align']).toBe('center');
+    expect(content.textStyle['white-space']).toBe('pre-wrap');
+    // Vertical alignment lands on the host box as a flex justify-content.
+    expect(title.boxStyle['justify-content']).toBe('center');
+  });
+
+  it('falls back to the document default font when an element overrides nothing', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+    });
+    // el_cert_presented has no font override; default is Inter 12pt.
+    const presented = boxById(vm, 'el_cert_presented');
+    const content = presented.content as TextContentView;
+    expect(content.textStyle['font-family']).toBe('Inter');
+    expect(content.textStyle['font-size']).toBe(`${ptToPx(12)}px`);
+  });
+
+  it('renders a bound text element from the resolved-values map', async () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+      resolvedValues: await resolveCertificateValues(),
+    });
+    const recipient = boxById(vm, 'el_cert_recipient');
+    expect((recipient.content as TextContentView).text).toBe('Jane A. Smith');
+  });
+
+  it('prefers a page-token resolvedText over the literal and binding', () => {
+    // The invoice footer carries `Page {{pageNumber}} of {{pageCount}}`.
+    const doc = paginate(goldenInvoiceTemplate, new Map());
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenInvoiceTemplate,
+    });
+    const page = boxById(vm, 'el_inv_page');
+    expect((page.content as TextContentView).text).toBe('Page 1 of 1');
+  });
+
+  it('renders a bound text as empty when its value is absent from the map', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+      // no resolvedValues
+    });
+    const recipient = boxById(vm, 'el_cert_recipient');
+    expect((recipient.content as TextContentView).text).toBe('');
+  });
+
+  it('renders a rectangle shape inset by half the stroke, with stroke + no fill', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+    });
+    const border = boxById(vm, 'el_cert_border');
+    const content = border.content as ShapeContentView;
+
+    expect(content.kind).toBe('shape');
+    expect(content.shape).toBe('rect');
+    const halfStroke = mmToPx(1.5) / 2;
+    expect(content.rect).toEqual({
+      x: halfStroke,
+      y: halfStroke,
+      width: mmToPx(277) - mmToPx(1.5),
+      height: mmToPx(190) - mmToPx(1.5),
+    });
+    expect(content.stroke).toMatchObject({ color: '#4F46E5', widthPx: mmToPx(1.5), dashArray: null });
+    expect(content.fill).toBeNull();
+  });
+
+  it('renders a line shape corner-to-corner (degenerate height → horizontal rule)', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+    });
+    const rule = boxById(vm, 'el_cert_rule');
+    const content = rule.content as ShapeContentView;
+    expect(content.shape).toBe('line');
+    expect(content.line).toEqual({ x1: 0, y1: 0, x2: mmToPx(217), y2: 0 });
+    expect(content.svgHeightPx).toBe(0);
+  });
+
+  it('renders an ellipse with both a fill and a stroke', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+    });
+    const seal = boxById(vm, 'el_cert_seal');
+    const content = seal.content as ShapeContentView;
+    expect(content.shape).toBe('ellipse');
+    expect(content.fill).toBe('#EEF2FF');
+    expect(content.ellipse).toMatchObject({ cx: mmToPx(40) / 2, cy: mmToPx(40) / 2 });
+    expect(content.stroke).toMatchObject({ color: '#4F46E5' });
+  });
+
+  it('renders an image with its object-fit and a sanitised https src', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+    });
+    const logo = boxById(vm, 'el_cert_logo');
+    const content = logo.content as ImageContentView;
+    expect(content.kind).toBe('image');
+    expect(content.imageStyle['object-fit']).toBe('contain');
+    expect(content.src).toBe('https://assets.rendara.dev/rendara-academy.png');
+  });
+});
+
+describe('boxDecorationStyle (E4-S2)', () => {
+  it('maps fill, per-side border (mm→px), padding and vertical alignment', () => {
+    const style = boxDecorationStyle(
+      {
+        fill: '#fee',
+        border: { bottom: { widthMm: 0.5, style: 'dashed', color: '#333' } },
+        padding: { top: 1, right: 2, bottom: 3, left: 4 },
+      },
+      undefined,
+      'bottom',
+    );
+    expect(style['background']).toBe('#fee');
+    expect(style['border-bottom']).toBe(`${mmToPx(0.5)}px dashed #333`);
+    expect(style['padding-top']).toBe(`${mmToPx(1)}px`);
+    expect(style['padding-left']).toBe(`${mmToPx(4)}px`);
+    expect(style['justify-content']).toBe('flex-end');
+  });
+
+  it('omits a border whose style is none or width is zero', () => {
+    expect(boxDecorationStyle({ border: { top: { style: 'none', widthMm: 2 } } }, undefined, undefined)[
+      'border-top'
+    ]).toBeUndefined();
+    expect(
+      boxDecorationStyle({ border: { top: { style: 'solid', widthMm: 0 } } }, undefined, undefined)[
+        'border-top'
+      ],
+    ).toBeUndefined();
+  });
+});
+
+describe('sanitizeImageUrl (E4-S2 security)', () => {
+  it('allows http, https, image data URIs, and relative/protocol-relative URLs', () => {
+    expect(sanitizeImageUrl('https://cdn.example/logo.png')).toBe('https://cdn.example/logo.png');
+    expect(sanitizeImageUrl('http://cdn.example/logo.png')).toBe('http://cdn.example/logo.png');
+    expect(sanitizeImageUrl('data:image/png;base64,AAAA')).toBe('data:image/png;base64,AAAA');
+    expect(sanitizeImageUrl('/assets/logo.png')).toBe('/assets/logo.png');
+    expect(sanitizeImageUrl('logo.png')).toBe('logo.png');
+    expect(sanitizeImageUrl('//cdn.example/logo.png')).toBe('//cdn.example/logo.png');
+  });
+
+  it('blocks javascript:, vbscript:, file: and non-image data URIs', () => {
+    expect(sanitizeImageUrl('javascript:alert(1)')).toBeNull();
+    expect(sanitizeImageUrl('vbscript:msgbox(1)')).toBeNull();
+    expect(sanitizeImageUrl('file:///etc/passwd')).toBeNull();
+    expect(sanitizeImageUrl('data:text/html,<script>alert(1)</script>')).toBeNull();
+  });
+
+  it('neutralises case- and whitespace-obfuscated javascript: URLs', () => {
+    expect(sanitizeImageUrl('JavaScript:alert(1)')).toBeNull();
+    expect(sanitizeImageUrl('  javascript:alert(1)')).toBeNull();
+    expect(sanitizeImageUrl('java\tscript:alert(1)')).toBeNull();
+    expect(sanitizeImageUrl('java\nscript:alert(1)')).toBeNull();
+    expect(sanitizeImageUrl(' javascript:alert(1)')).toBeNull();
+  });
+
+  it('returns null for absent or empty sources', () => {
+    expect(sanitizeImageUrl(null)).toBeNull();
+    expect(sanitizeImageUrl(undefined)).toBeNull();
+    expect(sanitizeImageUrl('')).toBeNull();
+    expect(sanitizeImageUrl('   ')).toBeNull();
   });
 });

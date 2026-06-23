@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { PageGeometry, PaginatedPage } from '@rendara/report-engine';
+import type { RendaraTemplate } from '@rendara/report-schema';
 
 import {
   buildPageViewModel,
@@ -23,9 +24,17 @@ import {
  * {@link buildPageViewModel} so it is unit-testable and reused by the headless
  * serializer.
  *
- * Scope is deliberately narrow: element **content** (text/shape/image) is E4-S2,
- * data-table slices are E4-S3, multi-page + zoom controls are E4-S4, style
- * isolation is E4-S5, design-mode hooks are E4-S6, and the watermark is E4-S7.
+ * E4-S2 fills in element **content**: each fixed box now paints its text
+ * (font/align/wrap/colour), its shape (line/rect/ellipse as inline SVG with
+ * stroke/fill), or its image (object-fit + a URL-sanitised `src`). Content comes
+ * from the source {@link template} joined by element id, with data-bound text/
+ * image display strings supplied via {@link resolvedValues} (the engine resolves
+ * bindings asynchronously upstream). All content math lives in the pure
+ * {@link buildPageViewModel} so it is unit-testable and reused by the serializer.
+ *
+ * Still deferred: data-table slices are E4-S3, multi-page + zoom controls are
+ * E4-S4, style isolation is E4-S5, design-mode hooks are E4-S6, the watermark is
+ * E4-S7.
  */
 @Component({
   selector: 'rdr-report-renderer',
@@ -43,12 +52,26 @@ export class ReportRenderer {
   readonly zoom = input<number>(1);
   /** CSS colour for the sheet fill; `null` → white paper. */
   readonly background = input<string | null>(null);
+  /**
+   * The source template (E4-S2): supplies each element's style and type-specific
+   * content (literal text, shape kind, image src/fit). When `null` the boxes
+   * render empty (the E4-S1 positioned-host-box behaviour).
+   */
+  readonly template = input<RendaraTemplate | null>(null);
+  /**
+   * Resolved binding **display strings** by element id (E4-S2): the `formatted`
+   * value from the engine's `resolveElement`, used for data-bound text/image.
+   * A page-token text still wins; a static literal is the final fallback.
+   */
+  readonly resolvedValues = input<ReadonlyMap<string, string>>(new Map());
 
   /** The pure view-model for the current inputs. */
   protected readonly vm = computed<PageViewModel>(() =>
     buildPageViewModel(this.page(), this.geometry(), {
       zoom: this.zoom(),
       background: this.background(),
+      template: this.template() ?? undefined,
+      resolvedValues: this.resolvedValues(),
     }),
   );
 

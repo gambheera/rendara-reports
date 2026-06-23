@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/angular';
-import { goldenCertificateTemplate } from '@rendara/report-schema';
-import { mmToPx, paginate, type PaginatedDocument } from '@rendara/report-engine';
+import {
+  goldenCertificateData,
+  goldenCertificateTemplate,
+  type RendaraTemplate,
+} from '@rendara/report-schema';
+import {
+  mmToPx,
+  paginate,
+  resolveElement,
+  type PaginatedDocument,
+} from '@rendara/report-engine';
 
 import { ReportRenderer } from './report-renderer';
 
@@ -83,5 +92,101 @@ describe('ReportRenderer (E4-S1)', () => {
   it('tags the sheet with the page number', async () => {
     const sheet = el(await renderCertificate(), '.rdr-page');
     expect(sheet.getAttribute('data-page-number')).toBe('1');
+  });
+});
+
+/**
+ * Element content (E4-S2, QA: "per-type" + "malicious image URL is neutralised").
+ * Renders the certificate golden with its template + resolved bindings and
+ * asserts text/shape/image content in the live DOM, plus the image-URL security.
+ */
+async function resolveCertificateValues(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  for (const element of goldenCertificateTemplate.body.elements) {
+    const resolved = await resolveElement(element, goldenCertificateData);
+    if (resolved) map.set(element.id, resolved.formatted);
+  }
+  return map;
+}
+
+async function renderCertificateWithContent() {
+  const doc = certificatePage();
+  const { container } = await render(ReportRenderer, {
+    inputs: {
+      page: doc.pages[0],
+      geometry: doc.geometry,
+      template: goldenCertificateTemplate,
+      resolvedValues: await resolveCertificateValues(),
+    },
+  });
+  return container;
+}
+
+describe('ReportRenderer content (E4-S2)', () => {
+  it('paints a static text element with its resolved styles', async () => {
+    const container = await renderCertificateWithContent();
+    const box = el(container, '[data-element-id="el_cert_title"]');
+    const text = el(box, '.rdr-text');
+
+    expect(text.textContent).toBe('Certificate of Completion');
+    expect(text.style.textAlign).toBe('center');
+    expect(text.style.fontWeight).toBe('bold');
+    expect(box.style.display).toBe('flex');
+  });
+
+  it('paints a data-bound text element from the resolved values', async () => {
+    const container = await renderCertificateWithContent();
+    const box = el(container, '[data-element-id="el_cert_recipient"]');
+    expect(el(box, '.rdr-text').textContent).toBe('Jane A. Smith');
+  });
+
+  it('paints each shape as an inline SVG with stroke/fill', async () => {
+    const container = await renderCertificateWithContent();
+
+    const rect = el(container, '[data-element-id="el_cert_border"] svg rect');
+    expect(rect.getAttribute('stroke')).toBe('#4F46E5');
+
+    const line = el(container, '[data-element-id="el_cert_rule"] svg line');
+    expect(line.getAttribute('x1')).toBe('0');
+
+    const ellipse = el(container, '[data-element-id="el_cert_seal"] svg ellipse');
+    expect(ellipse.getAttribute('fill')).toBe('#EEF2FF');
+  });
+
+  it('paints an image with object-fit and a sanitised src', async () => {
+    const container = await renderCertificateWithContent();
+    const img = el(container, '[data-element-id="el_cert_logo"] img');
+    expect(img.getAttribute('src')).toBe('https://assets.rendara.dev/rendara-academy.png');
+    expect(img.style.objectFit).toBe('contain');
+    expect(img.getAttribute('alt')).toBe('');
+  });
+
+  it('neutralises a malicious image URL (no img is rendered)', async () => {
+    const template: RendaraTemplate = {
+      ...goldenCertificateTemplate,
+      header: { elements: [] },
+      footer: { elements: [] },
+      body: {
+        elements: [
+          {
+            id: 'el_evil_img',
+            type: 'image',
+            frame: { xMm: 20, yMm: 20, wMm: 40, hMm: 20 },
+            src: 'javascript:alert(document.cookie)',
+            fit: 'contain',
+            z: 1,
+          },
+        ],
+      },
+    };
+    const doc = paginate(template, new Map());
+    const { container } = await render(ReportRenderer, {
+      inputs: { page: doc.pages[0], geometry: doc.geometry, template },
+    });
+
+    const box = el(container, '[data-element-id="el_evil_img"]');
+    // The dangerous URL is dropped entirely — no <img> with a javascript: src.
+    expect(box.querySelector('img')).toBeNull();
+    expect(container.innerHTML).not.toContain('javascript:');
   });
 });
