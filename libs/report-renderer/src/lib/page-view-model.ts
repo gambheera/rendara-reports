@@ -1,16 +1,17 @@
 /**
- * Page view-model (E4-S1) — the pure, framework-agnostic bridge between the
- * engine's {@link PaginatedPage page model} and the DOM the shared renderer
- * paints. It is the single source of layout→style truth: both the Angular
- * {@link ReportRenderer} component and the headless {@link serializePageToHtml}
- * serializer consume it, so designer preview, viewer, and visual-regression
- * snapshots are byte-for-byte the same geometry (brief §7's "one renderer").
+ * Page view-model (E4-S1, content in E4-S2) — the pure, framework-agnostic
+ * bridge between the engine's {@link PaginatedPage page model} and the DOM the
+ * shared renderer paints. It is the single source of layout→style truth: both
+ * the Angular {@link ReportRenderer} component and the headless
+ * {@link serializePageToHtml} serializer consume it, so designer preview, viewer,
+ * and visual-regression snapshots are byte-for-byte the same geometry and content
+ * (brief §7's "one renderer").
  *
  * ## What this pass does
  * The engine has already done the hard part: {@link computePageGeometry}
  * converted the page + margins to px, and {@link layoutStaticPage}/
  * {@link paginate} placed every fixed element as an absolute **page-absolute px**
- * box. This module only:
+ * box. This module:
  *  - exposes the **sheet** (full page px) and the **printable area** (margins
  *    inset) as plain rectangles a renderer can position directly;
  *  - resolves the **background** fill (a CSS colour string; default white);
@@ -19,23 +20,119 @@
  *    `z` carried through as a `zIndex`;
  *  - carries the **zoom** factor through untouched — zoom is applied by the
  *    renderer as a single `transform: scale(zoom)` on the sheet (E4-S4 builds
- *    fit-width/fit-page on top), so inner coordinates stay at natural engine px.
+ *    fit-width/fit-page on top), so inner coordinates stay at natural engine px;
+ *  - **(E4-S2)** attaches each box's **content** — the displayed text, the SVG
+ *    shape primitive, or the (URL-sanitised) image — plus the resolved per-type
+ *    **style**, sourced from the supplied {@link PageViewOptions.template}
+ *    elements and the optional {@link PageViewOptions.resolvedValues} map of
+ *    binding display strings.
+ *
+ * ## Content sourcing (E4-S2)
+ * The page model carries geometry + page-token text only, so content is joined
+ * back from the source template by element id. A text element's display string
+ * is, in priority order, its per-page {@link PlacedElement.resolvedText} (a
+ * `{{pageNumber}}`/`{{pageCount}}` substitution), then a caller-supplied
+ * **resolved binding** value (the `formatted` string from the engine's async
+ * `resolveElement`), then its static literal, then `''`. Image sources resolve
+ * the same way (binding value over static `src`) and pass through
+ * {@link sanitizeImageUrl}. Shapes carry no value — their appearance comes
+ * wholly from {@link ElementStyle}. When no `template` is supplied every box is
+ * `kind: 'empty'` (the E4-S1 positioned-host-box behaviour), so callers that only
+ * need geometry keep working.
  *
  * ## What this pass does NOT do (deferred, later E4 stories)
- *  - **Element content** — text/shape/image visuals are E4-S2; here an element is
- *    only its positioned host box.
  *  - **Data-table slices** (`page.tables`) — E4-S3.
  *  - **Watermark** (`page.watermark`) — E4-S7.
+ *  - **Style isolation / Shadow DOM** — E4-S5.
  * A `null`-height element (a growing box) is passed through with `heightPx: null`
  * so a renderer can let it size to content; the fixed elements on a paginated
  * page always carry a concrete height, so this only matters defensively.
  */
 
+import { DEFAULT_DPI, mmToPx, ptToPx } from '@rendara/report-engine';
 import type { PageGeometry, PaginatedPage, PlacedElement } from '@rendara/report-engine';
-import type { ElementType } from '@rendara/report-schema';
+import type {
+  BorderSide,
+  ElementStyle,
+  ElementType,
+  FontSpec,
+  ImageElement,
+  RendaraTemplate,
+  ShapeElement,
+  ShapeKind,
+  TemplateElement,
+  TextElement,
+} from '@rendara/report-schema';
 
 /** The default page fill when a template declares no background (brief §5: `null` = none → white paper). */
 export const DEFAULT_PAGE_BACKGROUND = '#ffffff';
+
+/** Document-default font used when no template (and thus no {@link FontSpec}) is supplied. */
+const FALLBACK_FONT: FontSpec = { family: 'Inter', sizePt: 10 };
+
+// ---------------------------------------------------------------------------
+// Content view types (E4-S2): what to paint inside a positioned host box.
+// ---------------------------------------------------------------------------
+
+/** A block of (already-resolved) text plus the inline style to paint it with. */
+export interface TextContentView {
+  readonly kind: 'text';
+  /** The display string (page-token > binding > literal > `''`), pre-resolved. */
+  readonly text: string;
+  /** Inline styles for the text run (font, colour, alignment, wrapping). */
+  readonly textStyle: StyleMap;
+}
+
+/** A vector shape, described as an SVG primitive in natural box px. */
+export interface ShapeContentView {
+  readonly kind: 'shape';
+  readonly shape: ShapeKind;
+  /** Width of the `<svg>` canvas in px (the host box width). */
+  readonly svgWidthPx: number;
+  /** Height of the `<svg>` canvas in px (the host box height; `0` for a rule line). */
+  readonly svgHeightPx: number;
+  /** Endpoints for a `line` shape (corner-to-corner of the frame). */
+  readonly line?: { readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number };
+  /** Geometry for a `rect` shape, inset by half the stroke so it is not clipped. */
+  readonly rect?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  /** Geometry for an `ellipse` shape, inset by half the stroke. */
+  readonly ellipse?: { readonly cx: number; readonly cy: number; readonly rx: number; readonly ry: number };
+  /** Resolved stroke, or `null` when the shape has no visible outline. */
+  readonly stroke: ShapeStrokeView | null;
+  /** Resolved interior fill (CSS colour), or `null` for no fill. */
+  readonly fill: string | null;
+}
+
+/** A resolved shape stroke ready to map onto SVG `stroke*` attributes. */
+export interface ShapeStrokeView {
+  readonly color: string;
+  readonly widthPx: number;
+  /** SVG `stroke-dasharray` value for dashed/dotted strokes, else `null` (solid). */
+  readonly dashArray: string | null;
+  /** `'round'` for dotted strokes so dots are circular, else `null`. */
+  readonly lineCap: 'round' | null;
+}
+
+/** An image: the sanitised source (or `null` if blocked/absent) and its fit. */
+export interface ImageContentView {
+  readonly kind: 'image';
+  /** The {@link sanitizeImageUrl sanitised} source URL, or `null` when blocked/absent. */
+  readonly src: string | null;
+  /** Inline styles for the `<img>` (object-fit, full-box sizing). */
+  readonly imageStyle: StyleMap;
+}
+
+/** No content (no source element supplied, or a type with nothing to paint here). */
+export interface EmptyContentView {
+  readonly kind: 'empty';
+}
+
+/** The painted content of one element host box. */
+export type ElementContentView =
+  | TextContentView
+  | ShapeContentView
+  | ImageContentView
+  | EmptyContentView;
 
 /** A positioned element host box in natural (unscaled) page px, ready to absolutely position. */
 export interface ElementBoxView {
@@ -48,6 +145,15 @@ export interface ElementBoxView {
   readonly heightPx: number | null;
   /** Paint depth, mapped straight to CSS `z-index` (lower paints behind). */
   readonly zIndex: number;
+  /** What to paint inside the box (E4-S2); `kind: 'empty'` when no template is supplied. */
+  readonly content: ElementContentView;
+  /**
+   * Pre-resolved box decoration (E4-S2): fill / per-side border / padding and —
+   * for text — the flex `justify-content` realising vertical alignment. Merged
+   * into the host style by {@link elementStyle} so the component and serializer
+   * share one decision. Empty when the element declares no decoration.
+   */
+  readonly boxStyle: StyleMap;
 }
 
 /** A rectangle in natural page px. */
@@ -83,12 +189,25 @@ export interface PageViewOptions {
    * `undefined` or an empty string fall back to {@link DEFAULT_PAGE_BACKGROUND}.
    */
   readonly background?: string | null;
+  /**
+   * The source template (E4-S2): supplies each element's style and type-specific
+   * content (literal text, shape kind, image src/fit) plus the document default
+   * font. When omitted, every box is `kind: 'empty'` (E4-S1 behaviour).
+   */
+  readonly template?: RendaraTemplate;
+  /**
+   * Resolved binding **display strings** by element id (E4-S2): the `formatted`
+   * value from the engine's async `resolveElement`, used for data-bound text and
+   * image elements. A page-token `resolvedText` still wins; a static literal is
+   * the final fallback. Defaults to empty.
+   */
+  readonly resolvedValues?: ReadonlyMap<string, string>;
 }
 
 /**
  * Builds the {@link PageViewModel} for one paginated `page` against its shared
  * `geometry`. Pure: no DOM, no Angular, deterministic for snapshot tests. See
- * the module overview for what it does and (deliberately) does not cover.
+ * the module overview for content sourcing and the (deliberate) deferrals.
  */
 export function buildPageViewModel(
   page: PaginatedPage,
@@ -97,13 +216,20 @@ export function buildPageViewModel(
 ): PageViewModel {
   const zoom = options?.zoom ?? 1;
   const background = resolveBackground(options?.background);
+  const dpi = geometry.dpi ?? DEFAULT_DPI;
+
+  const template = options?.template;
+  const resolvedValues = options?.resolvedValues ?? EMPTY_VALUES;
+  const elementsById = template ? indexElements(template) : null;
+  const defaultFont = template?.page.defaultFont ?? FALLBACK_FONT;
 
   const { pagePx, printable } = geometry;
 
   // header → body → footer concatenation preserves the engine's band tiebreak
   // for equal z; the explicit `zIndex` makes paint order independent of DOM order.
   const elements: ElementBoxView[] = [...page.header, ...page.elements, ...page.footer].map(
-    toElementBoxView,
+    (placed) =>
+      toElementBoxView(placed, elementsById?.get(placed.id), resolvedValues, defaultFont, dpi),
   );
 
   return {
@@ -121,17 +247,311 @@ export function buildPageViewModel(
   };
 }
 
-/** Maps one engine {@link PlacedElement} to its positioned host box. */
-function toElementBoxView(element: PlacedElement): ElementBoxView {
+/** A stable empty map so the default path allocates nothing. */
+const EMPTY_VALUES: ReadonlyMap<string, string> = new Map();
+
+/** Indexes every element across the three bands by id, for content lookup. */
+function indexElements(template: RendaraTemplate): Map<string, TemplateElement> {
+  const map = new Map<string, TemplateElement>();
+  for (const band of ['header', 'body', 'footer'] as const) {
+    for (const element of template[band].elements) {
+      map.set(element.id, element);
+    }
+  }
+  return map;
+}
+
+/** Maps one engine {@link PlacedElement} (+ its source element) to its positioned host box. */
+function toElementBoxView(
+  placed: PlacedElement,
+  source: TemplateElement | undefined,
+  resolvedValues: ReadonlyMap<string, string>,
+  defaultFont: FontSpec,
+  dpi: number,
+): ElementBoxView {
+  const widthPx = placed.boxPx.wPx;
+  const heightPx = placed.boxPx.hPx;
+  const content = buildContent(placed, source, resolvedValues, defaultFont, dpi, widthPx, heightPx);
+  // Vertical alignment only realises for text (the only flex host box); other
+  // types ignore it. Shapes paint their own fill/stroke via SVG, so box
+  // decoration (fill/border/padding) is meaningful for text and images only.
+  const verticalAlign = content.kind === 'text' ? source?.style?.align?.vertical : undefined;
+  const decorate = source && source.type !== 'shape';
   return {
-    id: element.id,
-    type: element.type,
-    leftPx: element.boxPx.xPx,
-    topPx: element.boxPx.yPx,
-    widthPx: element.boxPx.wPx,
-    heightPx: element.boxPx.hPx,
-    zIndex: element.z,
+    id: placed.id,
+    type: placed.type,
+    leftPx: placed.boxPx.xPx,
+    topPx: placed.boxPx.yPx,
+    widthPx,
+    heightPx,
+    zIndex: placed.z,
+    content,
+    boxStyle: decorate ? boxDecorationStyle(source.style, dpi, verticalAlign) : EMPTY_STYLE,
   };
+}
+
+/** A stable empty style map for boxes with no decoration. */
+const EMPTY_STYLE: StyleMap = {};
+
+/** Builds the content view for one box from its source element (or `empty` when absent). */
+function buildContent(
+  placed: PlacedElement,
+  source: TemplateElement | undefined,
+  resolvedValues: ReadonlyMap<string, string>,
+  defaultFont: FontSpec,
+  dpi: number,
+  widthPx: number,
+  heightPx: number | null,
+): ElementContentView {
+  if (!source) {
+    return EMPTY_CONTENT;
+  }
+  switch (source.type) {
+    case 'text':
+      return buildTextContent(placed, source, resolvedValues, defaultFont, dpi);
+    case 'shape':
+      return buildShapeContent(source, dpi, widthPx, heightPx ?? 0);
+    case 'image':
+      return buildImageContent(placed, source, resolvedValues);
+    case 'dataTable':
+      // Data tables are rendered from `page.tables` slices by E4-S3, not here.
+      return EMPTY_CONTENT;
+  }
+}
+
+const EMPTY_CONTENT: EmptyContentView = { kind: 'empty' };
+
+// ---------------------------------------------------------------------------
+// Text content + style.
+// ---------------------------------------------------------------------------
+
+/** Resolves a text element's display string and its inline run style. */
+function buildTextContent(
+  placed: PlacedElement,
+  element: TextElement,
+  resolvedValues: ReadonlyMap<string, string>,
+  defaultFont: FontSpec,
+  dpi: number,
+): TextContentView {
+  const text = resolveTextString(placed, element, resolvedValues);
+  return { kind: 'text', text, textStyle: textRunStyle(element.style, defaultFont, dpi) };
+}
+
+/**
+ * Display string priority (E4-S2): the per-page page-token substitution wins,
+ * then the caller-supplied resolved binding value, then the static literal, then
+ * the empty string. See the module overview.
+ */
+function resolveTextString(
+  placed: PlacedElement,
+  element: TextElement,
+  resolvedValues: ReadonlyMap<string, string>,
+): string {
+  if (placed.resolvedText !== null) {
+    return placed.resolvedText;
+  }
+  if (element.binding) {
+    return resolvedValues.get(element.id) ?? '';
+  }
+  return element.text ?? '';
+}
+
+/** Maps font + colour + horizontal alignment + wrapping to the text-run inline style. */
+function textRunStyle(style: ElementStyle | undefined, defaultFont: FontSpec, dpi: number): StyleMap {
+  const font = style?.font;
+  const family = font?.family ?? defaultFont.family;
+  const sizePt = font?.sizePt ?? defaultFont.sizePt;
+  const out: Record<string, string> = {
+    'font-family': family,
+    'font-size': `${ptToPx(sizePt, dpi)}px`,
+    // Wrap within the frame and honour authored newlines (e.g. multi-line address).
+    'white-space': 'pre-wrap',
+    // The run fills the box width so text-align positions it horizontally.
+    width: '100%',
+  };
+  if (font?.weight !== undefined) {
+    out['font-weight'] = `${font.weight}`;
+  }
+  if (font?.style !== undefined) {
+    out['font-style'] = font.style;
+  }
+  if (style?.color !== undefined) {
+    out['color'] = style.color;
+  }
+  const horizontal = style?.align?.horizontal;
+  if (horizontal !== undefined) {
+    out['text-align'] = horizontal;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Shape content (SVG primitives).
+// ---------------------------------------------------------------------------
+
+/** Builds the SVG primitive for a shape, inset so the stroke is not clipped. */
+function buildShapeContent(
+  element: ShapeElement,
+  dpi: number,
+  widthPx: number,
+  heightPx: number,
+): ShapeContentView {
+  const stroke = resolveStroke(element.style, dpi);
+  const fill = element.style?.fill ?? null;
+  const half = stroke ? stroke.widthPx / 2 : 0;
+
+  const base = {
+    kind: 'shape' as const,
+    shape: element.shape,
+    svgWidthPx: widthPx,
+    svgHeightPx: heightPx,
+    stroke,
+    fill,
+  };
+
+  switch (element.shape) {
+    case 'line':
+      // Corner-to-corner of the frame; a zero-height frame degenerates to a
+      // horizontal rule, a zero-width frame to a vertical one. `overflow: visible`
+      // on the svg keeps the stroke of a zero-dimension rule painted.
+      return { ...base, line: { x1: 0, y1: 0, x2: widthPx, y2: heightPx } };
+    case 'rect':
+      return {
+        ...base,
+        rect: {
+          x: half,
+          y: half,
+          width: Math.max(0, widthPx - half * 2),
+          height: Math.max(0, heightPx - half * 2),
+        },
+      };
+    case 'ellipse':
+      return {
+        ...base,
+        ellipse: {
+          cx: widthPx / 2,
+          cy: heightPx / 2,
+          rx: Math.max(0, widthPx / 2 - half),
+          ry: Math.max(0, heightPx / 2 - half),
+        },
+      };
+  }
+}
+
+/** Maps a {@link StrokeStyle} to a resolved SVG stroke, or `null` when there is none. */
+function resolveStroke(style: ElementStyle | undefined, dpi: number): ShapeStrokeView | null {
+  const stroke = style?.stroke;
+  if (!stroke) {
+    return null;
+  }
+  const lineStyle = stroke.style ?? 'solid';
+  if (lineStyle === 'none') {
+    return null;
+  }
+  const widthMm = stroke.widthMm ?? DEFAULT_STROKE_WIDTH_MM;
+  const widthPx = mmToPx(widthMm, dpi);
+  if (widthPx <= 0) {
+    return null;
+  }
+  const color = stroke.color ?? DEFAULT_STROKE_COLOR;
+  return {
+    color,
+    widthPx,
+    dashArray: dashArrayFor(lineStyle, widthPx),
+    lineCap: lineStyle === 'dotted' ? 'round' : null,
+  };
+}
+
+/** Default stroke width (mm) when a shape declares a stroke style/colour but no width. */
+const DEFAULT_STROKE_WIDTH_MM = 0.2;
+/** Default stroke colour when a shape declares a stroke but no colour. */
+const DEFAULT_STROKE_COLOR = '#000000';
+
+/** SVG `stroke-dasharray` for dashed/dotted lines, scaled to the stroke width; `null` for solid. */
+function dashArrayFor(lineStyle: string, widthPx: number): string | null {
+  switch (lineStyle) {
+    case 'dashed':
+      return `${widthPx * 3} ${widthPx * 2}`;
+    case 'dotted':
+      // A zero-length dash with a round cap renders as a dot; the gap spaces them.
+      return `0 ${widthPx * 2}`;
+    default:
+      // solid / double both render as a solid stroke at this layer.
+      return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Image content + safe URL handling.
+// ---------------------------------------------------------------------------
+
+/** Builds the image content view: resolved + sanitised src and the object-fit style. */
+function buildImageContent(
+  placed: PlacedElement,
+  element: ImageElement,
+  resolvedValues: ReadonlyMap<string, string>,
+): ImageContentView {
+  const raw = element.binding ? resolvedValues.get(placed.id) : element.src;
+  return {
+    kind: 'image',
+    src: sanitizeImageUrl(raw),
+    imageStyle: {
+      width: '100%',
+      height: '100%',
+      'object-fit': element.fit,
+    },
+  };
+}
+
+/** URL schemes an image source may use (besides scheme-relative / relative paths). */
+const SAFE_IMAGE_SCHEMES = new Set(['http', 'https']);
+
+/**
+ * Hardens an image source against XSS (E4-S2 security requirement, brief §6/§7):
+ * blocks `javascript:`/`vbscript:`/`file:` and any non-`image` `data:` URI, and
+ * is robust to obfuscation (leading/embedded control characters and whitespace,
+ * mixed case). Returns the trimmed URL when safe, or `null` when blocked, absent,
+ * or empty.
+ *
+ * - **Allowed:** `http:`/`https:` absolute URLs; `data:image/<type>` URIs;
+ *   protocol-relative (`//host/…`) and relative (`/path`, `path`, `./`, `../`)
+ *   URLs (no scheme → inherits the page's, which is safe).
+ * - **Blocked:** everything with an explicit non-allowed scheme.
+ *
+ * This runs in the pure layer so the component, the headless serializer, and the
+ * unit tests all share one decision — and never relies on `eval`/the DOM.
+ */
+export function sanitizeImageUrl(url: string | null | undefined): string | null {
+  if (typeof url !== 'string') {
+    return null;
+  }
+  // Strip ASCII control characters and whitespace (NUL, tab, CR/LF, space) that
+  // are used to split a scheme keyword across characters. Image URLs never carry
+  // raw whitespace, so dropping every char with code <= 0x20 is safe and defeats
+  // the obfuscation before the scheme check.
+  const cleaned = Array.from(url)
+    .filter((ch) => ch.charCodeAt(0) > 0x20)
+    .join('');
+  if (cleaned.length === 0) {
+    return null;
+  }
+
+  const schemeMatch = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(cleaned);
+  if (!schemeMatch) {
+    // No scheme → relative or protocol-relative URL; safe.
+    return cleaned;
+  }
+
+  const scheme = schemeMatch[1].toLowerCase();
+  if (SAFE_IMAGE_SCHEMES.has(scheme)) {
+    return cleaned;
+  }
+  if (scheme === 'data') {
+    // Only image data URIs; block `data:text/html`, `data:application/...`, etc.
+    return /^data:image\//i.test(cleaned) ? cleaned : null;
+  }
+  // javascript:, vbscript:, file:, and anything else explicit → block.
+  return null;
 }
 
 /** A non-empty background string wins; everything else falls back to white paper. */
@@ -174,9 +594,13 @@ export function printableStyle(vm: PageViewModel): StyleMap {
   };
 }
 
-/** Inline styles for one absolutely-positioned element host box. */
+/**
+ * Inline styles for one absolutely-positioned element host box. Carries the
+ * position/size/z-index and, for text, the box decoration (fill, border,
+ * padding) + a flex column whose `justify-content` realises vertical alignment.
+ */
 export function elementStyle(box: ElementBoxView): StyleMap {
-  return {
+  const out: Record<string, string> = {
     position: 'absolute',
     left: `${box.leftPx}px`,
     top: `${box.topPx}px`,
@@ -185,4 +609,75 @@ export function elementStyle(box: ElementBoxView): StyleMap {
     height: box.heightPx === null ? 'auto' : `${box.heightPx}px`,
     'z-index': `${box.zIndex}`,
   };
+  if (box.content.kind === 'text') {
+    out['box-sizing'] = 'border-box';
+    out['display'] = 'flex';
+    out['flex-direction'] = 'column';
+    out['overflow'] = 'hidden';
+  }
+  // Box decoration (fill/border/padding/justify-content) layers on top; none of
+  // its keys collide with the position/size/z-index set above.
+  return { ...out, ...box.boxStyle };
+}
+
+/**
+ * Box decoration (fill / border / padding / vertical alignment) for an element,
+ * derived from its source style. Returned separately from {@link elementStyle}
+ * so callers that pre-built the box style can merge these in; both the component
+ * and serializer compose them with the same precedence. Empty when there is no
+ * decoration to apply.
+ */
+export function boxDecorationStyle(
+  style: ElementStyle | undefined,
+  dpi: number,
+  verticalAlign: string | undefined,
+): StyleMap {
+  const out: Record<string, string> = {};
+  if (style?.fill !== undefined) {
+    out['background'] = style.fill;
+  }
+  applyBorder(out, 'top', style?.border?.top, dpi);
+  applyBorder(out, 'right', style?.border?.right, dpi);
+  applyBorder(out, 'bottom', style?.border?.bottom, dpi);
+  applyBorder(out, 'left', style?.border?.left, dpi);
+  const padding = style?.padding;
+  if (padding) {
+    out['padding-top'] = `${mmToPx(padding.top ?? 0, dpi)}px`;
+    out['padding-right'] = `${mmToPx(padding.right ?? 0, dpi)}px`;
+    out['padding-bottom'] = `${mmToPx(padding.bottom ?? 0, dpi)}px`;
+    out['padding-left'] = `${mmToPx(padding.left ?? 0, dpi)}px`;
+  }
+  if (verticalAlign !== undefined) {
+    out['justify-content'] = VERTICAL_JUSTIFY[verticalAlign] ?? 'flex-start';
+  }
+  return out;
+}
+
+/** Maps an authored vertical alignment to the flex `justify-content` value. */
+const VERTICAL_JUSTIFY: Readonly<Record<string, string>> = {
+  top: 'flex-start',
+  middle: 'center',
+  bottom: 'flex-end',
+};
+
+/** Writes one CSS `border-<side>` shorthand when the side declares a visible border. */
+function applyBorder(
+  out: Record<string, string>,
+  side: 'top' | 'right' | 'bottom' | 'left',
+  border: BorderSide | undefined,
+  dpi: number,
+): void {
+  if (!border) {
+    return;
+  }
+  const lineStyle = border.style ?? 'solid';
+  if (lineStyle === 'none') {
+    return;
+  }
+  const widthPx = mmToPx(border.widthMm ?? 0, dpi);
+  if (widthPx <= 0) {
+    return;
+  }
+  const color = border.color ?? DEFAULT_STROKE_COLOR;
+  out[`border-${side}`] = `${widthPx}px ${lineStyle} ${color}`;
 }

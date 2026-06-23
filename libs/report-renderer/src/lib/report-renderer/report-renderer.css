@@ -1,9 +1,10 @@
 /*
- * Single-page renderer styles (E4-S1). Deliberately minimal: the sheet's size,
- * background and zoom transform are inline (data-driven from the view-model);
- * these rules supply only the static chrome — the page drop shadow and the
- * printable-area guide. Element host boxes carry no visible styling yet
- * (content + per-type visuals are E4-S2). Full style isolation is E4-S5.
+ * Single-page renderer styles (E4-S1, content in E4-S2). Deliberately minimal:
+ * the sheet's size, background and zoom transform are inline (data-driven from
+ * the view-model), as are every element's content styles (font/align/fill/
+ * stroke/object-fit). These rules supply only the static chrome — the page drop
+ * shadow, the printable-area guide — and a tiny content reset so margins/line
+ * boxes are predictable. Full style isolation is E4-S5.
  */
 
 :host {
@@ -21,4 +22,15 @@
   /* A faint, non-printing guide marking the content area. */
   outline: 1px dashed rgba(79, 70, 229, 0.25);
   pointer-events: none;
+}
+
+/* Content reset: drop the browser's default text margin and let the run fill the
+   flex host box so its inline style alone governs font/colour/alignment. */
+.rdr-text {
+  margin: 0;
+}
+
+/* The image fills its host box; object-fit (inline) governs how it scales. */
+.rdr-image {
+  display: block;
 }
