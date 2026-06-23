@@ -1,10 +1,20 @@
 /**
- * Pagination algorithm (E3-S4) — the engine pass that turns a validated template
- * plus its **resolved** data tables into a deterministic **multi-page** layout:
- * the body's fixed elements distributed onto pages, and each data table sliced
- * across pages with its header repeated, `keepTogether` honoured, and basic
- * widow/orphan control. This is the "hardest core" of Epic 3 (brief §7) and the
- * thing the renderer (E4) walks page-by-page.
+ * Pagination algorithm (E3-S4) + page chrome (E3-S5) — the engine pass that turns
+ * a validated template plus its **resolved** data tables into a deterministic
+ * **multi-page** layout: the body's fixed elements distributed onto pages, and
+ * each data table sliced across pages with its header repeated, `keepTogether`
+ * honoured, and basic widow/orphan control. This is the "hardest core" of Epic 3
+ * (brief §7) and the thing the renderer (E4) walks page-by-page.
+ *
+ * ## Page chrome (E3-S5)
+ * On top of the body pagination, every page carries the template's **`header`**
+ * and **`footer`** band elements (laid out in the page margins by E3-S2 and
+ * **repeated on every page**), the **`{{pageNumber}}`/`{{pageCount}}` tokens**
+ * resolved per page into each text element's {@link PlacedElement.resolvedText},
+ * and the document-level **watermark** config echoed into the page model. The
+ * watermark is a render-time concern (brief §8: the *viewer* config, not the
+ * template, carries it), so it arrives via {@link PaginateOptions.watermark} and
+ * is **not** sourced from the (frozen) template schema; absent → `null`.
  *
  * It composes the earlier passes and reinvents none of them:
  *  - **E3-S2 {@link layoutStaticPage}** gives the page geometry and every
@@ -19,10 +29,7 @@
  *    yields a deeply-equal document, exactly what the snapshot suite (E3-S7)
  *    needs.
  *
- * ## What this pass does NOT do (deferred, see ADR 0006)
- *  - **Page header/footer bands, `{{pageNumber}}` tokens, watermark** — E3-S5.
- *    This paginates the **body** band only; the template's `header`/`footer`
- *    bands are left for the page-chrome pass to repeat on every page.
+ * ## What this pass does NOT do (deferred, see ADR 0006 / 0007)
  *  - **Grouping bands across pages** — E3-S6. The flat measured row list (header /
  *    detail / columnFooter) is sliced here; group header/footer rows and
  *    carry-over subtotals are E3-S6's concern.
@@ -87,8 +94,52 @@ import {
 } from './table-layout';
 import { DEFAULT_DPI } from './units';
 
+/**
+ * Watermark config (E3-S5) echoed into the page model. The engine only *produces*
+ * this config; painting it (a centred, rotated text/image layer behind the page
+ * content) is the renderer's job (E4) and configuring it interactively is the
+ * viewer's (E8-S4). Fields mirror the viewer's watermark dialog (brief §8). It is
+ * a **render-time** concern supplied via {@link PaginateOptions.watermark}, not a
+ * field of the (versioned) template schema.
+ */
+export interface Watermark {
+  /** `text` paints {@link text}; `image` paints {@link src}. */
+  readonly type: 'text' | 'image';
+  /** The watermark caption (e.g. `"CONFIDENTIAL"`), for `type: 'text'`. */
+  readonly text?: string;
+  /** Image URL/data-URI, for `type: 'image'`. */
+  readonly src?: string;
+  /** Layer opacity in `[0, 1]` (e.g. `0.15`). */
+  readonly opacity: number;
+  /** Rotation in degrees (e.g. `-45` for the classic diagonal). */
+  readonly angleDeg: number;
+  /** Text colour (hex), for `type: 'text'`. */
+  readonly color?: string;
+  /** Text size in points, for `type: 'text'`. */
+  readonly fontSizePt?: number;
+}
+
 /** Tuning for pagination; extends the E3-S3 table-measurement options. */
-export type PaginateOptions = TableLayoutOptions;
+export interface PaginateOptions extends TableLayoutOptions {
+  /**
+   * Optional watermark to stamp on every page, echoed into
+   * {@link PaginatedDocument.watermark}. Omit (or `null`) for no watermark.
+   */
+  readonly watermark?: Watermark | null;
+}
+
+/**
+ * A fixed (non-table) element placed on a page (E3-S5): its E3-S2 geometry plus
+ * the per-page-resolved text for {@link resolvePageTokens page tokens}.
+ */
+export interface PlacedElement extends LaidOutElement {
+  /**
+   * For a text element whose literal `text` contains `{{pageNumber}}`/
+   * `{{pageCount}}`, the substituted string for **this** page; otherwise `null`,
+   * meaning the renderer uses the element's own (token-free) content.
+   */
+  readonly resolvedText: string | null;
+}
 
 /**
  * One on-page fragment of a data table. Its {@link rows} carry **page-absolute**
@@ -117,14 +168,18 @@ export interface TableSlice {
   readonly overflowsPage: boolean;
 }
 
-/** One paginated page: its fixed body elements and the table slices it carries. */
+/** One paginated page: its repeating chrome, fixed body elements and table slices. */
 export interface PaginatedPage {
   /** 0-based page index. */
   readonly index: number;
   /** 1-based page number (`index + 1`), for convenience. */
   readonly pageNumber: number;
+  /** Header band elements, repeated on every page, with page tokens resolved (E3-S5). */
+  readonly header: readonly PlacedElement[];
   /** Fixed (non-table) body elements placed on this page, in paint order. */
-  readonly elements: readonly LaidOutElement[];
+  readonly elements: readonly PlacedElement[];
+  /** Footer band elements, repeated on every page, with page tokens resolved (E3-S5). */
+  readonly footer: readonly PlacedElement[];
   /** Table slices on this page, in document then slice order. */
   readonly tables: readonly TableSlice[];
 }
@@ -135,6 +190,8 @@ export interface PaginatedDocument {
   /** Total number of pages (always ≥ 1). */
   readonly pageCount: number;
   readonly pages: readonly PaginatedPage[];
+  /** Watermark stamped on every page (E3-S5), or `null` when none was configured. */
+  readonly watermark: Watermark | null;
 }
 
 /** A page-assigned table slice (the internal product of {@link sliceTable}). */
@@ -182,6 +239,14 @@ export function paginate(
   const bodyElements = staticLayout.elements.filter((e) => e.band === 'body');
   const fixedElements = bodyElements.filter((e) => e.type !== 'dataTable');
   const tableBoxById = new Map(bodyElements.map((e) => [e.id, e]));
+
+  // Repeating page chrome (E3-S5): the header/footer band elements, already laid
+  // out in the margins by E3-S2, are re-emitted (with page tokens resolved) on
+  // every page. A lookup of each text element's *literal* text feeds token
+  // substitution; binding-driven text has no literal and is left untouched.
+  const headerElements = staticLayout.elements.filter((e) => e.band === 'header');
+  const footerElements = staticLayout.elements.filter((e) => e.band === 'footer');
+  const literalTextById = buildLiteralTextMap(template);
 
   const tableElements = template.body.elements.filter(
     (e): e is DataTableElement => e.type === 'dataTable',
@@ -236,7 +301,13 @@ export function paginate(
 
   const pages: PaginatedPage[] = [];
   for (let index = 0; index < pageCount; index += 1) {
-    const elements =
+    const pageNumber = index + 1;
+    // Resolve `{{pageNumber}}`/`{{pageCount}}` against THIS page for every placed
+    // element, so a renderer paints "Page 2 of 12" etc. directly.
+    const place = (e: LaidOutElement): PlacedElement =>
+      toPlacedElement(e, literalTextById, pageNumber, pageCount);
+
+    const bodyFixed =
       index === 0 && index === lastPageIndex
         ? [...leading, ...trailing]
         : index === 0
@@ -247,10 +318,17 @@ export function paginate(
     const tables = slices
       .filter((s) => s.pageIndex === index)
       .map(stripPageIndex);
-    pages.push({ index, pageNumber: index + 1, elements, tables });
+    pages.push({
+      index,
+      pageNumber,
+      header: headerElements.map(place),
+      elements: bodyFixed.map(place),
+      footer: footerElements.map(place),
+      tables,
+    });
   }
 
-  return { geometry, pageCount, pages };
+  return { geometry, pageCount, pages, watermark: options?.watermark ?? null };
 }
 
 /**
@@ -434,6 +512,63 @@ function finalizeSlice(
     yPx: plan.startY,
     heightPx: y - plan.startY,
     overflowsPage: plan.overflow,
+  };
+}
+
+/** Matches `{{pageNumber}}` / `{{pageCount}}`, tolerant of inner whitespace. */
+const PAGE_TOKEN_RE = /\{\{\s*(pageNumber|pageCount)\s*\}\}/g;
+
+/**
+ * Builds a map of element id → its **literal** `text` for every text element
+ * across all three bands. Binding-driven text elements have no literal and are
+ * omitted, so they never receive a `resolvedText` (the renderer resolves their
+ * binding instead).
+ */
+function buildLiteralTextMap(template: RendaraTemplate): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const band of ['header', 'body', 'footer'] as const) {
+    for (const element of template[band].elements) {
+      if (element.type === 'text' && typeof element.text === 'string') {
+        map.set(element.id, element.text);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * Substitutes `{{pageNumber}}`/`{{pageCount}}` in a literal string with this
+ * page's 1-based number and the document's total page count (E3-S5). Returns
+ * `null` when the element has no literal text **or carries no page token** — in
+ * both cases the renderer falls back to the element's own content, so static text
+ * is not duplicated into the page model on every page.
+ */
+function resolvePageTokens(
+  literal: string | undefined,
+  pageNumber: number,
+  pageCount: number,
+): string | null {
+  if (literal === undefined) {
+    return null;
+  }
+  const resolved = literal.replace(PAGE_TOKEN_RE, (_match, token: string) =>
+    String(token === 'pageNumber' ? pageNumber : pageCount),
+  );
+  // Only an override when a token was actually substituted; otherwise the
+  // renderer uses the element's own (token-free) literal text.
+  return resolved === literal ? null : resolved;
+}
+
+/** Pairs a laid-out element with its page-resolved text into a {@link PlacedElement}. */
+function toPlacedElement(
+  element: LaidOutElement,
+  literalTextById: ReadonlyMap<string, string>,
+  pageNumber: number,
+  pageCount: number,
+): PlacedElement {
+  return {
+    ...element,
+    resolvedText: resolvePageTokens(literalTextById.get(element.id), pageNumber, pageCount),
   };
 }
 

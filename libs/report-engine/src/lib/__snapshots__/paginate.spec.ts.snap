@@ -58,6 +58,7 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
           "id": "el_rpt_title",
           "order": 0,
           "overflowsPage": false,
+          "resolvedText": null,
           "type": "text",
           "z": 1,
         },
@@ -84,10 +85,41 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
           "id": "el_rpt_period",
           "order": 1,
           "overflowsPage": false,
+          "resolvedText": null,
           "type": "text",
           "z": 1,
         },
       ],
+      "footer": [
+        {
+          "band": "footer",
+          "boxPx": {
+            "hPx": 22.67716535433071,
+            "wPx": 1009.1338582677166,
+            "xPx": 56.69291338582678,
+            "yPx": 755.9055118110236,
+          },
+          "clippedPx": {
+            "hPx": 22.67716535433071,
+            "wPx": 1009.1338582677166,
+            "xPx": 56.69291338582678,
+            "yPx": 755.9055118110236,
+          },
+          "frameMm": {
+            "hMm": 6,
+            "wMm": 267,
+            "xMm": 15,
+            "yMm": 200,
+          },
+          "id": "el_rpt_page",
+          "order": 0,
+          "overflowsPage": false,
+          "resolvedText": "Page 1 of 1",
+          "type": "text",
+          "z": 1,
+        },
+      ],
+      "header": [],
       "index": 0,
       "pageNumber": 1,
       "tables": [
@@ -743,5 +775,6 @@ exports[`paginate — tabular-report golden > matches the page-model snapshot 1`
       ],
     },
   ],
+  "watermark": null,
 }
 `;

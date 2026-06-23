@@ -11,7 +11,7 @@ import {
   goldenTabularReportTemplate,
 } from '@rendara/report-schema';
 
-import { paginate, type PaginatedDocument } from './paginate';
+import { paginate, type PaginatedDocument, type Watermark } from './paginate';
 import { resolveDataTable, type ResolvedDataTable } from './resolve';
 import { mmToPx, ptToPx } from './units';
 
@@ -71,6 +71,38 @@ function makeTemplate(page: Page, body: TemplateElement[]): RendaraTemplate {
     header: { elements: [] },
     body: { elements: body },
     footer: { elements: [] },
+  };
+}
+
+/** Like {@link makeTemplate} but with explicit header/footer band elements (E3-S5). */
+function makeTemplateWithBands(
+  page: Page,
+  body: TemplateElement[],
+  header: TemplateElement[],
+  footer: TemplateElement[],
+): RendaraTemplate {
+  return { ...makeTemplate(page, body), header: { elements: header }, footer: { elements: footer } };
+}
+
+/** A footer text element carrying the page-number tokens. */
+function pageNumberFooter(yMm = 52): TemplateElement {
+  return {
+    id: 'el_footer_page',
+    type: 'text',
+    frame: { xMm: 10, yMm, wMm: 100, hMm: 6 },
+    text: 'Page {{pageNumber}} of {{pageCount}}',
+    z: 1,
+  };
+}
+
+/** A static header title (no page tokens). */
+function headerTitle(): TemplateElement {
+  return {
+    id: 'el_header_title',
+    type: 'text',
+    frame: { xMm: 10, yMm: 2, wMm: 100, hMm: 6 },
+    text: 'Quarterly Report',
+    z: 1,
   };
 }
 
@@ -355,6 +387,102 @@ describe('paginate — fixed body elements', () => {
     const ids = doc.pages[0].elements.map((e) => e.id);
     expect(ids).toContain('el_inv_title'); // leading (above the table)
     expect(ids).toContain('el_inv_total'); // trailing (below the table)
+  });
+});
+
+// --- page chrome: header/footer, page numbers, watermark (E3-S5) -------------
+
+describe('paginate — page chrome (E3-S5)', () => {
+  it('repeats the header and footer bands on every page', async () => {
+    const table = oneColumnTable({ topMm: 10, widthMm: 100 });
+    const template = makeTemplateWithBands(
+      SMALL,
+      [table],
+      [headerTitle()],
+      [pageNumberFooter()],
+    );
+    const resolved = await resolveDataTable(table, rows(12));
+    const doc = paginate(template, new Map([[table.id, resolved]]));
+
+    expect(doc.pageCount).toBeGreaterThan(1);
+    for (const page of doc.pages) {
+      expect(page.header.map((e) => e.id)).toEqual(['el_header_title']);
+      expect(page.footer.map((e) => e.id)).toEqual(['el_footer_page']);
+    }
+  });
+
+  it('resolves incrementing page numbers in the footer', async () => {
+    const table = oneColumnTable({ topMm: 10, widthMm: 100 });
+    const template = makeTemplateWithBands(SMALL, [table], [], [pageNumberFooter()]);
+    const resolved = await resolveDataTable(table, rows(12));
+    const doc = paginate(template, new Map([[table.id, resolved]]));
+
+    const total = doc.pageCount;
+    expect(total).toBeGreaterThan(1);
+    doc.pages.forEach((page, index) => {
+      expect(page.footer[0].resolvedText).toBe(`Page ${index + 1} of ${total}`);
+    });
+  });
+
+  it('resolves "Page 1 of 1" on a single-page document', () => {
+    const template = makeTemplateWithBands(
+      SMALL,
+      [],
+      [headerTitle()],
+      [pageNumberFooter()],
+    );
+    const doc = paginate(template, new Map());
+
+    expect(doc.pageCount).toBe(1);
+    expect(doc.pages[0].footer[0].resolvedText).toBe('Page 1 of 1');
+  });
+
+  it('leaves token-free text untouched (resolvedText is null)', () => {
+    const template = makeTemplateWithBands(
+      SMALL,
+      [],
+      [headerTitle()],
+      [pageNumberFooter()],
+    );
+    const doc = paginate(template, new Map());
+
+    // The static header carries no page token, so it gets no override.
+    expect(doc.pages[0].header[0].resolvedText).toBeNull();
+  });
+
+  it('places the golden invoice header logo and a "Page 1 of 1" footer', async () => {
+    const { doc } = await paginateTemplate(goldenInvoiceTemplate);
+
+    expect(doc.pageCount).toBe(1);
+    expect(doc.pages[0].header.map((e) => e.id)).toContain('el_inv_logo');
+    const footer = doc.pages[0].footer.find((e) => e.id === 'el_inv_page');
+    expect(footer?.resolvedText).toBe('Page 1 of 1');
+  });
+
+  it('resolves the page-number footer on every page of the tabular-report golden', async () => {
+    const { doc } = await paginateTemplate(goldenTabularReportTemplate);
+
+    doc.pages.forEach((page, index) => {
+      const footer = page.footer.find((e) => e.id === 'el_rpt_page');
+      expect(footer?.resolvedText).toBe(`Page ${index + 1} of ${doc.pageCount}`);
+    });
+  });
+
+  it('echoes a watermark config into the page model when provided', () => {
+    const watermark: Watermark = {
+      type: 'text',
+      text: 'CONFIDENTIAL',
+      opacity: 0.15,
+      angleDeg: -45,
+      color: '#9CA3AF',
+    };
+    const doc = paginate(goldenInvoiceTemplate, new Map(), { watermark });
+    expect(doc.watermark).toEqual(watermark);
+  });
+
+  it('reports a null watermark when none is configured', () => {
+    const doc = paginate(goldenInvoiceTemplate, new Map());
+    expect(doc.watermark).toBeNull();
   });
 });
 
