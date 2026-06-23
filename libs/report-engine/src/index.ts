@@ -40,3 +40,8 @@ export * from './lib/layout';
 // rows (header/detail/column-footer) and honoured column widths, via a
 // deterministic headless text-wrap strategy (E3-S3).
 export * from './lib/table-layout';
+
+// Pagination algorithm: template + resolved tables -> a deterministic multi-page
+// layout, breaking the body/table across pages with repeated headers,
+// keepTogether, and basic widow/orphan handling (E3-S4).
+export * from './lib/paginate';
