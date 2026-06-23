@@ -31,3 +31,7 @@ export * from './lib/units';
 // Page & printable-area geometry: a resolved Page + margins -> page box and
 // printable (content) area in both mm and px (E3-S1).
 export * from './lib/geometry';
+
+// Static single-page layout: fixed element frames -> absolute px boxes with
+// z-order and page-sheet clipping, over the E3-S1 geometry (E3-S2).
+export * from './lib/layout';
