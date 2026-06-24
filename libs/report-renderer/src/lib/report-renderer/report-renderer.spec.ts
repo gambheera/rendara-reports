@@ -275,3 +275,61 @@ describe('ReportRenderer tables (E4-S3)', () => {
     );
   });
 });
+
+/**
+ * Design-mode hooks (E4-S6, QA: "view-mode DOM is byte-stable regardless of design
+ * hooks"). View mode (the default) emits no selection anchors; design mode marks the
+ * page and exposes per-element + per-table hit targets with their natural-px frame.
+ */
+describe('ReportRenderer design-mode hooks (E4-S6)', () => {
+  async function renderInvoice(mode?: 'view' | 'design') {
+    const doc = await paginateWithTables(goldenInvoiceTemplate, goldenInvoiceData);
+    const { container } = await render(ReportRenderer, {
+      inputs: {
+        page: doc.pages[0],
+        geometry: doc.geometry,
+        template: goldenInvoiceTemplate,
+        ...(mode ? { mode } : {}),
+      },
+    });
+    return container;
+  }
+
+  it('emits no design anchors in view mode (the default)', async () => {
+    const container = await renderInvoice();
+
+    expect(el(container, '.rdr-page').hasAttribute('data-rdr-mode')).toBe(false);
+    expect(container.querySelector('[data-rdr-hit]')).toBeNull();
+  });
+
+  it('marks the page and every element/table as a hit target in design mode', async () => {
+    const container = await renderInvoice('design');
+
+    expect(el(container, '.rdr-page').getAttribute('data-rdr-mode')).toBe('design');
+
+    const elementHits = container.querySelectorAll('.rdr-element[data-rdr-hit="element"]');
+    expect(elementHits.length).toBe(
+      container.querySelectorAll('.rdr-element').length,
+    );
+    expect(container.querySelector('.rdr-table[data-rdr-hit="table"]')).not.toBeNull();
+  });
+
+  it("exposes an element's natural-px frame on its anchor", async () => {
+    const container = await renderInvoice('design');
+    // el_inv_title sits at the page's first body text element; assert its frame
+    // metadata mirrors the inline geometry the renderer positioned it with.
+    const box = el(container, '.rdr-element[data-element-id="el_inv_title"]');
+    expect(box.getAttribute('data-rdr-hit')).toBe('element');
+    expect(box.getAttribute('data-rdr-x')).toBe(`${parseFloat(box.style.left)}`);
+    expect(box.getAttribute('data-rdr-y')).toBe(`${parseFloat(box.style.top)}`);
+    expect(box.getAttribute('data-rdr-w')).toBe(`${parseFloat(box.style.width)}`);
+  });
+
+  it('keeps view-mode DOM free of any design-hook bytes (explicit view)', async () => {
+    // Byte-for-byte equality of view vs design output is pinned by the headless
+    // serializer spec; here we confirm the live component emits no `data-rdr-*`
+    // when view mode is asked for explicitly.
+    const container = await renderInvoice('view');
+    expect(container.innerHTML).not.toContain('data-rdr-');
+  });
+});

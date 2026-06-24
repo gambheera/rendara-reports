@@ -42,8 +42,9 @@ import {
  * cross the shadow boundary) to re-theme the chrome and table palette.
  *
  * Use this for the embedded viewer; the designer keeps the emulated
- * {@link ReportDocument} (it needs live, inspectable DOM for selection/design-mode
- * hooks in E4-S6).
+ * {@link ReportDocument} (it needs live, inspectable DOM for the E4-S6 selection /
+ * design-mode hooks). This surface is view-only by design — it forwards no `mode`,
+ * so the isolated embedded viewer never carries design-mode anchors.
  */
 @Component({
   selector: 'rdr-report-surface',

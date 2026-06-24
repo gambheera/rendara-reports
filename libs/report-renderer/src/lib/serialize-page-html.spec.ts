@@ -183,3 +183,84 @@ describe('serializePageToHtml tables (E4-S3)', () => {
     expect(html).not.toContain('<b>&');
   });
 });
+
+describe('serializePageToHtml design-mode hooks (E4-S6)', () => {
+  async function invoiceDoc() {
+    const resolved = new Map<string, ResolvedDataTable>();
+    for (const element of goldenInvoiceTemplate.body.elements) {
+      if (isDataTableElement(element)) {
+        resolved.set(element.id, await resolveDataTable(element, goldenInvoiceData));
+      }
+    }
+    return paginate(goldenInvoiceTemplate, resolved);
+  }
+
+  /** Strips every additive `data-rdr-*` design attribute the design path emits. */
+  function stripDesignAttrs(html: string): string {
+    return html.replace(/ data-rdr-[a-z]+="[^"]*"/g, '');
+  }
+
+  it('emits no design attributes in view mode (the default)', async () => {
+    const doc = await invoiceDoc();
+    const html = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+
+    expect(html).not.toContain('data-rdr-mode');
+    expect(html).not.toContain('data-rdr-hit');
+    expect(html).not.toContain('data-rdr-x');
+  });
+
+  it('marks the page and exposes per-element + per-table hit anchors in design mode', async () => {
+    const doc = await invoiceDoc();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenInvoiceTemplate,
+      mode: 'design',
+    });
+    const html = serializePageToHtml(vm);
+
+    expect(html).toContain('class="rdr-page"');
+    expect(html).toContain('data-rdr-mode="design"');
+    expect(html).toContain('data-rdr-hit="element"');
+    expect(html).toContain('data-rdr-hit="table"');
+
+    // The first element's anchor carries its natural-px frame.
+    const box = vm.elements[0];
+    expect(html).toContain(`data-rdr-x="${box.leftPx}"`);
+    expect(html).toContain(`data-rdr-y="${box.topPx}"`);
+    expect(html).toContain(`data-rdr-w="${box.widthPx}"`);
+  });
+
+  it('keeps view-mode output byte-stable: design mode is purely additive', async () => {
+    const doc = await invoiceDoc();
+    const viewHtml = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+    const designHtml = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenInvoiceTemplate,
+        mode: 'design',
+      }),
+    );
+
+    // The design output differs only by the additive `data-rdr-*` anchors; remove
+    // them and the bytes are identical to the view output.
+    expect(designHtml).not.toBe(viewHtml);
+    expect(stripDesignAttrs(designHtml)).toBe(viewHtml);
+  });
+
+  it('explicit view mode equals the default (no anchors)', async () => {
+    const doc = await invoiceDoc();
+    const defaultHtml = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+    const explicitView = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenInvoiceTemplate,
+        mode: 'view',
+      }),
+    );
+
+    expect(explicitView).toBe(defaultHtml);
+  });
+});

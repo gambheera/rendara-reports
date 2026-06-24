@@ -155,6 +155,13 @@ export const RENDERER_PAGE_CSS = `.rdr-page {
 
 .rdr-image {
   display: block;
+}
+
+/* Design-mode hooks (E4-S6): only matches when the page carries the design marker,
+   so view-mode DOM/painting is unaffected. Hit targets become pointer-selectable
+   for the designer canvas. */
+.rdr-page[data-rdr-mode='design'] [data-rdr-hit] {
+  cursor: pointer;
 }`;
 
 /**

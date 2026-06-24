@@ -23,6 +23,7 @@ import {
   boxDecorationStyle,
   buildPageViewModel,
   DEFAULT_PAGE_BACKGROUND,
+  designAnchorAttrs,
   elementStyle,
   printableStyle,
   sanitizeImageUrl,
@@ -711,5 +712,65 @@ describe('sanitizeImageUrl (E4-S2 security)', () => {
     expect(sanitizeImageUrl(undefined)).toBeNull();
     expect(sanitizeImageUrl('')).toBeNull();
     expect(sanitizeImageUrl('   ')).toBeNull();
+  });
+});
+
+/**
+ * Design-mode hooks (E4-S6). The view-model carries a `mode` and the pure
+ * `designAnchorAttrs` produces the additive selection-anchor attributes — `null`
+ * in view mode (so callers emit nothing and view output is byte-stable).
+ */
+describe('design-mode hooks (E4-S6)', () => {
+  it('defaults the mode to "view"', () => {
+    const doc = paginateCertificate();
+    expect(buildPageViewModel(doc.pages[0], doc.geometry).mode).toBe('view');
+  });
+
+  it('carries an explicit design mode through', () => {
+    const doc = paginateCertificate();
+    expect(buildPageViewModel(doc.pages[0], doc.geometry, { mode: 'design' }).mode).toBe('design');
+    expect(buildPageViewModel(doc.pages[0], doc.geometry, { mode: 'view' }).mode).toBe('view');
+  });
+
+  it('designAnchorAttrs returns null in view mode (no anchors emitted)', () => {
+    const frame = { leftPx: 10, topPx: 20, widthPx: 30, heightPx: 40 };
+    expect(designAnchorAttrs('element', frame, 'view')).toBeNull();
+    expect(designAnchorAttrs('table', frame, 'view')).toBeNull();
+  });
+
+  it('designAnchorAttrs exposes the role + natural-px frame in design mode', () => {
+    const frame = { leftPx: 10, topPx: 20, widthPx: 30, heightPx: 40 };
+    expect(designAnchorAttrs('element', frame, 'design')).toEqual({
+      'data-rdr-hit': 'element',
+      'data-rdr-x': '10',
+      'data-rdr-y': '20',
+      'data-rdr-w': '30',
+      'data-rdr-h': '40',
+    });
+    expect(designAnchorAttrs('table', frame, 'design')).toMatchObject({ 'data-rdr-hit': 'table' });
+  });
+
+  it('omits data-rdr-h for a growing (auto-height) element', () => {
+    const frame = { leftPx: 10, topPx: 20, widthPx: 30, heightPx: null };
+    const attrs = designAnchorAttrs('element', frame, 'design');
+    expect(attrs).not.toBeNull();
+    expect(attrs).not.toHaveProperty('data-rdr-h');
+    expect(attrs).toMatchObject({ 'data-rdr-w': '30' });
+  });
+
+  it('builds anchors straight from a real element box frame', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+      mode: 'design',
+    });
+    const border = boxById(vm, 'el_cert_border');
+    expect(designAnchorAttrs('element', border, vm.mode)).toEqual({
+      'data-rdr-hit': 'element',
+      'data-rdr-x': `${border.leftPx}`,
+      'data-rdr-y': `${border.topPx}`,
+      'data-rdr-w': `${border.widthPx}`,
+      'data-rdr-h': `${border.heightPx}`,
+    });
   });
 });

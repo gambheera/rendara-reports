@@ -23,7 +23,7 @@ import {
   type ZoomSpec,
 } from '../document-view-model';
 import { ReportRenderer } from '../report-renderer/report-renderer';
-import type { StyleMap } from '../page-view-model';
+import type { RenderMode, StyleMap } from '../page-view-model';
 import { RENDERER_DOCUMENT_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
 
 /**
@@ -53,8 +53,12 @@ import { RENDERER_DOCUMENT_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
  * default `ViewEncapsulation.Emulated`; the opt-in Shadow-DOM {@link ReportSurface}
  * wraps this component for a fully isolated embedded viewer.
  *
- * Still deferred (later E4 stories): design-mode hooks (E4-S6), watermark + page
- * chrome (E4-S7).
+ * E4-S6 adds the **design-mode** flag: a {@link mode} input forwarded verbatim to
+ * every child {@link ReportRenderer}, so the designer can drive the whole
+ * multi-page document as its canvas with per-element selection anchors. View mode
+ * (the default) forwards nothing extra, keeping the viewer DOM byte-stable.
+ *
+ * Still deferred (later E4 stories): watermark + page chrome (E4-S7).
  */
 @Component({
   selector: 'rdr-report-document',
@@ -80,6 +84,8 @@ export class ReportDocument {
   readonly layout = input<PageLayoutMode>('continuous');
   /** 1-based page to show in `'single'` layout; clamped to the document. Defaults to `1`. */
   readonly currentPage = input<number>(1);
+  /** Render mode (E4-S6), forwarded to every page; `'view'` (default) or `'design'`. */
+  readonly mode = input<RenderMode>('view');
   /**
    * Explicit viewport size for resolving the fit zoom modes. When `null` (the
    * default) the component measures its own host with a `ResizeObserver`. A host

@@ -29,3 +29,8 @@ export * from './lib/document-view-model';
 // Headless page->HTML serializer driving visual-regression snapshots without
 // Angular (E4-S1/E4-S2/E4-S4).
 export * from './lib/serialize-page-html';
+
+// Design-mode selection-anchor directive (E4-S6): applies the additive `data-rdr-*`
+// hit-target attribute map to a rendered element/table in design mode, the bridge
+// that keeps the component DOM in lock-step with the headless serializer.
+export * from './lib/rdr-design-attrs';
