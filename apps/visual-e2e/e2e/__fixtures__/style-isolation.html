@@ -10,6 +10,7 @@
   --rdr-table-detail-rule: #E2E8F0;
   --rdr-table-band-rule: #CBD5E1;
   --rdr-table-total-rule: #334155;
+  --rdr-watermark-color: #9CA3AF;
 
   display: block;
 }
@@ -56,6 +57,21 @@
 }
 
 .rdr-image {
+  display: block;
+}
+
+/* Watermark overlay (E4-S7): the page-covering layer + its centred caption/image.
+   The size/opacity/rotation/colour stay inline on the elements (data-driven); these
+   are the static resets so the caption/image paint predictably. */
+.rdr-watermark {
+  margin: 0;
+}
+
+.rdr-watermark-text {
+  margin: 0;
+}
+
+.rdr-watermark-image {
   display: block;
 }
 

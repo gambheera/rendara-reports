@@ -10,6 +10,7 @@ import {
   renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
   renderStyleIsolationContent,
+  renderWatermarkPageHtml,
 } from './golden-page-html';
 
 /** Walks up from `process.cwd()` to the workspace root (the dir holding `nx.json`). */
@@ -122,6 +123,24 @@ describe('renderMultiPageDocumentHtml (E4-S4)', () => {
     // The repeated page-number footer resolves per page.
     expect(html).toContain('Page 1 of');
     expect(html).toContain('data-page-number="2"');
+  });
+});
+
+describe('renderWatermarkPageHtml (E4-S7)', () => {
+  it('matches the committed visual fixture (regenerate with render-fixtures:generate)', () => {
+    const committed = readFileSync(fixturePath('watermark-page.html'), 'utf8');
+    expect(committed.trimEnd()).toBe(renderWatermarkPageHtml());
+  });
+
+  it('paints a rotated CONFIDENTIAL watermark behind the table content', () => {
+    const html = renderWatermarkPageHtml();
+    expect(html).toContain('class="rdr-watermark"');
+    expect(html).toContain('class="rdr-watermark-text"');
+    expect(html).toContain('CONFIDENTIAL');
+    expect(html).toContain('rotate(-45deg)');
+    expect(html).toContain('opacity: 0.15');
+    // The watermark is painted behind the content (before the first element/table).
+    expect(html.indexOf('class="rdr-watermark"')).toBeLessThan(html.indexOf('class="rdr-table"'));
   });
 });
 

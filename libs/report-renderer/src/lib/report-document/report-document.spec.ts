@@ -170,6 +170,42 @@ describe('ReportDocument (E4-S4)', () => {
     expect(zoomChange).toHaveBeenCalledWith(0.75);
   });
 
+  it('forwards the document-level watermark to every page (E4-S7)', async () => {
+    const template = syntheticTemplate();
+    const rows = Array.from({ length: 70 }, (_, i) => ({
+      index: i,
+      data: {},
+      cells: [
+        { columnKey: 'a', value: { raw: `Item ${i}`, formatted: `Item ${i}` } },
+        { columnKey: 'b', value: { raw: String(i), formatted: String(i) } },
+      ],
+    }));
+    const resolved: ResolvedDataTable = { rows, columnFooters: [], errors: [], diagnostics: [] };
+    const doc = paginate(template, new Map([['el_doc_table', resolved]]), {
+      watermark: { type: 'text', text: 'CONFIDENTIAL', opacity: 0.15, angleDeg: -45 },
+    });
+    expect(doc.pageCount).toBeGreaterThanOrEqual(2);
+
+    const { container } = await render(ReportDocument, {
+      inputs: { document: doc, template },
+    });
+
+    const watermarks = container.querySelectorAll<HTMLElement>('.rdr-watermark');
+    // One watermark overlay per page sheet, each carrying the caption.
+    expect(watermarks).toHaveLength(doc.pageCount);
+    for (const layer of Array.from(watermarks)) {
+      expect(layer.querySelector('.rdr-watermark-text')?.textContent?.trim()).toBe('CONFIDENTIAL');
+    }
+  });
+
+  it('renders no watermark overlay when the document has none (E4-S7)', async () => {
+    const { doc, template } = multiPageDoc();
+    const { container } = await render(ReportDocument, {
+      inputs: { document: doc, template },
+    });
+    expect(container.querySelector('.rdr-watermark')).toBeNull();
+  });
+
   it('measures the host via ResizeObserver to drive fit modes (no availableSize)', async () => {
     // jsdom has no ResizeObserver; install a controllable mock so the measurement
     // path runs and a simulated resize updates the resolved fit-width zoom.

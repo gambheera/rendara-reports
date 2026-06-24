@@ -6,7 +6,15 @@
   [attr.data-rdr-mode]="model.mode === 'design' ? 'design' : null"
 >
   <div class="rdr-printable" [style]="printableStyle()"></div>
-  @for (box of model.elements; track box.id) { @let content = box.content;
+  @if (model.watermark; as watermark) {
+  <div class="rdr-watermark" [style]="watermark.layerStyle">
+    @if (watermark.kind === 'image' && watermark.src) {
+    <img class="rdr-watermark-image" [src]="watermark.src" alt="" [style]="watermark.innerStyle" />
+    } @else {
+    <span class="rdr-watermark-text" [style]="watermark.innerStyle">{{ watermark.text }}</span>
+    }
+  </div>
+  } @for (box of model.elements; track box.id) { @let content = box.content;
   <div
     class="rdr-element"
     [style]="elementStyle(box)"

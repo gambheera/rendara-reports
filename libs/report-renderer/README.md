@@ -23,8 +23,17 @@ and `@rendara/report-schema` (Nx module boundaries).
 - **Multi-page + zoom (E4-S4):** `ReportDocument` paints a whole paginated
   document — N pages at one resolved zoom (`fit-width`/`fit-page`/explicit %), in
   `continuous` or `single` layout.
-
-Deferred to later E4 stories: design-mode hooks (E4-S6), watermark (E4-S7).
+- **Page chrome (E4-S1/S2):** the `header`/`footer` band elements are repeated on
+  every page and `{{pageNumber}}`/`{{pageCount}}` tokens are resolved per page
+  (drawn straight from the engine page model — no extra renderer pass).
+- **Design-mode hooks (E4-S6):** a `mode` flag (`view`|`design`) exposes per-element
+  and per-table selection anchors for the designer canvas; view-mode DOM is
+  byte-stable regardless.
+- **Watermark (E4-S7):** an optional document-level watermark — a centred, rotated
+  **text** caption or (URL-sanitised) **image**, with opacity + angle — stamped
+  behind the content of every page. The config is a render-time concern (brief §8 /
+  ADR 0007), not a template-schema field: the engine echoes it onto the
+  `PaginatedDocument`, and `ReportDocument` forwards it to every page. `null` → none.
 
 ## Style isolation & theming (E4-S5)
 
@@ -66,6 +75,7 @@ forking:
 | `--rdr-font-family` / `--rdr-text-color` | base report typography |
 | `--rdr-table-header-fill` / `--rdr-table-group-fill` | table header / group-band fills |
 | `--rdr-table-detail-rule` / `--rdr-table-band-rule` / `--rdr-table-total-rule` | table separators / rules |
+| `--rdr-watermark-color` | default watermark text colour (when the config sets none) |
 
 `renderer-styles.ts` is the single style source (reset, chrome, tokens) consumed
 by the components, the shadow surface, and the visual fixtures (`RDR_THEME_TOKENS`
@@ -106,9 +116,11 @@ to case and whitespace/control-character obfuscation. A blocked URL renders **no
 
 ## Visual fixtures
 
-`golden-page-html.ts` pre-renders the certificate golden and a compact per-type
-page to committed HTML (`apps/visual-e2e/e2e/__fixtures__/*.html`) the Playwright
-visual suite loads via `fs` (e2e projects can't import workspace libs).
+`golden-page-html.ts` pre-renders the goldens (certificate, per-type, plain/grouped
+tables, multi-page document, and a watermarked page) to committed HTML
+(`apps/visual-e2e/e2e/__fixtures__/*.html`) the Playwright visual suite loads via
+`fs` (e2e projects can't import workspace libs). The watermark fixture is
+snapshotted on-screen **and** in print media (`emulateMedia({ media: 'print' })`).
 Regenerate with `pnpm render-fixtures:generate`; `golden-page-html.spec.ts` guards
 the committed artifacts against drift. Linux baselines are CI-seeded — see
 `docs/testing/visual-regression.md`.

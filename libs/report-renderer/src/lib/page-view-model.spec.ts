@@ -9,12 +9,14 @@ import {
   type RendaraTemplate,
 } from '@rendara/report-schema';
 import {
+  DEFAULT_DPI,
   mmToPx,
   paginate,
   ptToPx,
   resolveElement,
   type PaginatedDocument,
   type ResolvedDataTable,
+  type Watermark,
 } from '@rendara/report-engine';
 import { resolveDataTable } from '@rendara/report-engine';
 import { isDataTableElement } from '@rendara/report-schema';
@@ -22,6 +24,7 @@ import { isDataTableElement } from '@rendara/report-schema';
 import {
   boxDecorationStyle,
   buildPageViewModel,
+  buildWatermarkView,
   DEFAULT_PAGE_BACKGROUND,
   designAnchorAttrs,
   elementStyle,
@@ -772,5 +775,127 @@ describe('design-mode hooks (E4-S6)', () => {
       'data-rdr-w': `${border.widthPx}`,
       'data-rdr-h': `${border.heightPx}`,
     });
+  });
+});
+
+/**
+ * Watermark (E4-S7). `buildWatermarkView` resolves the document-level config into
+ * the centred, rotated overlay the renderer stamps behind the content: text vs.
+ * image, opacity clamp, angle, URL sanitisation, and the null cases. The page
+ * view-model surfaces it on `PageViewModel.watermark` (null by default).
+ */
+const TEXT_WATERMARK: Watermark = {
+  type: 'text',
+  text: 'CONFIDENTIAL',
+  opacity: 0.15,
+  angleDeg: -45,
+  color: '#9CA3AF',
+};
+
+describe('buildWatermarkView (E4-S7)', () => {
+  it('returns null when there is no watermark config', () => {
+    expect(buildWatermarkView(null, DEFAULT_DPI)).toBeNull();
+    expect(buildWatermarkView(undefined, DEFAULT_DPI)).toBeNull();
+  });
+
+  it('builds a centred, non-interactive, rotated text overlay', () => {
+    const view = buildWatermarkView(TEXT_WATERMARK, DEFAULT_DPI);
+    expect(view).not.toBeNull();
+    expect(view?.kind).toBe('text');
+    expect(view?.text).toBe('CONFIDENTIAL');
+    expect(view?.src).toBeNull();
+
+    // The layer covers the whole sheet, is non-interactive, sits behind content,
+    // and carries the opacity.
+    expect(view?.layerStyle).toMatchObject({
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      'pointer-events': 'none',
+      'z-index': '0',
+      opacity: '0.15',
+    });
+    // The caption is rotated and painted in the configured colour at the default size.
+    expect(view?.innerStyle['transform']).toBe('rotate(-45deg)');
+    expect(view?.innerStyle['color']).toBe('#9CA3AF');
+    expect(view?.innerStyle['white-space']).toBe('nowrap');
+    expect(view?.innerStyle['font-size']).toBe(`${ptToPx(72, DEFAULT_DPI)}px`);
+  });
+
+  it('falls back to the themeable colour token and default size when unset', () => {
+    const view = buildWatermarkView(
+      { type: 'text', text: 'DRAFT', opacity: 0.2, angleDeg: 0 },
+      DEFAULT_DPI,
+    );
+    expect(view?.innerStyle['color']).toBe('var(--rdr-watermark-color, #9CA3AF)');
+    expect(view?.innerStyle['font-size']).toBe(`${ptToPx(72, DEFAULT_DPI)}px`);
+    expect(view?.innerStyle['transform']).toBe('rotate(0deg)');
+  });
+
+  it('honours an explicit font size (pt→px)', () => {
+    const view = buildWatermarkView(
+      { type: 'text', text: 'DRAFT', opacity: 0.2, angleDeg: -30, fontSizePt: 48 },
+      DEFAULT_DPI,
+    );
+    expect(view?.innerStyle['font-size']).toBe(`${ptToPx(48, DEFAULT_DPI)}px`);
+  });
+
+  it('clamps opacity into [0, 1] and degrades a non-finite angle to 0deg', () => {
+    expect(buildWatermarkView({ ...TEXT_WATERMARK, opacity: 2 }, DEFAULT_DPI)?.layerStyle['opacity']).toBe(
+      '1',
+    );
+    expect(
+      buildWatermarkView({ ...TEXT_WATERMARK, opacity: -1 }, DEFAULT_DPI)?.layerStyle['opacity'],
+    ).toBe('0');
+    expect(
+      buildWatermarkView({ ...TEXT_WATERMARK, opacity: Number.NaN }, DEFAULT_DPI)?.layerStyle[
+        'opacity'
+      ],
+    ).toBe('1');
+    expect(
+      buildWatermarkView({ ...TEXT_WATERMARK, angleDeg: Number.POSITIVE_INFINITY }, DEFAULT_DPI)
+        ?.innerStyle['transform'],
+    ).toBe('rotate(0deg)');
+  });
+
+  it('returns null for a text watermark with an empty (or whitespace-only) caption', () => {
+    expect(buildWatermarkView({ type: 'text', text: '', opacity: 0.2, angleDeg: 0 }, DEFAULT_DPI)).toBeNull();
+    expect(
+      buildWatermarkView({ type: 'text', text: '   ', opacity: 0.2, angleDeg: 0 }, DEFAULT_DPI),
+    ).toBeNull();
+    expect(buildWatermarkView({ type: 'text', opacity: 0.2, angleDeg: 0 }, DEFAULT_DPI)).toBeNull();
+  });
+
+  it('builds an image overlay with a sanitised src and rotation', () => {
+    const view = buildWatermarkView(
+      { type: 'image', src: 'https://cdn.example/seal.png', opacity: 0.3, angleDeg: -45 },
+      DEFAULT_DPI,
+    );
+    expect(view?.kind).toBe('image');
+    expect(view?.src).toBe('https://cdn.example/seal.png');
+    expect(view?.text).toBeNull();
+    expect(view?.innerStyle['transform']).toBe('rotate(-45deg)');
+    expect(view?.innerStyle['max-width']).toBe('60%');
+  });
+
+  it('blocks a dangerous image src (security) → null', () => {
+    expect(
+      buildWatermarkView(
+        { type: 'image', src: 'javascript:alert(1)', opacity: 0.3, angleDeg: 0 },
+        DEFAULT_DPI,
+      ),
+    ).toBeNull();
+    expect(
+      buildWatermarkView({ type: 'image', opacity: 0.3, angleDeg: 0 }, DEFAULT_DPI),
+    ).toBeNull();
+  });
+
+  it('surfaces on the page view-model, defaulting to null', () => {
+    const doc = paginateCertificate();
+    expect(buildPageViewModel(doc.pages[0], doc.geometry).watermark).toBeNull();
+
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, { watermark: TEXT_WATERMARK });
+    expect(vm.watermark?.kind).toBe('text');
+    expect(vm.watermark?.text).toBe('CONFIDENTIAL');
   });
 });

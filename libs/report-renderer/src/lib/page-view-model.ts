@@ -33,6 +33,13 @@
  *    band labels carrying the engine's already-resolved text, alignment and a
  *    default professional table style (header emphasis, row separators, total
  *    rules, cell padding matching the engine's measurement).
+ *  - **(E4-S7)** builds the optional **watermark** layer ({@link WatermarkView})
+ *    from the document-level {@link Watermark} config (a render-time concern, brief
+ *    §8 / ADR 0007 — *not* a template-schema field): a page-covering, centred,
+ *    `pointer-events:none`, opacity-bearing layer holding a single **rotated**
+ *    (`angleDeg`) text caption or (URL-sanitised) image, stamped on every page
+ *    behind the content. `null` when no watermark is configured (or the text is
+ *    empty / the image src blocked), so the default output is unchanged.
  *
  * ## Content sourcing (E4-S2)
  * The page model carries geometry + page-token text only, so content is joined
@@ -47,9 +54,7 @@
  * `kind: 'empty'` (the E4-S1 positioned-host-box behaviour), so callers that only
  * need geometry keep working.
  *
- * ## What this pass does NOT do (deferred, later E4 stories)
- *  - **Watermark** (`page.watermark`) — E4-S7.
- *  - **Style isolation / Shadow DOM** — E4-S5.
+ * ## What this pass does NOT do
  * A `null`-height element (a growing box) is passed through with `heightPx: null`
  * so a renderer can let it size to content; the fixed elements on a paginated
  * page always carry a concrete height, so this only matters defensively.
@@ -77,6 +82,7 @@ import type {
   PlacedElement,
   TableColumnLayout,
   TableSlice,
+  Watermark,
 } from '@rendara/report-engine';
 import type {
   BorderSide,
@@ -220,6 +226,33 @@ export interface RectPx {
 }
 
 // ---------------------------------------------------------------------------
+// Watermark view (E4-S7): the optional page-covering overlay layer.
+// ---------------------------------------------------------------------------
+
+/**
+ * A page watermark resolved for painting (E4-S7). It models the centred, rotated
+ * overlay the renderer stamps on every page **behind** the content: the {@link
+ * layerStyle} covers the whole sheet, carries the layer {@link Watermark.opacity
+ * opacity}, centres its content and is non-interactive (`pointer-events:none`);
+ * the {@link innerStyle} carries the rotation plus the per-kind paint (text font/
+ * colour/size, or image max-size). Built only when there is something to paint —
+ * a non-empty caption for `text`, or a {@link sanitizeImageUrl sanitised} `src`
+ * for `image` — so callers never emit an empty layer.
+ */
+export interface WatermarkView {
+  /** `text` paints {@link text}; `image` paints {@link src}. */
+  readonly kind: 'text' | 'image';
+  /** The caption to paint, for `kind: 'text'` (non-empty); else `null`. */
+  readonly text: string | null;
+  /** The {@link sanitizeImageUrl sanitised} image source, for `kind: 'image'`; else `null`. */
+  readonly src: string | null;
+  /** Inline styles for the covering layer (full-sheet, opacity, centre, non-interactive). */
+  readonly layerStyle: StyleMap;
+  /** Inline styles for the inner caption/image (rotation + per-kind paint). */
+  readonly innerStyle: StyleMap;
+}
+
+// ---------------------------------------------------------------------------
 // Table view types (E4-S3): one on-page data-table slice, ready to position.
 // ---------------------------------------------------------------------------
 
@@ -305,6 +338,8 @@ export interface PageViewModel {
   readonly elements: readonly ElementBoxView[];
   /** Data-table slices on this page (E4-S3), in document then slice order. */
   readonly tables: readonly TableView[];
+  /** The page watermark (E4-S7), stamped behind the content, or `null` when none. */
+  readonly watermark: WatermarkView | null;
   /** Render mode (E4-S6): `'view'` (static output) or `'design'` (selection anchors exposed). */
   readonly mode: RenderMode;
 }
@@ -337,6 +372,12 @@ export interface PageViewOptions {
    * with no anchors, keeping the viewer DOM byte-stable.
    */
   readonly mode?: RenderMode;
+  /**
+   * The document-level watermark (E4-S7) to stamp on this page, from the engine's
+   * {@link Watermark PaginatedDocument.watermark}. A render-time concern (brief §8 /
+   * ADR 0007), not a template-schema field. Omit (or `null`) for no watermark.
+   */
+  readonly watermark?: Watermark | null;
 }
 
 /**
@@ -395,6 +436,7 @@ export function buildPageViewModel(
     background,
     elements,
     tables,
+    watermark: buildWatermarkView(options?.watermark, dpi),
     mode,
   };
 }
@@ -876,6 +918,106 @@ function tableRowDecoration(kind: MeasuredRowKind): StyleMap {
     case 'columnFooter':
       return { 'box-sizing': 'border-box', 'border-top': `2px solid ${TABLE_TOTAL_RULE}` };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Watermark (E4-S7) — the centred, rotated overlay stamped on every page behind
+// the content. The config is document-level and render-time (brief §8 / ADR
+// 0007), so it arrives via options, never the (frozen) template schema. Built in
+// the pure layer so the component and the headless serializer paint it identically.
+// ---------------------------------------------------------------------------
+
+/** Default watermark text colour when the config declares none (slate-400); themeable. */
+const WATERMARK_COLOR = 'var(--rdr-watermark-color, #9CA3AF)';
+/** Default watermark caption size (pt) when the config declares none — large, document-spanning. */
+const DEFAULT_WATERMARK_FONT_SIZE_PT = 72;
+
+/**
+ * Builds the {@link WatermarkView} for a page, or `null` when there is nothing to
+ * paint: no config, a `text` watermark with an empty caption, or an `image`
+ * watermark whose `src` is missing or blocked by {@link sanitizeImageUrl}. The
+ * layer covers the whole sheet, carries the (clamped) opacity, centres its
+ * content and is non-interactive; the inner caption/image carries the rotation
+ * and per-kind paint.
+ */
+export function buildWatermarkView(
+  watermark: Watermark | null | undefined,
+  dpi: number,
+): WatermarkView | null {
+  if (!watermark) {
+    return null;
+  }
+  const layerStyle = watermarkLayerStyle(watermark.opacity);
+
+  if (watermark.type === 'image') {
+    const src = sanitizeImageUrl(watermark.src);
+    if (src === null) {
+      return null;
+    }
+    return {
+      kind: 'image',
+      text: null,
+      src,
+      layerStyle,
+      innerStyle: {
+        'max-width': '60%',
+        'max-height': '60%',
+        transform: rotate(watermark.angleDeg),
+      },
+    };
+  }
+
+  const text = watermark.text?.trim() ?? '';
+  if (text.length === 0) {
+    return null;
+  }
+  const sizePt = watermark.fontSizePt ?? DEFAULT_WATERMARK_FONT_SIZE_PT;
+  return {
+    kind: 'text',
+    text,
+    src: null,
+    layerStyle,
+    innerStyle: {
+      transform: rotate(watermark.angleDeg),
+      'font-size': `${ptToPx(sizePt, dpi)}px`,
+      'font-weight': '700',
+      'letter-spacing': '0.2em',
+      'white-space': 'nowrap',
+      color: watermark.color ?? WATERMARK_COLOR,
+    },
+  };
+}
+
+/** The full-sheet, centred, non-interactive overlay layer carrying the clamped opacity. */
+function watermarkLayerStyle(opacity: number): StyleMap {
+  return {
+    position: 'absolute',
+    left: '0',
+    top: '0',
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    'align-items': 'center',
+    'justify-content': 'center',
+    overflow: 'hidden',
+    'pointer-events': 'none',
+    // Behind the element/table content (z ≥ 0); emitted first so equal-z content wins.
+    'z-index': '0',
+    opacity: `${clampOpacity(opacity)}`,
+  };
+}
+
+/** A CSS `rotate(<deg>deg)` transform; a non-finite angle degrades to no rotation. */
+function rotate(angleDeg: number): string {
+  return `rotate(${Number.isFinite(angleDeg) ? angleDeg : 0}deg)`;
+}
+
+/** Clamps a watermark opacity into `[0, 1]`; a non-finite value falls back to fully opaque. */
+function clampOpacity(opacity: number): number {
+  if (!Number.isFinite(opacity)) {
+    return 1;
+  }
+  return Math.min(1, Math.max(0, opacity));
 }
 
 // ---------------------------------------------------------------------------

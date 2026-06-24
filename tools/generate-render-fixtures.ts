@@ -20,6 +20,7 @@ import {
   renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
   renderStyleIsolationContent,
+  renderWatermarkPageHtml,
 } from '../libs/report-renderer/src/lib/golden-page-html';
 
 const fixturesDir = join(__dirname, '..', 'apps', 'visual-e2e', 'e2e', '__fixtures__');
@@ -32,6 +33,7 @@ const artifacts: ReadonlyArray<readonly [string, string]> = [
   ['plain-table-page.html', renderPlainTablePageHtml()],
   ['grouped-table-page.html', renderGroupedTablePageHtml()],
   ['multi-page-document.html', renderMultiPageDocumentHtml()],
+  ['watermark-page.html', renderWatermarkPageHtml()],
   ['style-isolation.html', renderStyleIsolationContent()],
 ];
 
