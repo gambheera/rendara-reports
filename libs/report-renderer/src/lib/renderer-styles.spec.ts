@@ -4,6 +4,7 @@ import {
   RDR_THEME_TOKENS,
   RENDERER_DOCUMENT_CSS,
   RENDERER_PAGE_CSS,
+  RENDERER_PRINT_CSS,
   RENDERER_SURFACE_CSS,
   RENDERER_THEME_CSS,
 } from './renderer-styles';
@@ -65,9 +66,24 @@ describe('renderer-styles (E4-S5)', () => {
     expect(RENDERER_DOCUMENT_CSS).toContain('gap: var(--rdr-page-gap);');
   });
 
-  it('bundles reset, theme and chrome into the surface stylesheet', () => {
+  it('bundles reset, theme, chrome and print rules into the surface stylesheet', () => {
     expect(RENDERER_SURFACE_CSS).toContain(RENDERER_THEME_CSS);
     expect(RENDERER_SURFACE_CSS).toContain(RENDERER_PAGE_CSS);
     expect(RENDERER_SURFACE_CSS).toContain(RENDERER_DOCUMENT_CSS);
+    expect(RENDERER_SURFACE_CSS).toContain(RENDERER_PRINT_CSS);
+  });
+
+  it('suppresses screen-only chrome under the print stylesheet (E4-S8)', () => {
+    // The print stylesheet is `@media print` only, so it never moves on-screen
+    // pixels; it strips the screen drop-shadow and the non-printing printable
+    // guide, forces the sheet white, and lets the browser own the physical page.
+    expect(RENDERER_PRINT_CSS.trimStart().startsWith('@media print {')).toBe(true);
+    expect(RENDERER_PRINT_CSS).toContain('box-shadow: none;');
+    expect(RENDERER_PRINT_CSS).toContain('outline: none;');
+    expect(RENDERER_PRINT_CSS).toContain('@page {');
+    expect(RENDERER_PRINT_CSS).toContain('margin: 0;');
+    // Fills / table bands / the watermark must survive the print engine's
+    // ink-saving default.
+    expect(RENDERER_PRINT_CSS).toContain('print-color-adjust: exact;');
   });
 });

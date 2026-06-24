@@ -213,14 +213,62 @@ export const RENDERER_DOCUMENT_CSS = `.rdr-document {
 }`;
 
 /**
- * The full stylesheet for an isolated render root: theme + reset, page chrome and
- * document chrome. Used by the {@link ReportSurface} shadow root and by the
- * headless style-isolation fixture (so an `attachShadow` host renders identically
- * to the component). Built at runtime — this constant is never passed to a
- * component's `styles`, so it does not need to be statically evaluable.
+ * Print stylesheet (E4-S8) — the `@media print` rules that turn the on-screen
+ * paginated DOM into print-optimised output (brief §7: "a dedicated `@page`/print
+ * stylesheet" so `window.print()` is crisp, vector and correctly paginated). This
+ * is the **renderer-level** print stylesheet; the viewer's Print toolbar action
+ * (E8) drives `window.print()` against it — see ADR 0008.
+ *
+ * Everything here is screen-suppressing chrome: the screen-only page drop-shadow
+ * and the non-printing printable-area guide are removed, the grey designer/viewer
+ * backdrop is forced white and the inter-page gaps collapse, so each sheet prints
+ * edge-to-edge with the browser owning the physical page via `@page { margin: 0 }`
+ * (the sheet's own mm dimensions are the printable area). `print-color-adjust:
+ * exact` keeps tinted fills, table bands and the watermark from being dropped by
+ * the print engine's ink-saving default.
+ *
+ * Being `@media print`, these rules never affect on-screen rendering and never
+ * touch the DOM (so the E4-S6 view-mode byte-stability guarantee is unaffected and
+ * existing screen baselines do not move).
+ */
+export const RENDERER_PRINT_CSS = `@media print {
+  :host,
+  .rdr-document,
+  .rdr-page,
+  .rdr-page-slot {
+    background: #ffffff;
+  }
+
+  .rdr-document {
+    gap: 0;
+  }
+
+  .rdr-page {
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .rdr-printable {
+    outline: none;
+  }
+
+  @page {
+    margin: 0;
+  }
+}`;
+
+/**
+ * The full stylesheet for an isolated render root: theme + reset, page chrome,
+ * document chrome and the print stylesheet. Used by the {@link ReportSurface}
+ * shadow root and by the headless style-isolation fixture (so an `attachShadow`
+ * host renders identically to the component). Built at runtime — this constant is
+ * never passed to a component's `styles`, so it does not need to be statically
+ * evaluable.
  */
 export const RENDERER_SURFACE_CSS = [
   RENDERER_THEME_CSS,
   RENDERER_PAGE_CSS,
   RENDERER_DOCUMENT_CSS,
+  RENDERER_PRINT_CSS,
 ].join('\n\n');

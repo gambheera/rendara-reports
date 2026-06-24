@@ -1,0 +1,26 @@
+@media print {
+  :host,
+  .rdr-document,
+  .rdr-page,
+  .rdr-page-slot {
+    background: #ffffff;
+  }
+
+  .rdr-document {
+    gap: 0;
+  }
+
+  .rdr-page {
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .rdr-printable {
+    outline: none;
+  }
+
+  @page {
+    margin: 0;
+  }
+}

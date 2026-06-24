@@ -24,7 +24,7 @@ import {
 } from '../document-view-model';
 import { ReportRenderer } from '../report-renderer/report-renderer';
 import type { RenderMode, StyleMap } from '../page-view-model';
-import { RENDERER_DOCUMENT_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
+import { RENDERER_DOCUMENT_CSS, RENDERER_PRINT_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
 
 /**
  * Multi-page document renderer (E4-S4) — wraps the single-page
@@ -61,12 +61,16 @@ import { RENDERER_DOCUMENT_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
  * E4-S7 forwards the document-level **watermark** ({@link PaginatedDocument.watermark})
  * to every child {@link ReportRenderer}, so the centred, rotated text/image overlay
  * is stamped behind the content of every page. `null` (no watermark) is unchanged.
+ *
+ * E4-S8 carries the shared {@link RENDERER_PRINT_CSS} print stylesheet so the
+ * stacked pages collapse their inter-page gaps and the grey backdrop turns white
+ * under `@media print`; it never affects on-screen rendering or the DOM.
  */
 @Component({
   selector: 'rdr-report-document',
   imports: [ReportRenderer],
   templateUrl: './report-document.html',
-  styles: [RENDERER_THEME_CSS, RENDERER_DOCUMENT_CSS],
+  styles: [RENDERER_THEME_CSS, RENDERER_DOCUMENT_CSS, RENDERER_PRINT_CSS],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportDocument {

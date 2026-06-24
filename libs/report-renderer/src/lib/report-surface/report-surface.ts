@@ -13,6 +13,7 @@ import type { PageLayoutMode, ViewportSize, ZoomSpec } from '../document-view-mo
 import {
   RENDERER_DOCUMENT_CSS,
   RENDERER_PAGE_CSS,
+  RENDERER_PRINT_CSS,
   RENDERER_THEME_CSS,
 } from '../renderer-styles';
 
@@ -35,7 +36,9 @@ import {
  * document head and do **not** pierce a shadow boundary, so this surface re-declares
  * the page + document chrome ({@link RENDERER_PAGE_CSS} / {@link RENDERER_DOCUMENT_CSS})
  * inside its own (shadow-scoped) styles — there they match the nested
- * `.rdr-page`/`.rdr-document` DOM directly.
+ * `.rdr-page`/`.rdr-document` DOM directly. The same applies to the shared
+ * {@link RENDERER_PRINT_CSS} print stylesheet (E4-S8), re-declared here so the
+ * isolated surface prints with the same `@media print` chrome as the emulated path.
  *
  * Theming works exactly as on the emulated components: override any `--rdr-*`
  * token on `<rdr-report-surface>` (or an ancestor — inherited custom properties
@@ -60,7 +63,7 @@ import {
     [availableSize]="availableSize()"
     (zoomChange)="zoomChange.emit($event)"
   />`,
-  styles: [RENDERER_THEME_CSS, RENDERER_PAGE_CSS, RENDERER_DOCUMENT_CSS],
+  styles: [RENDERER_THEME_CSS, RENDERER_PAGE_CSS, RENDERER_DOCUMENT_CSS, RENDERER_PRINT_CSS],
   encapsulation: ViewEncapsulation.ShadowDom,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

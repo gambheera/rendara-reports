@@ -31,6 +31,7 @@ have the context behind the code.
 | [0007](0007-page-chrome-page-numbers-watermark.md)    | Page chrome: repeating header/footer, page numbers, watermark    | Accepted | E3-S5 |
 | [0008](0008-grouping-pagination.md)                   | Grouping & group aggregates across pages                         | Accepted | E3-S6 |
 | [0009](0009-renderer-style-isolation.md)              | Renderer style isolation: emulated default + opt-in Shadow DOM   | Accepted | E4-S5 |
+| [0010](0010-renderer-print-stylesheet.md)             | Renderer print stylesheet: a shared `@media print` block         | Accepted | E4-S8 |
 
 > **Numbering note:** ADRs 0001–0004 were written first, during E0-S5…S8, each
 > recording one Epic 0 tooling decision. The foundational stack/architecture ADR

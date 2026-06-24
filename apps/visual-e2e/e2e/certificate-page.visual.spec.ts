@@ -2,59 +2,45 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 
+import { fixtureDocument } from './fixture-page';
+
 /**
- * Renderer visual-regression snapshot (E4-S1 frame, E4-S2 content; QA: "visual
- * snapshot of the certificate golden").
+ * Renderer visual-regression snapshots (E4-S1 frame, E4-S2 content; baseline
+ * consolidated in E4-S8).
  *
  * The page HTML is real renderer output: `tools/generate-render-fixtures.ts`
  * paginates the certificate golden with the engine and serializes page 1 via the
  * same shared style helpers the Angular component uses, committing the result to
  * `__fixtures__/certificate-page.html` (e2e projects may not import workspace
  * libs — Nx module boundaries — so the artifact is pre-rendered and loaded here
- * via `fs`; `golden-page-html.spec.ts` guards it against drift). E4-S2 fills the
- * boxes with content: resolved text, inline-SVG shapes, and images.
+ * via `fs`; `golden-page-html.spec.ts` guards it against drift).
  *
- * Determinism follows the E0-S5 harness: a vendored font as a data URI plus
- * `document.fonts.ready`, so the only variable is the OS rasterizer — hence
- * canonical baselines are Linux-only and CI-generated (docs/testing/
- * visual-regression.md).
+ * Two snapshots make up the protected baseline (E4-S8, QA: "screen + print
+ * stylesheet"): the on-screen render, and a **print-mode** render under
+ * `emulateMedia({ media: 'print' })`, where the shared {@link fixtureDocument}
+ * applies the renderer's genuine `@media print` stylesheet (no page shadow / no
+ * printable guide / white sheet). The deterministic-font harness is shared too —
+ * canonical baselines stay Linux-only and CI-generated.
  */
-const fontBase64 = readFileSync(
-  join(__dirname, '..', 'assets', 'inter-latin-400-normal.woff2'),
-).toString('base64');
-
 const pageHtml = readFileSync(join(__dirname, '__fixtures__', 'certificate-page.html'), 'utf8');
 
-const FIXTURE_HTML = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <style>
-      @font-face {
-        font-family: 'RendaraVisual';
-        font-style: normal;
-        font-weight: 400;
-        src: url(data:font/woff2;base64,${fontBase64}) format('woff2');
-      }
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { background: #e5e7eb; font-family: 'RendaraVisual', sans-serif; }
-      .stage { padding: 16px; }
-      .rdr-page { box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.12); overflow: hidden; }
-      .rdr-printable { outline: 1px dashed rgba(79, 70, 229, 0.25); pointer-events: none; }
-      .rdr-text { margin: 0; }
-      .rdr-image { display: block; }
-    </style>
-  </head>
-  <body>
-    <div class="stage" data-testid="certificate-page">${pageHtml}</div>
-  </body>
-</html>`;
+const FIXTURE_HTML = fixtureDocument(pageHtml, 'certificate-page');
 
-test.describe('Renderer visual regression (E4-S2)', () => {
-  test('renders the certificate golden page frame', async ({ page }) => {
+test.describe('Renderer certificate visual regression (E4-S2)', () => {
+  test('renders the certificate golden page on screen', async ({ page }) => {
     await page.setContent(FIXTURE_HTML, { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
 
     await expect(page.getByTestId('certificate-page')).toHaveScreenshot('certificate-page.png');
+  });
+
+  test('renders the certificate golden page under the print stylesheet', async ({ page }) => {
+    await page.emulateMedia({ media: 'print' });
+    await page.setContent(FIXTURE_HTML, { waitUntil: 'load' });
+    await page.evaluate(() => document.fonts.ready);
+
+    await expect(page.getByTestId('certificate-page')).toHaveScreenshot(
+      'certificate-page-print.png',
+    );
   });
 });

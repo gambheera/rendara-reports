@@ -23,7 +23,7 @@ import {
   type TableView,
 } from '../page-view-model';
 import { RdrDesignAttrs } from '../rdr-design-attrs';
-import { RENDERER_PAGE_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
+import { RENDERER_PAGE_CSS, RENDERER_PRINT_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
 
 /**
  * Single-page DOM renderer (E4-S1) — the foundation of the shared renderer that
@@ -71,12 +71,16 @@ import { RENDERER_PAGE_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
  * text/image overlay (opacity + angle from the document-level config) stamped
  * behind the page content. It is painted only when a watermark is supplied, so a
  * page without one is unchanged.
+ *
+ * E4-S8 carries the shared {@link RENDERER_PRINT_CSS} print stylesheet so this
+ * page prints crisp and edge-to-edge (screen-only chrome suppressed under
+ * `@media print`); it never affects on-screen rendering or the DOM.
  */
 @Component({
   selector: 'rdr-report-renderer',
   imports: [RdrDesignAttrs],
   templateUrl: './report-renderer.html',
-  styles: [RENDERER_THEME_CSS, RENDERER_PAGE_CSS],
+  styles: [RENDERER_THEME_CSS, RENDERER_PAGE_CSS, RENDERER_PRINT_CSS],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportRenderer {

@@ -19,6 +19,7 @@ import {
   renderGroupedTablePageHtml,
   renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
+  renderPrintStylesheetCss,
   renderStyleIsolationContent,
   renderWatermarkPageHtml,
 } from '../libs/report-renderer/src/lib/golden-page-html';
@@ -35,6 +36,9 @@ const artifacts: ReadonlyArray<readonly [string, string]> = [
   ['multi-page-document.html', renderMultiPageDocumentHtml()],
   ['watermark-page.html', renderWatermarkPageHtml()],
   ['style-isolation.html', renderStyleIsolationContent()],
+  // E4-S8: the renderer's print stylesheet, applied by the harness for the
+  // `*-print.png` snapshots.
+  ['renderer-print.css', renderPrintStylesheetCss()],
 ];
 
 for (const [name, html] of artifacts) {

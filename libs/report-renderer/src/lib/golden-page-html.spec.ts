@@ -9,6 +9,7 @@ import {
   renderGroupedTablePageHtml,
   renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
+  renderPrintStylesheetCss,
   renderStyleIsolationContent,
   renderWatermarkPageHtml,
 } from './golden-page-html';
@@ -141,6 +142,22 @@ describe('renderWatermarkPageHtml (E4-S7)', () => {
     expect(html).toContain('opacity: 0.15');
     // The watermark is painted behind the content (before the first element/table).
     expect(html.indexOf('class="rdr-watermark"')).toBeLessThan(html.indexOf('class="rdr-table"'));
+  });
+});
+
+describe('renderPrintStylesheetCss (E4-S8)', () => {
+  it('matches the committed print-stylesheet fixture (regenerate with render-fixtures:generate)', () => {
+    const committed = readFileSync(fixturePath('renderer-print.css'), 'utf8');
+    expect(committed.trimEnd()).toBe(renderPrintStylesheetCss());
+  });
+
+  it('carries the renderer print stylesheet for the harness', () => {
+    const css = renderPrintStylesheetCss();
+    expect(css.trimStart().startsWith('@media print {')).toBe(true);
+    // Screen-only chrome stripped so the golden prints crisp and edge-to-edge.
+    expect(css).toContain('box-shadow: none;');
+    expect(css).toContain('outline: none;');
+    expect(css).toContain('print-color-adjust: exact;');
   });
 });
 
