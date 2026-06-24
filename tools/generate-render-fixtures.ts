@@ -17,6 +17,7 @@ import {
   renderCertificatePageHtml,
   renderElementTypesPageHtml,
   renderGroupedTablePageHtml,
+  renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
 } from '../libs/report-renderer/src/lib/golden-page-html';
 
@@ -29,6 +30,7 @@ const artifacts: ReadonlyArray<readonly [string, string]> = [
   ['element-types-page.html', renderElementTypesPageHtml()],
   ['plain-table-page.html', renderPlainTablePageHtml()],
   ['grouped-table-page.html', renderGroupedTablePageHtml()],
+  ['multi-page-document.html', renderMultiPageDocumentHtml()],
 ];
 
 for (const [name, html] of artifacts) {
