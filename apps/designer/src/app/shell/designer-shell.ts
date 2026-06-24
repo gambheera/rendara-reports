@@ -1,10 +1,11 @@
-import { Component, ViewEncapsulation, signal } from '@angular/core';
+import { Component, ViewEncapsulation, signal, viewChild } from '@angular/core';
 import { TopBar } from './top-bar/top-bar';
 import { PalettePanel } from './palette-panel/palette-panel';
 import { CanvasStage } from './canvas-stage/canvas-stage';
 import { PropertiesPanel } from './properties-panel/properties-panel';
 import { StatusBar } from './status-bar/status-bar';
 import { PanelResizeHandle } from './panel-resize-handle';
+import { PageSetupDialog } from '../page-setup/page-setup-dialog';
 
 /**
  * Designer workspace shell (E5-S1): the responsive four-zone layout — top bar,
@@ -19,7 +20,15 @@ import { PanelResizeHandle } from './panel-resize-handle';
  */
 @Component({
   selector: 'rdr-designer-shell',
-  imports: [TopBar, PalettePanel, CanvasStage, PropertiesPanel, StatusBar, PanelResizeHandle],
+  imports: [
+    TopBar,
+    PalettePanel,
+    CanvasStage,
+    PropertiesPanel,
+    StatusBar,
+    PanelResizeHandle,
+    PageSetupDialog,
+  ],
   templateUrl: './designer-shell.html',
   styleUrl: './designer-shell.css',
   encapsulation: ViewEncapsulation.Emulated,
@@ -29,6 +38,13 @@ export class DesignerShell {
   /** Width bounds (px) shared by both side panels. */
   protected readonly MIN_WIDTH = 200;
   protected readonly MAX_WIDTH = 420;
+
+  private readonly pageSetup = viewChild.required(PageSetupDialog);
+
+  /** Opens the Page setup dialog (triggered from the status bar). */
+  protected openPageSetup(): void {
+    this.pageSetup().open();
+  }
 
   protected readonly leftWidth = signal(264);
   protected readonly rightWidth = signal(288);

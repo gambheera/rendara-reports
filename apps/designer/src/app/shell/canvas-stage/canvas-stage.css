@@ -15,11 +15,10 @@
   overflow: auto;
 }
 
-/* Static A4 proportion (210 × 297 mm) until the real renderer/zoom lands. */
+/* Proportion follows the live page geometry (E5-S3); zoom lands in E5-S4. */
 .rdr-canvas__paper {
   flex: none;
   width: min(100%, 620px);
-  aspect-ratio: 210 / 297;
   background: var(--rdr-color-paper);
   border: 1px solid var(--rdr-color-border-hairline);
   border-radius: 2px;

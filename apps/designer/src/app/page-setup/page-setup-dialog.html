@@ -1,0 +1,208 @@
+<dialog
+  #dialog
+  class="rdr-page-setup"
+  aria-labelledby="rdr-page-setup-title"
+  (close)="errors.set([])"
+>
+  <form method="dialog" class="rdr-page-setup__form" (submit)="$event.preventDefault()">
+    <header class="rdr-page-setup__header">
+      <h2 id="rdr-page-setup-title" class="rdr-page-setup__title">Page setup</h2>
+      <button
+        type="button"
+        class="rdr-page-setup__close"
+        aria-label="Close page setup"
+        (click)="close()"
+      >
+        ✕
+      </button>
+    </header>
+
+    <div class="rdr-page-setup__body">
+      <div class="rdr-page-setup__controls">
+        <div class="rdr-page-setup__field">
+          <label class="rdr-page-setup__label" for="rdr-page-setup-paper">Paper</label>
+          <select
+            id="rdr-page-setup-paper"
+            class="rdr-page-setup__select"
+            [value]="sizeKind()"
+            (change)="setSizeKind($any($event.target).value)"
+          >
+            <option value="A4">A4</option>
+            <option value="Letter">Letter</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+
+        @if (sizeKind() === 'custom') {
+        <div class="rdr-page-setup__pair">
+          <div class="rdr-page-setup__field">
+            <label class="rdr-page-setup__label" for="rdr-page-setup-w">Width (mm)</label>
+            <input
+              id="rdr-page-setup-w"
+              class="rdr-page-setup__input"
+              type="number"
+              min="1"
+              step="1"
+              [value]="customWidthMm()"
+              (input)="onCustomWidth(numberFrom($event))"
+            />
+          </div>
+          <div class="rdr-page-setup__field">
+            <label class="rdr-page-setup__label" for="rdr-page-setup-h">Height (mm)</label>
+            <input
+              id="rdr-page-setup-h"
+              class="rdr-page-setup__input"
+              type="number"
+              min="1"
+              step="1"
+              [value]="customHeightMm()"
+              (input)="onCustomHeight(numberFrom($event))"
+            />
+          </div>
+        </div>
+        }
+
+        <div class="rdr-page-setup__field">
+          <span class="rdr-page-setup__label" id="rdr-page-setup-orientation">Orientation</span>
+          <div
+            class="rdr-page-setup__segmented"
+            role="group"
+            aria-labelledby="rdr-page-setup-orientation"
+          >
+            <button
+              type="button"
+              class="rdr-page-setup__segment"
+              [class.rdr-page-setup__segment--active]="orientation() === 'portrait'"
+              [attr.aria-pressed]="orientation() === 'portrait'"
+              (click)="setOrientation('portrait')"
+            >
+              Portrait
+            </button>
+            <button
+              type="button"
+              class="rdr-page-setup__segment"
+              [class.rdr-page-setup__segment--active]="orientation() === 'landscape'"
+              [attr.aria-pressed]="orientation() === 'landscape'"
+              (click)="setOrientation('landscape')"
+            >
+              Landscape
+            </button>
+          </div>
+        </div>
+
+        <div class="rdr-page-setup__field">
+          <div class="rdr-page-setup__margins-head">
+            <span class="rdr-page-setup__label" id="rdr-page-setup-margins">Margins</span>
+            <button
+              type="button"
+              class="rdr-page-setup__link"
+              [class.rdr-page-setup__link--on]="linked()"
+              [attr.aria-pressed]="linked()"
+              aria-label="Link all margins"
+              (click)="toggleLinked()"
+            >
+              🔗
+            </button>
+          </div>
+          <div
+            class="rdr-page-setup__margins"
+            role="group"
+            aria-labelledby="rdr-page-setup-margins"
+          >
+            @for (side of sides; track side) {
+            <div class="rdr-page-setup__field rdr-page-setup__field--margin">
+              <label
+                class="rdr-page-setup__label rdr-page-setup__label--margin"
+                [for]="'rdr-margin-' + side"
+              >
+                {{ side }} ({{ unit() }})
+              </label>
+              <input
+                [id]="'rdr-margin-' + side"
+                class="rdr-page-setup__input"
+                type="number"
+                min="0"
+                step="0.1"
+                [value]="marginDisplay()[side]"
+                (input)="onMarginInput(side, numberFrom($event))"
+              />
+            </div>
+            }
+          </div>
+        </div>
+
+        <div class="rdr-page-setup__pair">
+          <div class="rdr-page-setup__field">
+            <span class="rdr-page-setup__label" id="rdr-page-setup-units">Units</span>
+            <div
+              class="rdr-page-setup__segmented"
+              role="group"
+              aria-labelledby="rdr-page-setup-units"
+            >
+              @for (option of ['mm', 'pt', 'in']; track option) {
+              <button
+                type="button"
+                class="rdr-page-setup__segment"
+                [class.rdr-page-setup__segment--active]="unit() === option"
+                [attr.aria-pressed]="unit() === option"
+                (click)="setUnit($any(option))"
+              >
+                {{ option }}
+              </button>
+              }
+            </div>
+          </div>
+
+          <div class="rdr-page-setup__field">
+            <label class="rdr-page-setup__label" for="rdr-page-setup-font">Default font size</label>
+            <div class="rdr-page-setup__suffix-field">
+              <input
+                id="rdr-page-setup-font"
+                class="rdr-page-setup__input"
+                type="number"
+                min="1"
+                step="0.5"
+                [value]="fontSizePt()"
+                (input)="onFontSize(numberFrom($event))"
+              />
+              <span class="rdr-page-setup__suffix">{{ fontUnitLabel }}</span>
+            </div>
+          </div>
+        </div>
+
+        @if (errors().length > 0) {
+        <div class="rdr-page-setup__errors" role="alert">
+          @for (error of errors(); track $index) {
+          <p class="rdr-page-setup__error">{{ error.message }}</p>
+          }
+        </div>
+        }
+      </div>
+
+      <div class="rdr-page-setup__preview">
+        <span class="rdr-page-setup__label">Preview</span>
+        <div class="rdr-page-setup__preview-frame">
+          <div
+            class="rdr-page-setup__preview-page"
+            [style.width.px]="previewSize().width"
+            [style.height.px]="previewSize().height"
+          >
+            <div
+              class="rdr-page-setup__preview-content"
+              [style.top]="previewInset().top"
+              [style.right]="previewInset().right"
+              [style.bottom]="previewInset().bottom"
+              [style.left]="previewInset().left"
+            ></div>
+          </div>
+        </div>
+        <p class="rdr-page-setup__dimensions">{{ dimensionsCaption() }}</p>
+      </div>
+    </div>
+
+    <footer class="rdr-page-setup__footer">
+      <button type="button" rdr-button variant="ghost" (click)="close()">Cancel</button>
+      <button type="button" rdr-button variant="primary" (click)="apply()">Apply</button>
+    </footer>
+  </form>
+</dialog>
