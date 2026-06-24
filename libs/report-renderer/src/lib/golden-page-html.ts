@@ -36,6 +36,10 @@
  *    so the centred, rotated overlay is painted behind real content. Satisfies the
  *    story's QA ("visual snapshot with watermark"); the same fixture drives the
  *    print-mode snapshot under `emulateMedia({ media: 'print' })`.
+ *  - **print stylesheet** (E4-S8) — not a page but the renderer's `@media print`
+ *    rules ({@link renderPrintStylesheetCss}), emitted as `renderer-print.css` so
+ *    the harness applies the genuine print stylesheet to *every* golden's
+ *    print-mode snapshot. Completes the screen + print baseline (Epic 4 capstone).
  */
 
 import { goldenCertificateTemplate, type RendaraTemplate } from '@rendara/report-schema';
@@ -50,7 +54,7 @@ import {
 
 import { buildDocumentViewModel } from './document-view-model';
 import { buildPageViewModel } from './page-view-model';
-import { RENDERER_SURFACE_CSS } from './renderer-styles';
+import { RENDERER_PRINT_CSS, RENDERER_SURFACE_CSS } from './renderer-styles';
 import { serializeDocumentToHtml, serializePageToHtml } from './serialize-page-html';
 
 /** Zoom that fits the A4-landscape certificate sheet within the harness viewport. */
@@ -679,4 +683,21 @@ export function renderStyleIsolationContent(): string {
   const doc = paginate(plainTableTemplate, new Map([[PLAIN_TABLE_ID, PLAIN_TABLE_RESOLVED]]));
   const vm = buildPageViewModel(doc.pages[0], doc.geometry, { template: plainTableTemplate });
   return `<style>${RENDERER_SURFACE_CSS}</style>${serializePageToHtml(vm)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Print stylesheet artifact (E4-S8): the renderer's `@media print` rules, exported
+// as a standalone CSS artifact so the visual harness can apply the *genuine* print
+// stylesheet to its golden pages under `emulateMedia({ media: 'print' })` (e2e
+// projects may not import workspace libs — Nx module boundaries — so the harness
+// reads the committed `__fixtures__/renderer-print.css` instead). The shared
+// fixture-page helper appends it after the unchanged on-screen chrome, so the
+// screen snapshots are byte-stable while the `*-print.png` snapshots exercise the
+// real print stylesheet. `golden-page-html.spec.ts` guards the artifact against
+// drift, exactly like the HTML fixtures.
+// ---------------------------------------------------------------------------
+
+/** Returns the renderer's print stylesheet ({@link RENDERER_PRINT_CSS}) for the harness artifact. */
+export function renderPrintStylesheetCss(): string {
+  return RENDERER_PRINT_CSS;
 }
