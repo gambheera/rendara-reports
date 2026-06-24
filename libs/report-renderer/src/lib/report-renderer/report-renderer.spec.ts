@@ -17,6 +17,7 @@ import {
   resolveElement,
   type PaginatedDocument,
   type ResolvedDataTable,
+  type Watermark,
 } from '@rendara/report-engine';
 
 import { ReportRenderer } from './report-renderer';
@@ -331,5 +332,65 @@ describe('ReportRenderer design-mode hooks (E4-S6)', () => {
     // when view mode is asked for explicitly.
     const container = await renderInvoice('view');
     expect(container.innerHTML).not.toContain('data-rdr-');
+  });
+});
+
+/**
+ * Watermark (E4-S7, QA: "visual snapshot with watermark"). Confirms the live
+ * component paints the centred, rotated overlay behind the content when a
+ * watermark is supplied, sanitises an image watermark, and renders nothing extra
+ * when none is configured.
+ */
+describe('ReportRenderer watermark (E4-S7)', () => {
+  const watermark: Watermark = {
+    type: 'text',
+    text: 'CONFIDENTIAL',
+    opacity: 0.15,
+    angleDeg: -45,
+    color: '#9CA3AF',
+  };
+
+  async function renderWith(watermarkInput: Watermark | null) {
+    const doc = certificatePage();
+    const { container } = await render(ReportRenderer, {
+      inputs: {
+        page: doc.pages[0],
+        geometry: doc.geometry,
+        template: goldenCertificateTemplate,
+        watermark: watermarkInput,
+      },
+    });
+    return container;
+  }
+
+  it('paints a rotated text watermark behind the content', async () => {
+    const container = await renderWith(watermark);
+    const layer = el(container, '.rdr-watermark');
+    expect(layer.style.pointerEvents).toBe('none');
+    expect(layer.style.opacity).toBe('0.15');
+
+    const caption = el(layer, '.rdr-watermark-text');
+    expect(caption.textContent?.trim()).toBe('CONFIDENTIAL');
+    expect(caption.style.transform).toBe('rotate(-45deg)');
+    expect(caption.style.color).toBe('rgb(156, 163, 175)');
+  });
+
+  it('sanitises an image watermark src', async () => {
+    const doc = certificatePage();
+    const { container } = await render(ReportRenderer, {
+      inputs: {
+        page: doc.pages[0],
+        geometry: doc.geometry,
+        watermark: { type: 'image', src: 'javascript:alert(1)', opacity: 0.3, angleDeg: 0 },
+      },
+    });
+    // The blocked src yields no watermark view at all → no overlay element.
+    expect(container.querySelector('.rdr-watermark')).toBeNull();
+    expect(container.innerHTML).not.toContain('javascript:');
+  });
+
+  it('renders no watermark overlay when none is configured', async () => {
+    const container = await renderWith(null);
+    expect(container.querySelector('.rdr-watermark')).toBeNull();
   });
 });

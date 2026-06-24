@@ -192,4 +192,32 @@ describe('buildDocumentViewModel (E4-S4)', () => {
     expect(designVm.mode).toBe('design');
     expect(designVm.pages.every((p) => p.mode === 'design')).toBe(true);
   });
+
+  it('forwards the document-level watermark to every page (E4-S7)', () => {
+    // The watermark is a render-time concern echoed onto the document by `paginate`.
+    const template = syntheticTemplate();
+    const rows = Array.from({ length: 70 }, (_, i) => ({
+      index: i,
+      data: {},
+      cells: [
+        { columnKey: 'a', value: { raw: `Item ${i}`, formatted: `Item ${i}` } },
+        { columnKey: 'b', value: { raw: String(i), formatted: String(i) } },
+      ],
+    }));
+    const resolved: ResolvedDataTable = { rows, columnFooters: [], errors: [], diagnostics: [] };
+    const doc = paginate(template, new Map([['el_doc_table', resolved]]), {
+      watermark: { type: 'text', text: 'CONFIDENTIAL', opacity: 0.15, angleDeg: -45 },
+    });
+    expect(doc.pageCount).toBeGreaterThanOrEqual(2);
+
+    const vm = buildDocumentViewModel(doc, { template });
+    expect(vm.pages.every((p) => p.watermark?.kind === 'text')).toBe(true);
+    expect(vm.pages.every((p) => p.watermark?.text === 'CONFIDENTIAL')).toBe(true);
+  });
+
+  it('leaves every page watermark null when the document has none (E4-S7)', () => {
+    const { doc, template } = multiPageDoc();
+    const vm = buildDocumentViewModel(doc, { template });
+    expect(vm.pages.every((p) => p.watermark === null)).toBe(true);
+  });
 });

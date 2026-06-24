@@ -11,7 +11,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import type { PaginatedDocument, PaginatedPage } from '@rendara/report-engine';
+import type { PaginatedDocument, PaginatedPage, Watermark } from '@rendara/report-engine';
 import type { RendaraTemplate } from '@rendara/report-schema';
 
 import {
@@ -58,7 +58,9 @@ import { RENDERER_DOCUMENT_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
  * multi-page document as its canvas with per-element selection anchors. View mode
  * (the default) forwards nothing extra, keeping the viewer DOM byte-stable.
  *
- * Still deferred (later E4 stories): watermark + page chrome (E4-S7).
+ * E4-S7 forwards the document-level **watermark** ({@link PaginatedDocument.watermark})
+ * to every child {@link ReportRenderer}, so the centred, rotated text/image overlay
+ * is stamped behind the content of every page. `null` (no watermark) is unchanged.
  */
 @Component({
   selector: 'rdr-report-document',
@@ -123,6 +125,9 @@ export class ReportDocument {
 
   /** The shared page geometry, forwarded to each child renderer. */
   protected readonly geometry = computed(() => this.document().geometry);
+
+  /** The document-level watermark (E4-S7), forwarded to each child renderer; `null` → none. */
+  protected readonly watermark = computed<Watermark | null>(() => this.document().watermark);
 
   /** The scaled layout box reserved around each page sheet at the current zoom. */
   protected readonly slot = computed<SheetSize>(() => slotSize(this.sheet(), this.effectiveZoom()));

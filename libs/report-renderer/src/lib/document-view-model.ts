@@ -146,7 +146,8 @@ export interface DocumentViewModel {
 /**
  * Builds the {@link DocumentViewModel} for a paginated `doc`: resolves the zoom
  * spec against the document's (uniform) sheet + viewport, then builds one
- * {@link PageViewModel} per page at that zoom. Pure and deterministic.
+ * {@link PageViewModel} per page at that zoom, forwarding the document-level
+ * watermark (E4-S7) to every page. Pure and deterministic.
  */
 export function buildDocumentViewModel(
   doc: PaginatedDocument,
@@ -167,6 +168,9 @@ export function buildDocumentViewModel(
       template: options?.template,
       resolvedValues: options?.resolvedValues,
       mode,
+      // The watermark (E4-S7) is document-level: the engine echoes the render-time
+      // config onto the document, and it is stamped on every page behind the content.
+      watermark: doc.watermark,
     }),
   );
 

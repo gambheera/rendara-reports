@@ -31,6 +31,11 @@
  *    ("multi-page golden renders correct page count; zoom levels visually
  *    snapshotted"). Rows are pre-resolved constants fed through the real
  *    paginator, so the page count + slicing are genuine and deterministic.
+ *  - **watermark** (E4-S7) — the plain-table page paginated *with* a `CONFIDENTIAL`
+ *    text watermark (the engine echoes the render-time config onto the document),
+ *    so the centred, rotated overlay is painted behind real content. Satisfies the
+ *    story's QA ("visual snapshot with watermark"); the same fixture drives the
+ *    print-mode snapshot under `emulateMedia({ media: 'print' })`.
  */
 
 import { goldenCertificateTemplate, type RendaraTemplate } from '@rendara/report-schema';
@@ -40,6 +45,7 @@ import {
   type ResolvedDataTable,
   type ResolvedGroup,
   type ResolvedRow,
+  type Watermark,
 } from '@rendara/report-engine';
 
 import { buildDocumentViewModel } from './document-view-model';
@@ -619,6 +625,39 @@ const MULTI_PAGE_RESOLVED: ResolvedDataTable = {
   errors: [],
   diagnostics: [],
 };
+
+// ---------------------------------------------------------------------------
+// Watermark fixture (E4-S7): the plain-table page paginated with a CONFIDENTIAL
+// text watermark. The watermark is a render-time concern (brief §8 / ADR 0007),
+// so it arrives via `paginate`'s options and is echoed onto the document, then
+// forwarded into the page view-model — exactly the path the viewer drives. The
+// same artifact backs both the screen and the print-mode visual snapshots.
+// ---------------------------------------------------------------------------
+
+/** Zoom for the watermark fixture page (A4 portrait), sized to the harness viewport. */
+export const WATERMARK_FIXTURE_ZOOM = 0.75;
+
+/** The diagonal `CONFIDENTIAL` text watermark stamped on the fixture (mockup defaults). */
+const WATERMARK_FIXTURE: Watermark = {
+  type: 'text',
+  text: 'CONFIDENTIAL',
+  opacity: 0.15,
+  angleDeg: -45,
+  color: '#9CA3AF',
+};
+
+/** Renders the watermarked plain-table fixture page to its static HTML. Deterministic. */
+export function renderWatermarkPageHtml(): string {
+  const doc = paginate(plainTableTemplate, new Map([[PLAIN_TABLE_ID, PLAIN_TABLE_RESOLVED]]), {
+    watermark: WATERMARK_FIXTURE,
+  });
+  const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+    zoom: WATERMARK_FIXTURE_ZOOM,
+    template: plainTableTemplate,
+    watermark: doc.watermark,
+  });
+  return serializePageToHtml(vm);
+}
 
 // ---------------------------------------------------------------------------
 // Style-isolation fixture (E4-S5): the exact content of an isolated render root —

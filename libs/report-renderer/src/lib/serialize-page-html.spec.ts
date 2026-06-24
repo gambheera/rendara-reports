@@ -11,6 +11,7 @@ import {
   paginate,
   resolveDataTable,
   type ResolvedDataTable,
+  type Watermark,
 } from '@rendara/report-engine';
 
 import { buildPageViewModel } from './page-view-model';
@@ -181,6 +182,74 @@ describe('serializePageToHtml tables (E4-S3)', () => {
     const html = serializePageToHtml(tampered);
     expect(html).toContain('&lt;b&gt;&amp;');
     expect(html).not.toContain('<b>&');
+  });
+});
+
+describe('serializePageToHtml watermark (E4-S7)', () => {
+  const watermark: Watermark = {
+    type: 'text',
+    text: 'CONFIDENTIAL',
+    opacity: 0.15,
+    angleDeg: -45,
+    color: '#9CA3AF',
+  };
+
+  function certificateDoc() {
+    return paginate(goldenCertificateTemplate, new Map());
+  }
+
+  it('emits the watermark layer before the element boxes (behind content)', () => {
+    const doc = certificateDoc();
+    const html = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenCertificateTemplate,
+        watermark,
+      }),
+    );
+
+    expect(html).toContain('class="rdr-watermark"');
+    expect(html).toContain('class="rdr-watermark-text"');
+    expect(html).toContain('CONFIDENTIAL');
+    expect(html).toContain('rotate(-45deg)');
+    // The watermark is painted first (behind), so it precedes the first element box.
+    expect(html.indexOf('class="rdr-watermark"')).toBeLessThan(html.indexOf('class="rdr-element"'));
+  });
+
+  it('emits an <img> for an image watermark with a sanitised src', () => {
+    const doc = certificateDoc();
+    const html = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        watermark: { type: 'image', src: 'https://cdn.example/seal.png', opacity: 0.3, angleDeg: 0 },
+      }),
+    );
+    expect(html).toContain('<img class="rdr-watermark-image"');
+    expect(html).toContain('src="https://cdn.example/seal.png"');
+  });
+
+  it('escapes the watermark caption it interpolates', () => {
+    const doc = certificateDoc();
+    const html = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        watermark: { ...watermark, text: '<b>&' },
+      }),
+    );
+    expect(html).toContain('&lt;b&gt;&amp;');
+    expect(html).not.toContain('<b>&');
+  });
+
+  it('keeps the page byte-stable when no watermark is configured', () => {
+    const doc = certificateDoc();
+    const noWatermark = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenCertificateTemplate }),
+    );
+    const nullWatermark = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenCertificateTemplate,
+        watermark: null,
+      }),
+    );
+    expect(nullWatermark).toBe(noWatermark);
+    expect(noWatermark).not.toContain('rdr-watermark');
   });
 });
 

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { PageGeometry, PaginatedPage } from '@rendara/report-engine';
+import type { PageGeometry, PaginatedPage, Watermark } from '@rendara/report-engine';
 import type { RendaraTemplate } from '@rendara/report-schema';
 
 import {
@@ -67,7 +67,10 @@ import { RENDERER_PAGE_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
  * role + the natural-px frame) plus a `data-rdr-mode="design"` marker on the page
  * root. View mode emits none of these, so the viewer DOM is byte-stable.
  *
- * Still deferred: the watermark is E4-S7.
+ * E4-S7 paints the optional **watermark** ({@link watermark}): a centred, rotated
+ * text/image overlay (opacity + angle from the document-level config) stamped
+ * behind the page content. It is painted only when a watermark is supplied, so a
+ * page without one is unchanged.
  */
 @Component({
   selector: 'rdr-report-renderer',
@@ -103,6 +106,12 @@ export class ReportRenderer {
    * with no anchors. Geometry/content is identical in both modes.
    */
   readonly mode = input<RenderMode>('view');
+  /**
+   * The document-level watermark (E4-S7) to stamp behind the page content. A
+   * render-time concern (brief §8): the {@link ReportDocument} forwards the
+   * engine's `PaginatedDocument.watermark` here. `null` (the default) → none.
+   */
+  readonly watermark = input<Watermark | null>(null);
 
   /** The pure view-model for the current inputs. */
   protected readonly vm = computed<PageViewModel>(() =>
@@ -112,6 +121,7 @@ export class ReportRenderer {
       template: this.template() ?? undefined,
       resolvedValues: this.resolvedValues(),
       mode: this.mode(),
+      watermark: this.watermark(),
     }),
   );
 

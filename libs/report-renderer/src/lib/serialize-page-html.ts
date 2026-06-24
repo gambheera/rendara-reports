@@ -15,7 +15,10 @@
  * same shared style helpers. E4-S6 emits the additive design-mode selection anchors
  * ({@link designAnchorAttrs}) when the view-model's `mode` is `'design'` — the same
  * attributes the {@link RdrDesignAttrs} directive applies in the component, so the
- * two paths stay byte-for-byte identical in both modes.
+ * two paths stay byte-for-byte identical in both modes. E4-S7 paints the optional
+ * watermark overlay (a centred, rotated text/image layer behind the content) when
+ * the page carries one — emitted only when configured, so a page with no watermark
+ * is byte-stable.
  */
 
 import { slotSize, type DocumentViewModel } from './document-view-model';
@@ -37,6 +40,7 @@ import {
   type StyleMap,
   type TableRowView,
   type TableView,
+  type WatermarkView,
 } from './page-view-model';
 
 /** Serializes a {@link StyleMap} to an inline `style` attribute value. */
@@ -77,6 +81,9 @@ function escapeText(value: string): string {
  */
 export function serializePageToHtml(vm: PageViewModel): string {
   const mode = vm.mode;
+  // The watermark is painted first so it sits behind the content (E4-S7); it is
+  // emitted only when configured, so a page with no watermark stays byte-stable.
+  const watermark = vm.watermark ? serializeWatermark(vm.watermark) : '';
   const boxes = vm.elements.map((box) => serializeBox(box, mode)).join('');
   const tables = vm.tables.map((table) => serializeTable(table, mode)).join('');
   // The page-mode marker is additive (design only), so view-mode output is byte-stable.
@@ -85,10 +92,22 @@ export function serializePageToHtml(vm: PageViewModel): string {
   return (
     `<div class="rdr-page" style="${escapeAttr(inlineStyle(sheetStyle(vm)))}"${pageMode}>` +
     `<div class="rdr-printable" style="${escapeAttr(inlineStyle(printableStyle(vm)))}"></div>` +
+    watermark +
     boxes +
     tables +
     `</div>`
   );
+}
+
+/** Serializes the watermark overlay (E4-S7): a centred, rotated text caption or image. */
+function serializeWatermark(watermark: WatermarkView): string {
+  const layer = escapeAttr(inlineStyle(watermark.layerStyle));
+  const inner = escapeAttr(inlineStyle(watermark.innerStyle));
+  const content =
+    watermark.kind === 'image' && watermark.src !== null
+      ? `<img class="rdr-watermark-image" src="${escapeAttr(watermark.src)}" alt="" style="${inner}" />`
+      : `<span class="rdr-watermark-text" style="${inner}">${escapeText(watermark.text ?? '')}</span>`;
+  return `<div class="rdr-watermark" style="${layer}">${content}</div>`;
 }
 
 /**

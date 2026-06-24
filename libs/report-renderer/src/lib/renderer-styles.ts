@@ -68,6 +68,8 @@ export const RDR_THEME_TOKENS: Readonly<Record<string, string>> = {
   '--rdr-table-band-rule': '#CBD5E1',
   /** Strongest rule (header bottom / grand-total top). */
   '--rdr-table-total-rule': '#334155',
+  /** Default watermark text colour when the watermark config declares none (slate-400). */
+  '--rdr-watermark-color': '#9CA3AF',
 } as const;
 
 /**
@@ -100,6 +102,7 @@ export const RENDERER_THEME_CSS = `:host {
   --rdr-table-detail-rule: #E2E8F0;
   --rdr-table-band-rule: #CBD5E1;
   --rdr-table-total-rule: #334155;
+  --rdr-watermark-color: #9CA3AF;
 
   display: block;
 }
@@ -154,6 +157,21 @@ export const RENDERER_PAGE_CSS = `.rdr-page {
 }
 
 .rdr-image {
+  display: block;
+}
+
+/* Watermark overlay (E4-S7): the page-covering layer + its centred caption/image.
+   The size/opacity/rotation/colour stay inline on the elements (data-driven); these
+   are the static resets so the caption/image paint predictably. */
+.rdr-watermark {
+  margin: 0;
+}
+
+.rdr-watermark-text {
+  margin: 0;
+}
+
+.rdr-watermark-image {
   display: block;
 }
 
