@@ -180,4 +180,16 @@ describe('buildDocumentViewModel (E4-S4)', () => {
     const { doc } = multiPageDoc();
     expect(buildDocumentViewModel(doc).zoom).toBe(1);
   });
+
+  it('defaults the mode to "view" and forwards an explicit mode to every page (E4-S6)', () => {
+    const { doc, template } = multiPageDoc();
+
+    const viewVm = buildDocumentViewModel(doc, { template });
+    expect(viewVm.mode).toBe('view');
+    expect(viewVm.pages.every((p) => p.mode === 'view')).toBe(true);
+
+    const designVm = buildDocumentViewModel(doc, { template, mode: 'design' });
+    expect(designVm.mode).toBe('design');
+    expect(designVm.pages.every((p) => p.mode === 'design')).toBe(true);
+  });
 });

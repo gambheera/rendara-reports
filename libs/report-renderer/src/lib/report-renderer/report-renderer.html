@@ -1,5 +1,10 @@
 @let model = vm();
-<div class="rdr-page" [style]="sheetStyle()" [attr.data-page-number]="model.pageNumber">
+<div
+  class="rdr-page"
+  [style]="sheetStyle()"
+  [attr.data-page-number]="model.pageNumber"
+  [attr.data-rdr-mode]="model.mode === 'design' ? 'design' : null"
+>
   <div class="rdr-printable" [style]="printableStyle()"></div>
   @for (box of model.elements; track box.id) { @let content = box.content;
   <div
@@ -7,6 +12,7 @@
     [style]="elementStyle(box)"
     [attr.data-element-id]="box.id"
     [attr.data-element-type]="box.type"
+    [rdrDesignAttrs]="elementAnchor(box)"
   >
     @switch (content.kind) { @case ('text') {
     <div class="rdr-text" [style]="content.textStyle">{{ content.text }}</div>
@@ -59,7 +65,12 @@
     } } }
   </div>
   } @for (table of model.tables; track table.elementId) {
-  <div class="rdr-table" [style]="tableContainerStyle(table)" [attr.data-table-id]="table.elementId">
+  <div
+    class="rdr-table"
+    [style]="tableContainerStyle(table)"
+    [attr.data-table-id]="table.elementId"
+    [rdrDesignAttrs]="tableAnchor(table)"
+  >
     @for (row of table.rows; track $index) {
     <div class="rdr-table-row" [style]="tableRowStyle(row)" [attr.data-row-kind]="row.kind">
       @for (cell of row.cells; track cell.columnKey) {

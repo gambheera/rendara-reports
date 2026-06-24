@@ -12,11 +12,15 @@
  * E4-S2 paints each box's content: text runs, inline-SVG shapes, and
  * (URL-sanitised) images — mirroring the component's template exactly. E4-S3 adds
  * the page's data-table slices (containers → rows → cells + band labels) with the
- * same shared style helpers.
+ * same shared style helpers. E4-S6 emits the additive design-mode selection anchors
+ * ({@link designAnchorAttrs}) when the view-model's `mode` is `'design'` — the same
+ * attributes the {@link RdrDesignAttrs} directive applies in the component, so the
+ * two paths stay byte-for-byte identical in both modes.
  */
 
 import { slotSize, type DocumentViewModel } from './document-view-model';
 import {
+  designAnchorAttrs,
   elementStyle,
   printableStyle,
   sheetStyle,
@@ -24,9 +28,11 @@ import {
   tableContainerStyle,
   tableLabelStyle,
   tableRowStyle,
+  type AttrMap,
   type ElementBoxView,
   type ElementContentView,
   type PageViewModel,
+  type RenderMode,
   type ShapeContentView,
   type StyleMap,
   type TableRowView,
@@ -38,6 +44,20 @@ function inlineStyle(style: StyleMap): string {
   return Object.entries(style)
     .map(([prop, value]) => `${prop}: ${value}`)
     .join('; ');
+}
+
+/**
+ * Serializes an attribute map (E4-S6 design anchors) to a leading-space-prefixed
+ * attribute string, or `''` for `null` (view mode) — so view-mode output carries
+ * no anchor bytes. Mirrors the {@link RdrDesignAttrs} directive exactly.
+ */
+function inlineAttrs(attrs: AttrMap | null): string {
+  if (attrs === null) {
+    return '';
+  }
+  return Object.entries(attrs)
+    .map(([name, value]) => ` ${name}="${escapeAttr(value)}"`)
+    .join('');
 }
 
 /** Minimal HTML attribute-value escaping for the values we emit (ids, styles, urls). */
@@ -56,11 +76,14 @@ function escapeText(value: string): string {
  * content.
  */
 export function serializePageToHtml(vm: PageViewModel): string {
-  const boxes = vm.elements.map(serializeBox).join('');
-  const tables = vm.tables.map(serializeTable).join('');
+  const mode = vm.mode;
+  const boxes = vm.elements.map((box) => serializeBox(box, mode)).join('');
+  const tables = vm.tables.map((table) => serializeTable(table, mode)).join('');
+  // The page-mode marker is additive (design only), so view-mode output is byte-stable.
+  const pageMode = mode === 'design' ? ' data-rdr-mode="design"' : '';
 
   return (
-    `<div class="rdr-page" style="${escapeAttr(inlineStyle(sheetStyle(vm)))}">` +
+    `<div class="rdr-page" style="${escapeAttr(inlineStyle(sheetStyle(vm)))}"${pageMode}>` +
     `<div class="rdr-printable" style="${escapeAttr(inlineStyle(printableStyle(vm)))}"></div>` +
     boxes +
     tables +
@@ -90,12 +113,13 @@ export function serializeDocumentToHtml(vm: DocumentViewModel): string {
 }
 
 /** Serializes one element host box and its content. */
-function serializeBox(box: ElementBoxView): string {
+function serializeBox(box: ElementBoxView, mode: RenderMode): string {
+  const anchor = inlineAttrs(designAnchorAttrs('element', box, mode));
   return (
     `<div class="rdr-element" data-element-id="${escapeAttr(box.id)}" ` +
     `data-element-type="${escapeAttr(box.type)}" style="${escapeAttr(
       inlineStyle(elementStyle(box)),
-    )}">${serializeContent(box.content)}</div>`
+    )}"${anchor}>${serializeContent(box.content)}</div>`
   );
 }
 
@@ -158,11 +182,12 @@ function serializeShapePrimitive(content: ShapeContentView): string {
 }
 
 /** Serializes one table slice (E4-S3) as a positioned container of row tracks. */
-function serializeTable(table: TableView): string {
+function serializeTable(table: TableView, mode: RenderMode): string {
   const rows = table.rows.map(serializeTableRow).join('');
+  const anchor = inlineAttrs(designAnchorAttrs('table', table, mode));
   return (
     `<div class="rdr-table" data-table-id="${escapeAttr(table.elementId)}" ` +
-    `style="${escapeAttr(inlineStyle(tableContainerStyle(table)))}">${rows}</div>`
+    `style="${escapeAttr(inlineStyle(tableContainerStyle(table)))}"${anchor}>${rows}</div>`
   );
 }
 

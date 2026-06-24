@@ -29,7 +29,7 @@
 import type { PageGeometry, PaginatedDocument } from '@rendara/report-engine';
 import type { RendaraTemplate } from '@rendara/report-schema';
 
-import { buildPageViewModel, type PageViewModel } from './page-view-model';
+import { buildPageViewModel, type PageViewModel, type RenderMode } from './page-view-model';
 
 /** A natural-px sheet size (uniform across every page of a document). */
 export interface SheetSize {
@@ -125,6 +125,8 @@ export interface DocumentViewOptions {
   readonly resolvedValues?: ReadonlyMap<string, string>;
   /** CSS colour for every page's sheet fill; forwarded to {@link buildPageViewModel}. */
   readonly background?: string | null;
+  /** Render mode (E4-S6), forwarded to every page; `'view'` (default) or `'design'`. */
+  readonly mode?: RenderMode;
 }
 
 /** Everything a renderer needs to paint a whole document: the resolved zoom + every page. */
@@ -135,6 +137,8 @@ export interface DocumentViewModel {
   readonly pageCount: number;
   /** The shared sheet size in natural px (uniform across pages). */
   readonly sheet: SheetSize;
+  /** Render mode (E4-S6) every page was built in; `'view'` (default) or `'design'`. */
+  readonly mode: RenderMode;
   /** Every page's view-model, in document order, each carrying the resolved `zoom`. */
   readonly pages: readonly PageViewModel[];
 }
@@ -154,6 +158,7 @@ export function buildDocumentViewModel(
     heightPx: geometry.pagePx.heightPx,
   };
   const zoom = resolveZoomFactor(options?.zoom ?? 1, sheet, options?.viewport);
+  const mode: RenderMode = options?.mode ?? 'view';
 
   const pages = doc.pages.map((page) =>
     buildPageViewModel(page, geometry, {
@@ -161,8 +166,9 @@ export function buildDocumentViewModel(
       background: options?.background,
       template: options?.template,
       resolvedValues: options?.resolvedValues,
+      mode,
     }),
   );
 
-  return { zoom, pageCount: doc.pageCount, sheet, pages };
+  return { zoom, pageCount: doc.pageCount, sheet, mode, pages };
 }

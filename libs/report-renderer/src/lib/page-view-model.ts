@@ -53,6 +53,18 @@
  * A `null`-height element (a growing box) is passed through with `heightPx: null`
  * so a renderer can let it size to content; the fixed elements on a paginated
  * page always carry a concrete height, so this only matters defensively.
+ *
+ * ## Design-mode hooks (E4-S6)
+ * The view-model carries a {@link RenderMode} (`'view'` default, `'design'` for the
+ * designer canvas). The geometry/content is **identical** in both modes — design
+ * mode only adds, on top, per-element/-table **selection anchors**: the pure
+ * {@link designAnchorAttrs} returns the additive `data-rdr-*` attribute map for a
+ * hit target (its role + natural-px frame) in design mode, and `null` in view mode.
+ * Both the Angular component and the headless serializer consume that one helper,
+ * so design mode is strictly additive and view-mode output stays byte-for-byte
+ * stable (the story's QA). The designer reads element/table identity from the
+ * always-present `data-element-*`/`data-table-id` attributes and selectability +
+ * handle geometry from the design anchors.
  */
 
 import { DEFAULT_CELL_PADDING_MM, DEFAULT_DPI, mmToPx, ptToPx } from '@rendara/report-engine';
@@ -83,6 +95,17 @@ import type {
 
 /** The default page fill when a template declares no background (brief §5: `null` = none → white paper). */
 export const DEFAULT_PAGE_BACKGROUND = '#ffffff';
+
+/**
+ * How the shared renderer is being used (E4-S6): `'view'` for static viewer/preview
+ * output, `'design'` for the designer canvas (which additionally exposes per-element
+ * selection anchors via {@link designAnchorAttrs}). Geometry/content is identical in
+ * both modes.
+ */
+export type RenderMode = 'view' | 'design';
+
+/** A plain DOM attribute map (name → value), renderer-agnostic. */
+export type AttrMap = Readonly<Record<string, string>>;
 
 /** Document-default font used when no template (and thus no {@link FontSpec}) is supplied. */
 const FALLBACK_FONT: FontSpec = { family: 'Inter', sizePt: 10 };
@@ -282,6 +305,8 @@ export interface PageViewModel {
   readonly elements: readonly ElementBoxView[];
   /** Data-table slices on this page (E4-S3), in document then slice order. */
   readonly tables: readonly TableView[];
+  /** Render mode (E4-S6): `'view'` (static output) or `'design'` (selection anchors exposed). */
+  readonly mode: RenderMode;
 }
 
 /** Options for {@link buildPageViewModel}. */
@@ -306,6 +331,12 @@ export interface PageViewOptions {
    * the final fallback. Defaults to empty.
    */
   readonly resolvedValues?: ReadonlyMap<string, string>;
+  /**
+   * Render mode (E4-S6): `'design'` exposes per-element/-table selection anchors
+   * (see {@link designAnchorAttrs}); `'view'` (the default) renders static output
+   * with no anchors, keeping the viewer DOM byte-stable.
+   */
+  readonly mode?: RenderMode;
 }
 
 /**
@@ -320,6 +351,7 @@ export function buildPageViewModel(
 ): PageViewModel {
   const zoom = options?.zoom ?? 1;
   const background = resolveBackground(options?.background);
+  const mode = options?.mode ?? 'view';
   const dpi = geometry.dpi ?? DEFAULT_DPI;
 
   const template = options?.template;
@@ -363,6 +395,7 @@ export function buildPageViewModel(
     background,
     elements,
     tables,
+    mode,
   };
 }
 
@@ -843,6 +876,43 @@ function tableRowDecoration(kind: MeasuredRowKind): StyleMap {
     case 'columnFooter':
       return { 'box-sizing': 'border-box', 'border-top': `2px solid ${TABLE_TOTAL_RULE}` };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Design-mode hooks (E4-S6) — the additive selection anchors the designer canvas
+// reads. Shared by the Angular component and the headless serializer so the two
+// stay in lock-step and view mode is guaranteed anchor-free (byte-stable).
+// ---------------------------------------------------------------------------
+
+/**
+ * The additive `data-rdr-*` selection-anchor attributes for one hit target
+ * (element box or data-table) — or `null` in view mode, so callers emit nothing.
+ *
+ * In design mode it returns the anchor's `role` marker (`data-rdr-hit`) plus the
+ * target's natural (unscaled) px frame (`data-rdr-x/y/w/h`), so the designer can
+ * place a selection rectangle + handles without reading the zoom-transformed DOM.
+ * `data-rdr-h` is omitted for a growing (auto-height) element. Identity is *not*
+ * duplicated here: it already lives on the always-present
+ * `data-element-id`/`data-element-type` / `data-table-id` attributes.
+ */
+export function designAnchorAttrs(
+  role: 'element' | 'table',
+  frame: { readonly leftPx: number; readonly topPx: number; readonly widthPx: number; readonly heightPx: number | null },
+  mode: RenderMode,
+): AttrMap | null {
+  if (mode !== 'design') {
+    return null;
+  }
+  const out: Record<string, string> = {
+    'data-rdr-hit': role,
+    'data-rdr-x': `${frame.leftPx}`,
+    'data-rdr-y': `${frame.topPx}`,
+    'data-rdr-w': `${frame.widthPx}`,
+  };
+  if (frame.heightPx !== null) {
+    out['data-rdr-h'] = `${frame.heightPx}`;
+  }
+  return out;
 }
 
 /** A non-empty background string wins; everything else falls back to white paper. */

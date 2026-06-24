@@ -4,6 +4,7 @@ import type { RendaraTemplate } from '@rendara/report-schema';
 
 import {
   buildPageViewModel,
+  designAnchorAttrs,
   elementStyle,
   printableStyle,
   sheetStyle,
@@ -11,14 +12,17 @@ import {
   tableContainerStyle,
   tableLabelStyle,
   tableRowStyle,
+  type AttrMap,
   type ElementBoxView,
   type PageViewModel,
+  type RenderMode,
   type StyleMap,
   type TableCellView,
   type TableLabelView,
   type TableRowView,
   type TableView,
 } from '../page-view-model';
+import { RdrDesignAttrs } from '../rdr-design-attrs';
 import { RENDERER_PAGE_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
 
 /**
@@ -56,11 +60,18 @@ import { RENDERER_PAGE_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
  * inherited bleed; a host that needs to defend against `!important` rules wraps the
  * document in the opt-in Shadow-DOM {@link ReportSurface}.
  *
- * Still deferred: design-mode hooks are E4-S6, the watermark is E4-S7.
+ * E4-S6 adds **design-mode hooks**: a {@link mode} flag (`'view'` default,
+ * `'design'`) lets the designer reuse this same renderer as its canvas. The
+ * geometry/content is identical in both modes; design mode only adds per-element
+ * and per-table **selection anchors** ({@link designAnchorAttrs}: a `data-rdr-hit`
+ * role + the natural-px frame) plus a `data-rdr-mode="design"` marker on the page
+ * root. View mode emits none of these, so the viewer DOM is byte-stable.
+ *
+ * Still deferred: the watermark is E4-S7.
  */
 @Component({
   selector: 'rdr-report-renderer',
-  imports: [],
+  imports: [RdrDesignAttrs],
   templateUrl: './report-renderer.html',
   styles: [RENDERER_THEME_CSS, RENDERER_PAGE_CSS],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -86,6 +97,12 @@ export class ReportRenderer {
    * A page-token text still wins; a static literal is the final fallback.
    */
   readonly resolvedValues = input<ReadonlyMap<string, string>>(new Map());
+  /**
+   * Render mode (E4-S6): `'design'` exposes per-element/-table selection anchors
+   * for the designer canvas; `'view'` (the default) renders static viewer output
+   * with no anchors. Geometry/content is identical in both modes.
+   */
+  readonly mode = input<RenderMode>('view');
 
   /** The pure view-model for the current inputs. */
   protected readonly vm = computed<PageViewModel>(() =>
@@ -94,6 +111,7 @@ export class ReportRenderer {
       background: this.background(),
       template: this.template() ?? undefined,
       resolvedValues: this.resolvedValues(),
+      mode: this.mode(),
     }),
   );
 
@@ -126,5 +144,15 @@ export class ReportRenderer {
   /** Inline styles for one full-width band label (E4-S3). */
   protected tableLabelStyle(label: TableLabelView): StyleMap {
     return tableLabelStyle(label);
+  }
+
+  /** Design-mode selection anchors for one element box (E4-S6); `null` in view mode. */
+  protected elementAnchor(box: ElementBoxView): AttrMap | null {
+    return designAnchorAttrs('element', box, this.vm().mode);
+  }
+
+  /** Design-mode selection anchors for one table slice (E4-S6); `null` in view mode. */
+  protected tableAnchor(table: TableView): AttrMap | null {
+    return designAnchorAttrs('table', table, this.vm().mode);
   }
 }
