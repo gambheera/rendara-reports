@@ -7,6 +7,7 @@ import {
   renderCertificatePageHtml,
   renderElementTypesPageHtml,
   renderGroupedTablePageHtml,
+  renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
 } from './golden-page-html';
 
@@ -100,5 +101,25 @@ describe('renderGroupedTablePageHtml (E4-S3)', () => {
     expect(html).toContain('Region: North'); // a band label
     expect(html).toContain('Region: South');
     expect(html).toContain('$23,765.00'); // grand total revenue
+  });
+});
+
+describe('renderMultiPageDocumentHtml (E4-S4)', () => {
+  it('matches the committed visual fixture (regenerate with render-fixtures:generate)', () => {
+    const committed = readFileSync(fixturePath('multi-page-document.html'), 'utf8');
+    expect(committed.trimEnd()).toBe(renderMultiPageDocumentHtml());
+  });
+
+  it('stacks several pages in one document wrapper at the reduced zoom', () => {
+    const html = renderMultiPageDocumentHtml();
+    expect(html).toContain('class="rdr-document"');
+    // The table overflows a single page, so the document carries ≥2 page slots.
+    const slots = html.match(/class="rdr-page-slot"/g) ?? [];
+    expect(slots.length).toBeGreaterThanOrEqual(2);
+    // Each page sheet carries the document's reduced zoom transform.
+    expect(html).toContain('transform: scale(0.4)');
+    // The repeated page-number footer resolves per page.
+    expect(html).toContain('Page 1 of');
+    expect(html).toContain('data-page-number="2"');
   });
 });

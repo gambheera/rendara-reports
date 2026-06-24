@@ -15,6 +15,7 @@
  * same shared style helpers.
  */
 
+import { slotSize, type DocumentViewModel } from './document-view-model';
 import {
   elementStyle,
   printableStyle,
@@ -65,6 +66,27 @@ export function serializePageToHtml(vm: PageViewModel): string {
     tables +
     `</div>`
   );
+}
+
+/**
+ * Serializes a whole {@link DocumentViewModel} to a static
+ * `<div class="rdr-document">…</div>` string (E4-S4): every page wrapped in a
+ * `.rdr-page-slot` sized to the *scaled* box, mirroring the {@link ReportDocument}
+ * component so the multi-page visual snapshot matches the live DOM. The slot
+ * reserves the scaled layout box (the page's own `transform: scale` is visual
+ * only), so pages stack correctly at the document's zoom.
+ */
+export function serializeDocumentToHtml(vm: DocumentViewModel): string {
+  const slot = slotSize(vm.sheet, vm.zoom);
+  const slotInline = inlineStyle({ width: `${slot.widthPx}px`, height: `${slot.heightPx}px` });
+  const pages = vm.pages
+    .map(
+      (page) =>
+        `<div class="rdr-page-slot" data-page-number="${page.pageNumber}" ` +
+        `style="${escapeAttr(slotInline)}">${serializePageToHtml(page)}</div>`,
+    )
+    .join('');
+  return `<div class="rdr-document">${pages}</div>`;
 }
 
 /** Serializes one element host box and its content. */

@@ -25,6 +25,12 @@
  *    below), so each table's **resolved** cells/aggregates are supplied as
  *    constants and fed through the real {@link paginate}, so the slicing geometry
  *    the renderer paints is genuine while the content stays deterministic.
+ *  - **multi-page-document** (E4-S4) — a whole {@link PaginatedDocument} (a table
+ *    long enough to span several pages) serialized through
+ *    {@link serializeDocumentToHtml} at a reduced zoom, satisfying that story's QA
+ *    ("multi-page golden renders correct page count; zoom levels visually
+ *    snapshotted"). Rows are pre-resolved constants fed through the real
+ *    paginator, so the page count + slicing are genuine and deterministic.
  */
 
 import { goldenCertificateTemplate, type RendaraTemplate } from '@rendara/report-schema';
@@ -36,8 +42,9 @@ import {
   type ResolvedRow,
 } from '@rendara/report-engine';
 
+import { buildDocumentViewModel } from './document-view-model';
 import { buildPageViewModel } from './page-view-model';
-import { serializePageToHtml } from './serialize-page-html';
+import { serializeDocumentToHtml, serializePageToHtml } from './serialize-page-html';
 
 /** Zoom that fits the A4-landscape certificate sheet within the harness viewport. */
 export const CERTIFICATE_FIXTURE_ZOOM = 0.55;
@@ -465,6 +472,149 @@ const GROUPED_TABLE_RESOLVED: ResolvedDataTable = {
   rows: [...GROUPED_NORTH.rows, ...GROUPED_SOUTH.rows],
   groups: [GROUPED_NORTH, GROUPED_SOUTH],
   columnFooters: [resolvedAggregate('units', '283'), resolvedAggregate('revenue', '$23,765.00')],
+  errors: [],
+  diagnostics: [],
+};
+
+// ---------------------------------------------------------------------------
+// Multi-page document fixture (E4-S4): a single long table paginated into
+// several pages, serialized as a whole document at a reduced zoom so the
+// snapshot shows multiple stacked pages (multi-page + zoom in one artifact).
+// Rows are generated deterministically (plain JS, no JSONata) and fed through
+// the real paginator, so the page count and slice geometry are genuine.
+// ---------------------------------------------------------------------------
+
+/** Zoom for the multi-page document fixture, small enough to show several pages. */
+export const MULTI_PAGE_FIXTURE_ZOOM = 0.4;
+
+const MULTI_PAGE_TABLE_ID = 'el_multipage_table';
+const MULTI_PAGE_COLUMNS = ['ref', 'description', 'qty', 'amount'] as const;
+/** Detail-row count chosen to overflow a single A4-portrait page. */
+const MULTI_PAGE_ROW_COUNT = 60;
+
+/** Renders the multi-page document fixture to its static HTML. Deterministic. */
+export function renderMultiPageDocumentHtml(): string {
+  const doc = paginate(
+    multiPageTableTemplate,
+    new Map([[MULTI_PAGE_TABLE_ID, MULTI_PAGE_RESOLVED]]),
+  );
+  const vm = buildDocumentViewModel(doc, {
+    zoom: MULTI_PAGE_FIXTURE_ZOOM,
+    template: multiPageTableTemplate,
+  });
+  return serializeDocumentToHtml(vm);
+}
+
+/**
+ * A compact A4-portrait page with one long data table that spans several pages:
+ * a header, {@link MULTI_PAGE_ROW_COUNT} detail rows (repeated header per page),
+ * and a grand-total column footer.
+ */
+const multiPageTableTemplate: RendaraTemplate = {
+  schemaVersion: '1.0.0',
+  metadata: {
+    name: 'Multi-page Document',
+    id: 'fixture-multi-page-0001',
+    createdAt: '2026-06-17T00:00:00.000Z',
+    locale: 'en-US',
+  },
+  page: {
+    size: 'A4',
+    orientation: 'portrait',
+    marginsMm: { top: 20, right: 15, bottom: 20, left: 15 },
+    units: 'mm',
+    defaultFont: { family: 'Inter', sizePt: 10 },
+    background: null,
+  },
+  header: { elements: [] },
+  body: {
+    elements: [
+      {
+        id: 'el_multipage_title',
+        type: 'text',
+        frame: { xMm: 15, yMm: 18, wMm: 180, hMm: 10 },
+        text: 'Transaction Ledger',
+        style: {
+          font: { family: 'Inter', sizePt: 18, weight: 'bold', style: 'normal' },
+          color: '#4F46E5',
+          align: { horizontal: 'left', vertical: 'middle' },
+        },
+        z: 1,
+      },
+      {
+        id: MULTI_PAGE_TABLE_ID,
+        type: 'dataTable',
+        frame: { xMm: 15, yMm: 34, wMm: 180, hMm: null },
+        source: { arrayExpr: 'entries' },
+        columns: [
+          { key: 'ref', header: 'Ref', cell: { expr: '$.ref' }, widthMm: 35 },
+          {
+            key: 'description',
+            header: 'Description',
+            cell: { expr: '$.description' },
+            widthMm: 95,
+          },
+          {
+            key: 'qty',
+            header: 'Qty',
+            cell: { expr: '$.qty', format: 'number:0' },
+            widthMm: 20,
+            align: 'right',
+          },
+          {
+            key: 'amount',
+            header: 'Amount',
+            cell: { expr: '$.amount', format: 'currency:USD' },
+            footer: { expr: '$sum(entries.amount)', format: 'currency:USD' },
+            widthMm: 30,
+            align: 'right',
+          },
+        ],
+        repeatHeaderOnEachPage: true,
+        keepTogether: false,
+        z: 1,
+      },
+    ],
+  },
+  footer: {
+    elements: [
+      {
+        id: 'el_multipage_page',
+        type: 'text',
+        frame: { xMm: 15, yMm: 282, wMm: 180, hMm: 6 },
+        text: 'Page {{pageNumber}} of {{pageCount}}',
+        style: {
+          font: { family: 'Inter', sizePt: 9, style: 'normal' },
+          color: '#64748B',
+          align: { horizontal: 'right', vertical: 'middle' },
+        },
+        z: 1,
+      },
+    ],
+  },
+};
+
+/** Builds the {@link MULTI_PAGE_ROW_COUNT} pre-resolved detail rows (deterministic). */
+function multiPageRows(): readonly ResolvedRow[] {
+  return Array.from({ length: MULTI_PAGE_ROW_COUNT }, (_, i) => {
+    const qty = (i % 7) + 1;
+    const amount = qty * 25;
+    return resolvedRow(i, MULTI_PAGE_COLUMNS, [
+      `TX-${String(1001 + i)}`,
+      `Ledger entry ${i + 1}`,
+      String(qty),
+      `$${amount.toFixed(2)}`,
+    ]);
+  });
+}
+
+/** Grand total of the generated amounts ($25 × the qty cycle 1..7 over 60 rows = $5,850). */
+const MULTI_PAGE_TOTAL = '$5,850.00';
+
+/** Pre-resolved rows/total for {@link multiPageTableTemplate} (no JSONata at generate time). */
+const MULTI_PAGE_RESOLVED: ResolvedDataTable = {
+  rows: multiPageRows(),
+  columnFooters: [resolvedAggregate('amount', MULTI_PAGE_TOTAL)],
   errors: [],
   diagnostics: [],
 };

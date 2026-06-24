@@ -1,0 +1,15 @@
+@let zoom = effectiveZoom(); @let geo = geometry();
+<div class="rdr-document" [class.rdr-document--single]="layout() === 'single'">
+  @for (page of visiblePages(); track page.index) {
+  <div class="rdr-page-slot" [style]="slotStyle()" [attr.data-page-number]="page.pageNumber">
+    <rdr-report-renderer
+      [page]="page"
+      [geometry]="geo"
+      [zoom]="zoom"
+      [template]="template()"
+      [resolvedValues]="resolvedValues()"
+      [background]="background()"
+    />
+  </div>
+  }
+</div>
