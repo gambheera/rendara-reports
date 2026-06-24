@@ -690,16 +690,20 @@ export function sanitizeImageUrl(url: string | null | undefined): string | null 
 // painted rows fit the heights the paginator measured.
 // ---------------------------------------------------------------------------
 
+// Each colour is emitted as `var(--rdr-token, default)` so a host can re-theme the
+// table palette via the renderer's CSS custom properties (E4-S5) while the default
+// keeps the rendered pixels unchanged. The defaults mirror `RDR_THEME_TOKENS`.
+
 /** Tinted fill behind the header row (slate-100). */
-const TABLE_HEADER_FILL = '#F1F5F9';
+const TABLE_HEADER_FILL = 'var(--rdr-table-header-fill, #F1F5F9)';
 /** Tinted fill behind a group-header band (indigo-50, the accent tint). */
-const TABLE_GROUP_HEADER_FILL = '#EEF2FF';
+const TABLE_GROUP_HEADER_FILL = 'var(--rdr-table-group-fill, #EEF2FF)';
 /** Faint separator under each detail row (slate-200). */
-const TABLE_DETAIL_RULE = '#E2E8F0';
+const TABLE_DETAIL_RULE = 'var(--rdr-table-detail-rule, #E2E8F0)';
 /** Stronger rule under the header and group footers (slate-300). */
-const TABLE_BAND_RULE = '#CBD5E1';
+const TABLE_BAND_RULE = 'var(--rdr-table-band-rule, #CBD5E1)';
 /** Strongest rule above the grand-total / under the header bottom (slate-700). */
-const TABLE_TOTAL_RULE = '#334155';
+const TABLE_TOTAL_RULE = 'var(--rdr-table-total-rule, #334155)';
 
 /**
  * Positions one engine {@link TableSlice} into a {@link TableView}: the container

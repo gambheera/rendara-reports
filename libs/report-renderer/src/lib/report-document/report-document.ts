@@ -24,6 +24,7 @@ import {
 } from '../document-view-model';
 import { ReportRenderer } from '../report-renderer/report-renderer';
 import type { StyleMap } from '../page-view-model';
+import { RENDERER_DOCUMENT_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
 
 /**
  * Multi-page document renderer (E4-S4) — wraps the single-page
@@ -45,14 +46,21 @@ import type { StyleMap } from '../page-view-model';
  * {@link availableSize} directly (also used by tests for determinism). The
  * resolved factor is emitted via {@link zoomChange} so a toolbar can show "100%".
  *
- * Still deferred (later E4 stories): style isolation / Shadow DOM (E4-S5),
- * design-mode hooks (E4-S6), watermark + page chrome (E4-S7).
+ * E4-S5 adds **style isolation & theming**: the shared {@link RENDERER_THEME_CSS}
+ * resets inheritable host typography and declares the `--rdr-*` theme tokens, and
+ * {@link RENDERER_DOCUMENT_CSS} carries the (tokenised) multi-page chrome (each
+ * page's own chrome stays with the child {@link ReportRenderer}). It stays on the
+ * default `ViewEncapsulation.Emulated`; the opt-in Shadow-DOM {@link ReportSurface}
+ * wraps this component for a fully isolated embedded viewer.
+ *
+ * Still deferred (later E4 stories): design-mode hooks (E4-S6), watermark + page
+ * chrome (E4-S7).
  */
 @Component({
   selector: 'rdr-report-document',
   imports: [ReportRenderer],
   templateUrl: './report-document.html',
-  styleUrl: './report-document.css',
+  styles: [RENDERER_THEME_CSS, RENDERER_DOCUMENT_CSS],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportDocument {

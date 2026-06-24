@@ -19,6 +19,7 @@ import {
   type TableRowView,
   type TableView,
 } from '../page-view-model';
+import { RENDERER_PAGE_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
 
 /**
  * Single-page DOM renderer (E4-S1) — the foundation of the shared renderer that
@@ -47,14 +48,21 @@ import {
  * professional table style. All table geometry/style lives in the pure
  * {@link buildPageViewModel} too.
  *
- * Still deferred: multi-page + zoom controls are E4-S4, style isolation is
- * E4-S5, design-mode hooks are E4-S6, the watermark is E4-S7.
+ * E4-S5 adds **style isolation & theming**: the shared {@link RENDERER_THEME_CSS}
+ * resets inheritable host typography at the render root and declares the `--rdr-*`
+ * theme tokens, and {@link RENDERER_PAGE_CSS} carries the (tokenised) page chrome.
+ * This component stays on the default `ViewEncapsulation.Emulated` — its pervasive
+ * inline styles already outrank a host's selector rules, and the reset blocks
+ * inherited bleed; a host that needs to defend against `!important` rules wraps the
+ * document in the opt-in Shadow-DOM {@link ReportSurface}.
+ *
+ * Still deferred: design-mode hooks are E4-S6, the watermark is E4-S7.
  */
 @Component({
   selector: 'rdr-report-renderer',
   imports: [],
   templateUrl: './report-renderer.html',
-  styleUrl: './report-renderer.css',
+  styles: [RENDERER_THEME_CSS, RENDERER_PAGE_CSS],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReportRenderer {

@@ -44,6 +44,7 @@ import {
 
 import { buildDocumentViewModel } from './document-view-model';
 import { buildPageViewModel } from './page-view-model';
+import { RENDERER_SURFACE_CSS } from './renderer-styles';
 import { serializeDocumentToHtml, serializePageToHtml } from './serialize-page-html';
 
 /** Zoom that fits the A4-landscape certificate sheet within the harness viewport. */
@@ -618,3 +619,25 @@ const MULTI_PAGE_RESOLVED: ResolvedDataTable = {
   errors: [],
   diagnostics: [],
 };
+
+// ---------------------------------------------------------------------------
+// Style-isolation fixture (E4-S5): the exact content of an isolated render root —
+// the shared reset/theme/chrome stylesheet plus a serialized report page. The
+// e2e attaches a shadow root to a host element (under hostile global CSS) and
+// drops this content in, so it exercises the *same* isolation rules the
+// `ReportSurface` shadow root carries, without standing up Angular in Playwright.
+// The page is the plain-table golden (a reset-sensitive text run + a tokenised
+// table fill), serialized at zoom 1 so computed styles are easy to assert.
+// ---------------------------------------------------------------------------
+
+/**
+ * Renders the inner HTML of an isolated render root: a `<style>` carrying the
+ * shared {@link RENDERER_SURFACE_CSS} (reset + theme tokens + chrome) followed by
+ * the plain-table golden page. Deterministic. Committed as
+ * `__fixtures__/style-isolation.html` and consumed by the style-isolation e2e.
+ */
+export function renderStyleIsolationContent(): string {
+  const doc = paginate(plainTableTemplate, new Map([[PLAIN_TABLE_ID, PLAIN_TABLE_RESOLVED]]));
+  const vm = buildPageViewModel(doc.pages[0], doc.geometry, { template: plainTableTemplate });
+  return `<style>${RENDERER_SURFACE_CSS}</style>${serializePageToHtml(vm)}`;
+}

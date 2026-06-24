@@ -487,6 +487,26 @@ describe('buildPageViewModel tables (E4-S3)', () => {
     expect(footer?.cells.find((c) => c.columnKey === 'desc')?.text).toBe('');
   });
 
+  it('emits the table palette as themeable CSS custom properties (E4-S5)', async () => {
+    const doc = await paginateGolden(goldenInvoiceTemplate, goldenInvoiceData);
+    const table = onlyTable(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+
+    // The header fill and detail-row separator are `var(--rdr-…, default)` so a
+    // host can re-theme the palette while the default keeps the pixels unchanged.
+    const header = table.rows.find((r) => r.kind === 'header');
+    expect(header?.rowStyle['background']).toBe('var(--rdr-table-header-fill, #F1F5F9)');
+    expect(header?.rowStyle['border-bottom']).toBe(
+      '1px solid var(--rdr-table-total-rule, #334155)',
+    );
+
+    const detail = table.rows.find((r) => r.kind === 'detail');
+    expect(detail?.rowStyle['border-bottom']).toBe(
+      '1px solid var(--rdr-table-detail-rule, #E2E8F0)',
+    );
+  });
+
   it('matches the engine slice model: each row at its page-absolute y, slice-relative', async () => {
     const doc = await paginateGolden(goldenInvoiceTemplate, goldenInvoiceData);
     const slice = doc.pages[0].tables[0];
