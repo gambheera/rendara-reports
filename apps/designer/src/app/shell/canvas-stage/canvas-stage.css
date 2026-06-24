@@ -1,0 +1,55 @@
+:host {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  background: var(--rdr-color-backdrop);
+  overflow: hidden;
+}
+
+.rdr-canvas__scroll {
+  display: flex;
+  justify-content: center;
+  height: 100%;
+  padding: var(--rdr-space-8);
+  box-sizing: border-box;
+  overflow: auto;
+}
+
+/* Static A4 proportion (210 × 297 mm) until the real renderer/zoom lands. */
+.rdr-canvas__paper {
+  flex: none;
+  width: min(100%, 620px);
+  aspect-ratio: 210 / 297;
+  background: var(--rdr-color-paper);
+  border: 1px solid var(--rdr-color-border-hairline);
+  border-radius: 2px;
+  box-shadow: var(--rdr-elevation-paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rdr-canvas__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rdr-space-3);
+  color: var(--rdr-color-text-secondary);
+}
+
+.rdr-canvas__empty-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--rdr-radius-panel);
+  background: var(--rdr-color-accent-subtle);
+  color: var(--rdr-color-accent);
+  font-size: var(--rdr-font-size-title);
+}
+
+.rdr-canvas__empty-text {
+  margin: 0;
+  font-size: var(--rdr-font-size-body);
+}
