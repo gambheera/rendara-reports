@@ -1,5 +1,10 @@
 <div class="rdr-canvas__scroll">
-  <div class="rdr-canvas__paper" aria-label="Report page" role="img">
+  <div
+    class="rdr-canvas__paper"
+    [style.aspectRatio]="paperAspect()"
+    aria-label="Report page"
+    role="img"
+  >
     <div class="rdr-canvas__empty">
       <span class="rdr-canvas__empty-glyph" aria-hidden="true">✥</span>
       <p class="rdr-canvas__empty-text">Drag a control here to begin</p>

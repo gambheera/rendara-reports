@@ -2,44 +2,44 @@
 
 <div class="rdr-shell__body">
   @if (leftCollapsed()) {
-    <div class="rdr-shell__rail rdr-shell__rail--left">
-      <button
-        type="button"
-        class="rdr-shell__rail-btn"
-        (click)="toggleLeft()"
-        aria-label="Expand insert panel"
-        [attr.aria-expanded]="false"
-      >
-        ›
-      </button>
-    </div>
-  } @else {
-    <aside
-      class="rdr-shell__side rdr-shell__side--left"
-      [style.width.px]="leftWidth()"
-      aria-label="Insert palette"
+  <div class="rdr-shell__rail rdr-shell__rail--left">
+    <button
+      type="button"
+      class="rdr-shell__rail-btn"
+      (click)="toggleLeft()"
+      aria-label="Expand insert panel"
+      [attr.aria-expanded]="false"
     >
-      <rdr-palette-panel />
-      <button
-        type="button"
-        class="rdr-shell__collapse rdr-shell__collapse--left"
-        (click)="toggleLeft()"
-        aria-label="Collapse insert panel"
-        [attr.aria-expanded]="true"
-      >
-        ‹
-      </button>
-    </aside>
-    <div
-      rdrPanelResize
-      edge="start"
-      class="rdr-shell__handle"
-      [value]="leftWidth()"
-      [min]="MIN_WIDTH"
-      [max]="MAX_WIDTH"
-      label="Resize insert panel"
-      (resizeBy)="resizeLeft($event)"
-    ></div>
+      ›
+    </button>
+  </div>
+  } @else {
+  <aside
+    class="rdr-shell__side rdr-shell__side--left"
+    [style.width.px]="leftWidth()"
+    aria-label="Insert palette"
+  >
+    <rdr-palette-panel />
+    <button
+      type="button"
+      class="rdr-shell__collapse rdr-shell__collapse--left"
+      (click)="toggleLeft()"
+      aria-label="Collapse insert panel"
+      [attr.aria-expanded]="true"
+    >
+      ‹
+    </button>
+  </aside>
+  <div
+    rdrPanelResize
+    edge="start"
+    class="rdr-shell__handle"
+    [value]="leftWidth()"
+    [min]="MIN_WIDTH"
+    [max]="MAX_WIDTH"
+    label="Resize insert panel"
+    (resizeBy)="resizeLeft($event)"
+  ></div>
   }
 
   <main class="rdr-shell__canvas" aria-label="Report canvas">
@@ -47,45 +47,47 @@
   </main>
 
   @if (rightCollapsed()) {
-    <div class="rdr-shell__rail rdr-shell__rail--right">
-      <button
-        type="button"
-        class="rdr-shell__rail-btn"
-        (click)="toggleRight()"
-        aria-label="Expand properties panel"
-        [attr.aria-expanded]="false"
-      >
-        ‹
-      </button>
-    </div>
-  } @else {
-    <div
-      rdrPanelResize
-      edge="end"
-      class="rdr-shell__handle"
-      [value]="rightWidth()"
-      [min]="MIN_WIDTH"
-      [max]="MAX_WIDTH"
-      label="Resize properties panel"
-      (resizeBy)="resizeRight($event)"
-    ></div>
-    <aside
-      class="rdr-shell__side rdr-shell__side--right"
-      [style.width.px]="rightWidth()"
-      aria-label="Properties"
+  <div class="rdr-shell__rail rdr-shell__rail--right">
+    <button
+      type="button"
+      class="rdr-shell__rail-btn"
+      (click)="toggleRight()"
+      aria-label="Expand properties panel"
+      [attr.aria-expanded]="false"
     >
-      <rdr-properties-panel />
-      <button
-        type="button"
-        class="rdr-shell__collapse rdr-shell__collapse--right"
-        (click)="toggleRight()"
-        aria-label="Collapse properties panel"
-        [attr.aria-expanded]="true"
-      >
-        ›
-      </button>
-    </aside>
+      ‹
+    </button>
+  </div>
+  } @else {
+  <div
+    rdrPanelResize
+    edge="end"
+    class="rdr-shell__handle"
+    [value]="rightWidth()"
+    [min]="MIN_WIDTH"
+    [max]="MAX_WIDTH"
+    label="Resize properties panel"
+    (resizeBy)="resizeRight($event)"
+  ></div>
+  <aside
+    class="rdr-shell__side rdr-shell__side--right"
+    [style.width.px]="rightWidth()"
+    aria-label="Properties"
+  >
+    <rdr-properties-panel />
+    <button
+      type="button"
+      class="rdr-shell__collapse rdr-shell__collapse--right"
+      (click)="toggleRight()"
+      aria-label="Collapse properties panel"
+      [attr.aria-expanded]="true"
+    >
+      ›
+    </button>
+  </aside>
   }
 </div>
 
-<rdr-status-bar />
+<rdr-status-bar (openPageSetup)="openPageSetup()" />
+
+<rdr-page-setup-dialog />

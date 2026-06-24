@@ -32,8 +32,58 @@ test.describe('Designer shell', () => {
     await expect(page.getByText('No data imported')).toBeVisible();
   });
 
+  test('opens page setup and applies an A4 → Letter change', async ({ page }) => {
+    await page.goto('/');
+
+    const summary = page.getByRole('button', { name: /Page setup/ });
+    await expect(summary).toHaveText('A4 · Portrait · mm');
+
+    await summary.click();
+    const dialog = page.getByRole('dialog', { name: 'Page setup' });
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByLabel('Paper').selectOption('Letter');
+    await dialog.getByRole('button', { name: 'Landscape' }).click();
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+
+    await expect(dialog).toBeHidden();
+    await expect(summary).toHaveText('Letter · Landscape · mm');
+
+    // The canvas paper resized live to the new geometry.
+    const aspect = await page
+      .getByRole('img', { name: 'Report page' })
+      .evaluate((el) => getComputedStyle(el).aspectRatio);
+    expect(aspect.replace(/\s/g, '')).toBe('279.4/215.9');
+  });
+
+  test('cancelling page setup leaves the page model unchanged', async ({ page }) => {
+    await page.goto('/');
+
+    const summary = page.getByRole('button', { name: /Page setup/ });
+    await summary.click();
+    await page
+      .getByRole('dialog', { name: 'Page setup' })
+      .getByLabel('Paper')
+      .selectOption('Letter');
+    await page
+      .getByRole('dialog', { name: 'Page setup' })
+      .getByRole('button', { name: 'Cancel' })
+      .click();
+
+    await expect(summary).toHaveText('A4 · Portrait · mm');
+  });
+
   test('has no detectable accessibility violations', async ({ page }) => {
     await page.goto('/');
+
+    await expectNoAxeViolations(page);
+  });
+
+  test('page setup dialog has no detectable accessibility violations', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByRole('button', { name: /Page setup/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Page setup' })).toBeVisible();
 
     await expectNoAxeViolations(page);
   });
