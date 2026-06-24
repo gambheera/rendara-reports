@@ -9,6 +9,7 @@ import {
   renderGroupedTablePageHtml,
   renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
+  renderStyleIsolationContent,
 } from './golden-page-html';
 
 /** Walks up from `process.cwd()` to the workspace root (the dir holding `nx.json`). */
@@ -121,5 +122,24 @@ describe('renderMultiPageDocumentHtml (E4-S4)', () => {
     // The repeated page-number footer resolves per page.
     expect(html).toContain('Page 1 of');
     expect(html).toContain('data-page-number="2"');
+  });
+});
+
+describe('renderStyleIsolationContent (E4-S5)', () => {
+  it('matches the committed visual fixture (regenerate with render-fixtures:generate)', () => {
+    const committed = readFileSync(fixturePath('style-isolation.html'), 'utf8');
+    expect(committed.trimEnd()).toBe(renderStyleIsolationContent());
+  });
+
+  it('carries the reset/theme stylesheet plus a serialized report page', () => {
+    const html = renderStyleIsolationContent();
+    // The shared reset/theme/chrome stylesheet is embedded for the shadow root.
+    expect(html).toContain('<style>');
+    expect(html).toContain('--rdr-text-color');
+    expect(html).toContain('--rdr-table-header-fill');
+    // A real serialized page follows, with a tokenised table fill to theme.
+    expect(html).toContain('class="rdr-page"');
+    expect(html).toContain('var(--rdr-table-header-fill, #F1F5F9)');
+    expect(html).toContain('Aurora Desk Lamp');
   });
 });

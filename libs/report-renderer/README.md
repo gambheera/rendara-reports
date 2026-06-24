@@ -20,9 +20,56 @@ and `@rendara/report-schema` (Nx module boundaries).
   - **image** — `object-fit` from the element's `fit`, with a **URL-sanitised**
     `src` (see Security).
 
-Deferred to later E4 stories: data-table slices (E4-S3), multi-page + zoom
-controls (E4-S4), style isolation / Shadow DOM (E4-S5), design-mode hooks
-(E4-S6), watermark (E4-S7).
+- **Multi-page + zoom (E4-S4):** `ReportDocument` paints a whole paginated
+  document — N pages at one resolved zoom (`fit-width`/`fit-page`/explicit %), in
+  `continuous` or `single` layout.
+
+Deferred to later E4 stories: design-mode hooks (E4-S6), watermark (E4-S7).
+
+## Style isolation & theming (E4-S5)
+
+The viewer renders inside *other people's* apps, so it must neither inherit nor
+leak CSS (brief §3/§7). Two modes:
+
+- **Default — `ViewEncapsulation.Emulated`** on `ReportRenderer`/`ReportDocument`.
+  Their pervasive inline styles already outrank a host's selector rules, and a
+  shared **CSS reset** (`RENDERER_THEME_CSS`) neutralises inheritable host
+  typography (font, colour, line-height, alignment, …) at the render root. This is
+  the designer's mode — live, inspectable DOM. Its one gap: a host rule using
+  `!important` can still win, since emulated encapsulation doesn't shield incoming
+  selectors.
+- **Opt-in — `<rdr-report-surface>`** (`ViewEncapsulation.ShadowDom`). Wraps
+  `ReportDocument` in a real shadow root, so **every** host selector (including
+  `!important`) is blocked, and the reset neutralises the inheritable properties
+  that do cross a shadow boundary. This is the embedded viewer's fully-isolated
+  mode; it forwards every `ReportDocument` input/output verbatim, so output is
+  byte-identical.
+
+```html
+<!-- fully isolated against hostile host CSS -->
+<rdr-report-surface [document]="doc" [template]="template" [zoom]="'fit-width'" />
+```
+
+### Theming
+
+Every non-data-driven colour/measure is a `--rdr-*` **CSS custom property** with a
+safe default. Override any of them on the renderer/surface element (or an ancestor
+— inherited custom properties cross the shadow boundary) to re-theme without
+forking:
+
+| Token | Themes |
+| --- | --- |
+| `--rdr-page-background` | page sheet fill fallback (the `background` input still wins) |
+| `--rdr-page-shadow` | page sheet drop-shadow |
+| `--rdr-printable-guide` | printable-area guide outline |
+| `--rdr-page-gap` | gap between stacked pages (continuous layout) |
+| `--rdr-font-family` / `--rdr-text-color` | base report typography |
+| `--rdr-table-header-fill` / `--rdr-table-group-fill` | table header / group-band fills |
+| `--rdr-table-detail-rule` / `--rdr-table-band-rule` / `--rdr-table-total-rule` | table separators / rules |
+
+`renderer-styles.ts` is the single style source (reset, chrome, tokens) consumed
+by the components, the shadow surface, and the visual fixtures (`RDR_THEME_TOKENS`
+exposes the defaults). See ADR 0009.
 
 ## Usage
 
