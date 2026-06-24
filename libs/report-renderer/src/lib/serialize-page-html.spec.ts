@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { goldenCertificateTemplate, type RendaraTemplate } from '@rendara/report-schema';
-import { mmToPx, paginate } from '@rendara/report-engine';
+import {
+  goldenCertificateTemplate,
+  goldenInvoiceData,
+  goldenInvoiceTemplate,
+  isDataTableElement,
+  type RendaraTemplate,
+} from '@rendara/report-schema';
+import {
+  mmToPx,
+  paginate,
+  resolveDataTable,
+  type ResolvedDataTable,
+} from '@rendara/report-engine';
 
 import { buildPageViewModel } from './page-view-model';
 import { serializePageToHtml } from './serialize-page-html';
@@ -111,5 +122,64 @@ describe('serializePageToHtml content (E4-S2)', () => {
     expect(html).toContain('data-element-id="el_evil"');
     expect(html).not.toContain('<img');
     expect(html).not.toContain('javascript:');
+  });
+});
+
+describe('serializePageToHtml tables (E4-S3)', () => {
+  async function invoiceTableHtml(): Promise<string> {
+    const resolved = new Map<string, ResolvedDataTable>();
+    for (const element of goldenInvoiceTemplate.body.elements) {
+      if (isDataTableElement(element)) {
+        resolved.set(element.id, await resolveDataTable(element, goldenInvoiceData));
+      }
+    }
+    const doc = paginate(goldenInvoiceTemplate, resolved);
+    return serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+  }
+
+  it('emits a positioned table container with header, detail and footer rows', async () => {
+    const html = await invoiceTableHtml();
+    expect(html).toContain('class="rdr-table" data-table-id="el_inv_table"');
+    expect(html).toContain('data-row-kind="header"');
+    expect(html).toContain('data-row-kind="detail"');
+    expect(html).toContain('data-row-kind="columnFooter"');
+    expect(html).toContain('data-column-key="amt"');
+    expect(html).toContain('Design consultation'); // a detail cell
+    expect(html).toContain('$3,060.00'); // the grand total
+  });
+
+  it('escapes cell text it interpolates', () => {
+    const doc = paginate(goldenCertificateTemplate, new Map());
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry);
+    const tampered = {
+      ...vm,
+      tables: [
+        {
+          elementId: 'el_t',
+          leftPx: 0,
+          topPx: 0,
+          widthPx: 100,
+          heightPx: 20,
+          zIndex: 1,
+          rows: [
+            {
+              kind: 'detail' as const,
+              topPx: 0,
+              heightPx: 20,
+              widthPx: 100,
+              cells: [{ columnKey: 'a', text: '<b>&', leftPx: 0, widthPx: 100, cellStyle: {} }],
+              label: null,
+              rowStyle: {},
+              continued: false,
+            },
+          ],
+        },
+      ],
+    };
+    const html = serializePageToHtml(tampered);
+    expect(html).toContain('&lt;b&gt;&amp;');
+    expect(html).not.toContain('<b>&');
   });
 });

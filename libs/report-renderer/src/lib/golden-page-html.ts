@@ -13,16 +13,28 @@
  * builder for tests/tooling, kept beside the renderer so it shares the exact same
  * view-model and serializer the component uses.
  *
- * Two fixtures:
+ * Fixtures:
  *  - **certificate** — the document-first golden (text + shapes + images), with
  *    its data bindings resolved so the snapshot shows real content.
  *  - **element-types** — a compact per-type page (text, line, rect, ellipse,
- *    image) satisfying the story QA "per-type visual snapshots", using an inline
+ *    image) satisfying the E4-S2 QA "per-type visual snapshots", using an inline
  *    data-URI image so it renders deterministically without the network.
+ *  - **plain-table** / **grouped-table** (E4-S3) — compact data-table pages
+ *    satisfying that story's QA ("visual snapshots for plain + grouped tables").
+ *    The fixture generator can't evaluate JSONata (see the certificate note
+ *    below), so each table's **resolved** cells/aggregates are supplied as
+ *    constants and fed through the real {@link paginate}, so the slicing geometry
+ *    the renderer paints is genuine while the content stays deterministic.
  */
 
 import { goldenCertificateTemplate, type RendaraTemplate } from '@rendara/report-schema';
-import { paginate } from '@rendara/report-engine';
+import {
+  paginate,
+  type ResolvedAggregate,
+  type ResolvedDataTable,
+  type ResolvedGroup,
+  type ResolvedRow,
+} from '@rendara/report-engine';
 
 import { buildPageViewModel } from './page-view-model';
 import { serializePageToHtml } from './serialize-page-html';
@@ -166,4 +178,293 @@ const elementTypesTemplate: RendaraTemplate = {
     ],
   },
   footer: { elements: [] },
+};
+
+// ---------------------------------------------------------------------------
+// Table fixtures (E4-S3): plain + grouped data tables.
+//
+// `paginate` needs an already-resolved table (resolution is async JSONata, which
+// the generator runtime can't run — see the certificate note above), so the
+// resolved cells/aggregates are hand-authored here as small constants and fed
+// through the real engine. The geometry (row heights, slicing) is therefore the
+// engine's; only the cell *text* is pinned.
+// ---------------------------------------------------------------------------
+
+/** Zoom for the plain-table page (A4 portrait), sized to the harness viewport. */
+export const PLAIN_TABLE_FIXTURE_ZOOM = 0.75;
+
+/** Zoom for the grouped-table page (A4 landscape), sized to the harness viewport. */
+export const GROUPED_TABLE_FIXTURE_ZOOM = 0.6;
+
+/** Builds a resolved aggregate (column footer / group subtotal) from a display string. */
+function resolvedAggregate(columnKey: string, formatted: string): ResolvedAggregate {
+  return { columnKey, value: { raw: formatted, formatted } };
+}
+
+/** Builds one resolved detail row from its column keys and per-column display strings. */
+function resolvedRow(
+  index: number,
+  columnKeys: readonly string[],
+  texts: readonly string[],
+): ResolvedRow {
+  return {
+    index,
+    data: {},
+    cells: columnKeys.map((key, i) => ({
+      columnKey: key,
+      value: { raw: texts[i], formatted: texts[i] },
+    })),
+  };
+}
+
+/** Renders the plain-table fixture page to its static HTML. Deterministic. */
+export function renderPlainTablePageHtml(): string {
+  const doc = paginate(plainTableTemplate, new Map([[PLAIN_TABLE_ID, PLAIN_TABLE_RESOLVED]]));
+  const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+    zoom: PLAIN_TABLE_FIXTURE_ZOOM,
+    template: plainTableTemplate,
+  });
+  return serializePageToHtml(vm);
+}
+
+/** Renders the grouped-table fixture page to its static HTML. Deterministic. */
+export function renderGroupedTablePageHtml(): string {
+  const doc = paginate(groupedTableTemplate, new Map([[GROUPED_TABLE_ID, GROUPED_TABLE_RESOLVED]]));
+  const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+    zoom: GROUPED_TABLE_FIXTURE_ZOOM,
+    template: groupedTableTemplate,
+  });
+  return serializePageToHtml(vm);
+}
+
+const PLAIN_TABLE_ID = 'el_plain_table';
+const PLAIN_TABLE_COLUMNS = ['item', 'qty', 'price', 'amount'] as const;
+
+/**
+ * A compact A4-portrait page with a single ungrouped data table: a header row,
+ * three detail rows (right-aligned numeric columns), and a grand-total column
+ * footer — exercising the E4-S3 header / detail / column-footer rendering.
+ */
+const plainTableTemplate: RendaraTemplate = {
+  schemaVersion: '1.0.0',
+  metadata: {
+    name: 'Plain Table',
+    id: 'fixture-plain-table-0001',
+    createdAt: '2026-06-17T00:00:00.000Z',
+    locale: 'en-US',
+  },
+  page: {
+    size: 'A4',
+    orientation: 'portrait',
+    marginsMm: { top: 20, right: 15, bottom: 20, left: 15 },
+    units: 'mm',
+    defaultFont: { family: 'Inter', sizePt: 10 },
+    background: null,
+  },
+  header: { elements: [] },
+  body: {
+    elements: [
+      {
+        id: 'el_plain_title',
+        type: 'text',
+        frame: { xMm: 15, yMm: 18, wMm: 180, hMm: 10 },
+        text: 'Line Items',
+        style: {
+          font: { family: 'Inter', sizePt: 18, weight: 'bold', style: 'normal' },
+          color: '#4F46E5',
+          align: { horizontal: 'left', vertical: 'middle' },
+        },
+        z: 1,
+      },
+      {
+        id: PLAIN_TABLE_ID,
+        type: 'dataTable',
+        frame: { xMm: 15, yMm: 34, wMm: 180, hMm: null },
+        source: { arrayExpr: 'items' },
+        columns: [
+          { key: 'item', header: 'Item', cell: { expr: '$.item' }, widthMm: 95 },
+          {
+            key: 'qty',
+            header: 'Qty',
+            cell: { expr: '$.qty', format: 'number:0' },
+            widthMm: 25,
+            align: 'right',
+          },
+          {
+            key: 'price',
+            header: 'Unit Price',
+            cell: { expr: '$.price', format: 'currency:USD' },
+            widthMm: 30,
+            align: 'right',
+          },
+          {
+            key: 'amount',
+            header: 'Amount',
+            cell: { expr: '$.amount', format: 'currency:USD' },
+            footer: { expr: '$sum(items.amount)', format: 'currency:USD' },
+            widthMm: 30,
+            align: 'right',
+          },
+        ],
+        repeatHeaderOnEachPage: true,
+        keepTogether: false,
+        z: 1,
+      },
+    ],
+  },
+  footer: { elements: [] },
+};
+
+/** Pre-resolved cells/total for {@link plainTableTemplate} (no JSONata at generate time). */
+const PLAIN_TABLE_RESOLVED: ResolvedDataTable = {
+  rows: [
+    resolvedRow(0, PLAIN_TABLE_COLUMNS, ['Aurora Desk Lamp', '12', '$45.00', '$540.00']),
+    resolvedRow(1, PLAIN_TABLE_COLUMNS, ['Borealis Floor Lamp', '6', '$110.00', '$660.00']),
+    resolvedRow(2, PLAIN_TABLE_COLUMNS, ['Cedar Side Table', '3', '$130.00', '$390.00']),
+  ],
+  columnFooters: [resolvedAggregate('amount', '$1,590.00')],
+  errors: [],
+  diagnostics: [],
+};
+
+const GROUPED_TABLE_ID = 'el_grouped_table';
+const GROUPED_TABLE_COLUMNS = ['product', 'category', 'units', 'revenue'] as const;
+
+/**
+ * A compact A4-landscape page with a grouped data table: two region groups, each
+ * with a full-width header label, two detail rows, and a subtotal footer band,
+ * plus a grand-total column footer — exercising the E4-S3 group header/footer,
+ * aggregate and band-label rendering.
+ */
+const groupedTableTemplate: RendaraTemplate = {
+  schemaVersion: '1.0.0',
+  metadata: {
+    name: 'Grouped Table',
+    id: 'fixture-grouped-table-0001',
+    createdAt: '2026-06-17T00:00:00.000Z',
+    locale: 'en-US',
+  },
+  page: {
+    size: 'A4',
+    orientation: 'landscape',
+    marginsMm: { top: 20, right: 15, bottom: 20, left: 15 },
+    units: 'mm',
+    defaultFont: { family: 'Inter', sizePt: 10 },
+    background: null,
+  },
+  header: { elements: [] },
+  body: {
+    elements: [
+      {
+        id: 'el_grouped_title',
+        type: 'text',
+        frame: { xMm: 15, yMm: 18, wMm: 267, hMm: 10 },
+        text: 'Regional Sales',
+        style: {
+          font: { family: 'Inter', sizePt: 18, weight: 'bold', style: 'normal' },
+          color: '#4F46E5',
+          align: { horizontal: 'left', vertical: 'middle' },
+        },
+        z: 1,
+      },
+      {
+        id: GROUPED_TABLE_ID,
+        type: 'dataTable',
+        frame: { xMm: 15, yMm: 34, wMm: 267, hMm: null },
+        source: { arrayExpr: 'rows' },
+        columns: [
+          { key: 'product', header: 'Product', cell: { expr: '$.product' }, widthMm: 110 },
+          { key: 'category', header: 'Category', cell: { expr: '$.category' }, widthMm: 67 },
+          {
+            key: 'units',
+            header: 'Units',
+            cell: { expr: '$.units', format: 'number:0' },
+            footer: { expr: '$sum(rows.units)', format: 'number:0' },
+            widthMm: 35,
+            align: 'right',
+          },
+          {
+            key: 'revenue',
+            header: 'Revenue',
+            cell: { expr: '$.revenue', format: 'currency:USD' },
+            footer: { expr: '$sum(rows.revenue)', format: 'currency:USD' },
+            widthMm: 55,
+            align: 'right',
+          },
+        ],
+        groups: [
+          {
+            groupBy: '$.region',
+            header: { label: { expr: '"Region: " & $.region' } },
+            footer: {
+              aggregates: [
+                { columnKey: 'units', binding: { expr: '$sum($.units)', format: 'number:0' } },
+                {
+                  columnKey: 'revenue',
+                  binding: { expr: '$sum($.revenue)', format: 'currency:USD' },
+                },
+              ],
+            },
+          },
+        ],
+        repeatHeaderOnEachPage: true,
+        keepTogether: false,
+        z: 1,
+      },
+    ],
+  },
+  footer: { elements: [] },
+};
+
+/** Builds one resolved group (header label + detail rows + subtotal footer band). */
+function resolvedGroup(
+  region: string,
+  startIndex: number,
+  rows: readonly (readonly string[])[],
+  unitsSubtotal: string,
+  revenueSubtotal: string,
+): ResolvedGroup {
+  return {
+    key: region,
+    keyValue: region,
+    rows: rows.map((texts, i) => resolvedRow(startIndex + i, GROUPED_TABLE_COLUMNS, texts)),
+    header: { label: { raw: `Region: ${region}`, formatted: `Region: ${region}` }, aggregates: [] },
+    footer: {
+      aggregates: [
+        resolvedAggregate('units', unitsSubtotal),
+        resolvedAggregate('revenue', revenueSubtotal),
+      ],
+    },
+  };
+}
+
+const GROUPED_NORTH = resolvedGroup(
+  'North',
+  0,
+  [
+    ['Aurora Desk Lamp', 'Lighting', '120', '$5,400.00'],
+    ['Cedar Side Table', 'Furniture', '38', '$4,940.00'],
+  ],
+  '158',
+  '$10,340.00',
+);
+
+const GROUPED_SOUTH = resolvedGroup(
+  'South',
+  2,
+  [
+    ['Ember Pendant', 'Lighting', '95', '$7,125.00'],
+    ['Fjord Bookshelf', 'Furniture', '30', '$6,300.00'],
+  ],
+  '125',
+  '$13,425.00',
+);
+
+/** Pre-resolved groups/total for {@link groupedTableTemplate} (no JSONata at generate time). */
+const GROUPED_TABLE_RESOLVED: ResolvedDataTable = {
+  rows: [...GROUPED_NORTH.rows, ...GROUPED_SOUTH.rows],
+  groups: [GROUPED_NORTH, GROUPED_SOUTH],
+  columnFooters: [resolvedAggregate('units', '283'), resolvedAggregate('revenue', '$23,765.00')],
+  errors: [],
+  diagnostics: [],
 };

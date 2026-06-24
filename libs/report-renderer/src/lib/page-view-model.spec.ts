@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   goldenCertificateData,
   goldenCertificateTemplate,
+  goldenInvoiceData,
   goldenInvoiceTemplate,
+  goldenTabularReportData,
+  goldenTabularReportTemplate,
+  type RendaraTemplate,
 } from '@rendara/report-schema';
 import {
   mmToPx,
@@ -27,6 +31,7 @@ import {
   type ImageContentView,
   type PageViewModel,
   type ShapeContentView,
+  type TableView,
   type TextContentView,
 } from './page-view-model';
 
@@ -397,6 +402,234 @@ describe('buildPageViewModel content (E4-S2)', () => {
     expect(content.src).toBe('https://assets.rendara.dev/rendara-academy.png');
   });
 });
+
+/**
+ * Data-table slices (E4-S3). Drives the real engine (resolve → paginate, which
+ * works under Vitest) over the invoice (plain) and tabular-report (grouped)
+ * goldens, then asserts the positioned table view: container geometry, per-kind
+ * rows, cell text + alignment, band labels, aggregates, repeated and continued
+ * headers, and that every row matches the engine's page-absolute slice model.
+ */
+async function paginateGolden(
+  template: RendaraTemplate,
+  data: unknown,
+): Promise<PaginatedDocument> {
+  const resolved = new Map<string, ResolvedDataTable>();
+  for (const element of template.body.elements) {
+    if (isDataTableElement(element)) {
+      resolved.set(element.id, await resolveDataTable(element, data));
+    }
+  }
+  return paginate(template, resolved);
+}
+
+/** The single table view on a page, failing the test when absent. */
+function onlyTable(vm: PageViewModel): TableView {
+  if (vm.tables.length !== 1) throw new Error(`expected exactly one table, got ${vm.tables.length}`);
+  return vm.tables[0];
+}
+
+describe('buildPageViewModel tables (E4-S3)', () => {
+  it('omits tables when no template is supplied (cannot place without the frame)', async () => {
+    const doc = await paginateGolden(goldenInvoiceTemplate, goldenInvoiceData);
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry);
+    expect(vm.tables).toHaveLength(0);
+  });
+
+  it('positions the table at the element frame left / slice top, sized to its columns', async () => {
+    const doc = await paginateGolden(goldenInvoiceTemplate, goldenInvoiceData);
+    const slice = doc.pages[0].tables[0];
+    const table = onlyTable(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+
+    expect(table.elementId).toBe('el_inv_table');
+    // The table's left edge is its element frame's x (xMm: 15), page-absolute.
+    expect(table.leftPx).toBe(mmToPx(15));
+    // The slice top is the engine's page-absolute slice yPx (authored yMm: 74).
+    expect(table.topPx).toBe(slice.yPx);
+    // Width is the sum of the slice's column widths (90 + 20 + 35 + 35 = 180 mm),
+    // up to float accumulation across the four columns.
+    expect(table.widthPx).toBeCloseTo(mmToPx(180), 6);
+    expect(table.widthPx).toBe(slice.columns.reduce((sum, c) => sum + c.widthPx, 0));
+    expect(table.zIndex).toBe(1);
+  });
+
+  it('renders header, detail and grand-total rows with cell text and alignment', async () => {
+    const doc = await paginateGolden(goldenInvoiceTemplate, goldenInvoiceData);
+    const table = onlyTable(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+
+    const header = table.rows.find((r) => r.kind === 'header');
+    expect(header?.cells.map((c) => c.text)).toEqual(['Description', 'Qty', 'Unit Price', 'Amount']);
+    // Column alignment is carried onto each cell's style (Qty/Unit Price/Amount right).
+    expect(header?.cells.map((c) => c.cellStyle['text-align'])).toEqual([
+      'left',
+      'right',
+      'right',
+      'right',
+    ]);
+
+    const details = table.rows.filter((r) => r.kind === 'detail');
+    expect(details).toHaveLength(goldenInvoiceData.invoice.lineItems.length);
+    expect(details[0].cells.map((c) => c.text)).toEqual([
+      'Design consultation',
+      '8',
+      '$120.00',
+      '$960.00',
+    ]);
+
+    // The grand-total column footer carries the summed amount under the amount column.
+    const footer = table.rows.find((r) => r.kind === 'columnFooter');
+    const amountCell = footer?.cells.find((c) => c.columnKey === 'amt');
+    expect(amountCell?.text).toBe('$3,060.00');
+    expect(footer?.cells.find((c) => c.columnKey === 'desc')?.text).toBe('');
+  });
+
+  it('matches the engine slice model: each row at its page-absolute y, slice-relative', async () => {
+    const doc = await paginateGolden(goldenInvoiceTemplate, goldenInvoiceData);
+    const slice = doc.pages[0].tables[0];
+    const table = onlyTable(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+
+    expect(table.rows).toHaveLength(slice.rows.length);
+    table.rows.forEach((row, i) => {
+      expect(row.kind).toBe(slice.rows[i].kind);
+      expect(row.topPx).toBe(slice.rows[i].yPx - slice.yPx);
+      expect(row.heightPx).toBe(slice.rows[i].heightPx);
+    });
+  });
+
+  it('renders group header labels, subtotal footers and a grand total (grouped)', async () => {
+    const doc = await paginateGolden(goldenTabularReportTemplate, goldenTabularReportData);
+    const lastPage = doc.pages[doc.pageCount - 1];
+    const firstTable = onlyTable(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenTabularReportTemplate }),
+    );
+
+    // Group headers carry a full-width band label, e.g. "Region: North".
+    const groupHeaders = firstTable.rows.filter((r) => r.kind === 'groupHeader');
+    expect(groupHeaders.length).toBeGreaterThanOrEqual(1);
+    expect(groupHeaders[0].label?.text).toBe('Region: North');
+    expect(groupHeaders[0].label?.labelStyle['font-weight']).toBe('700');
+
+    // Group footers carry per-column subtotals (units + revenue) and no label.
+    // North's units subtotal is 120 + 64 + 38 + 22 = 244.
+    const groupFooter = firstTable.rows.find((r) => r.kind === 'groupFooter');
+    expect(groupFooter?.label).toBeNull();
+    expect(groupFooter?.cells.find((c) => c.columnKey === 'units')?.text).toBe('244');
+
+    // The grand total lands on the last page's slice; the rendered cell must equal
+    // the engine's own column-footer value (no re-derivation of the sum here).
+    const grandSlice = lastPage.tables[0].rows.find((r) => r.kind === 'columnFooter');
+    const grandTable = onlyTable(
+      buildPageViewModel(lastPage, doc.geometry, { template: goldenTabularReportTemplate }),
+    );
+    const grand = grandTable.rows.find((r) => r.kind === 'columnFooter');
+    const expectedUnits = grandSlice?.cells.find((c) => c.columnKey === 'units')?.text;
+    expect(grand?.cells.find((c) => c.columnKey === 'units')?.text).toBe(expectedUnits);
+  });
+
+  it('repeats the header on a continuation page (repeatHeaderOnEachPage)', () => {
+    const template = syntheticTableTemplate();
+    const rows = Array.from({ length: 80 }, (_, i) => ({
+      index: i,
+      data: {},
+      cells: [
+        { columnKey: 'a', value: { raw: `Item ${i}`, formatted: `Item ${i}` } },
+        { columnKey: 'b', value: { raw: String(i), formatted: String(i) } },
+      ],
+    }));
+    const resolved: ResolvedDataTable = { rows, columnFooters: [], errors: [], diagnostics: [] };
+    const doc = paginate(template, new Map([['el_syn', resolved]]));
+
+    expect(doc.pageCount).toBeGreaterThanOrEqual(2);
+    const page2 = buildPageViewModel(doc.pages[1], doc.geometry, { template });
+    const table = onlyTable(page2);
+    // The continuation slice re-emits the table header at its top.
+    expect(table.rows[0].kind).toBe('header');
+    expect(table.rows[0].cells.map((c) => c.text)).toEqual(['A', 'B']);
+  });
+
+  it('flags a continued group header repeated across a page break', () => {
+    const template = syntheticTableTemplate({ grouped: true });
+    const rows = Array.from({ length: 80 }, (_, i) => ({
+      index: i,
+      data: {},
+      cells: [
+        { columnKey: 'a', value: { raw: `Item ${i}`, formatted: `Item ${i}` } },
+        { columnKey: 'b', value: { raw: String(i), formatted: String(i) } },
+      ],
+    }));
+    const resolved: ResolvedDataTable = {
+      rows,
+      groups: [
+        {
+          key: 'All',
+          keyValue: 'All',
+          rows,
+          header: { label: { raw: 'Group All', formatted: 'Group All' }, aggregates: [] },
+          footer: { aggregates: [] },
+        },
+      ],
+      columnFooters: [],
+      errors: [],
+      diagnostics: [],
+    };
+    const doc = paginate(template, new Map([['el_syn', resolved]]));
+
+    expect(doc.pageCount).toBeGreaterThanOrEqual(2);
+    const table = onlyTable(buildPageViewModel(doc.pages[1], doc.geometry, { template }));
+    const continued = table.rows.find((r) => r.kind === 'groupHeader' && r.continued);
+    expect(continued).toBeDefined();
+    expect(continued?.label?.text).toContain('(continued)');
+  });
+});
+
+/** A minimal A4-portrait table template (optionally grouped) for synthetic pagination tests. */
+function syntheticTableTemplate(options?: { grouped?: boolean }): RendaraTemplate {
+  return {
+    schemaVersion: '1.0.0',
+    metadata: {
+      name: 'Synthetic',
+      id: 'fixture-synthetic-0001',
+      createdAt: '2026-06-17T00:00:00.000Z',
+      locale: 'en-US',
+    },
+    page: {
+      size: 'A4',
+      orientation: 'portrait',
+      marginsMm: { top: 20, right: 15, bottom: 20, left: 15 },
+      units: 'mm',
+      defaultFont: { family: 'Inter', sizePt: 10 },
+      background: null,
+    },
+    header: { elements: [] },
+    body: {
+      elements: [
+        {
+          id: 'el_syn',
+          type: 'dataTable',
+          frame: { xMm: 15, yMm: 30, wMm: 180, hMm: null },
+          source: { arrayExpr: 'rows' },
+          columns: [
+            { key: 'a', header: 'A', cell: { expr: '$.a' }, widthMm: 90 },
+            { key: 'b', header: 'B', cell: { expr: '$.b' }, widthMm: 90, align: 'right' },
+          ],
+          ...(options?.grouped
+            ? { groups: [{ groupBy: '$.g', header: { label: { expr: '"Group All"' } } }] }
+            : {}),
+          repeatHeaderOnEachPage: true,
+          keepTogether: false,
+          z: 1,
+        },
+      ],
+    },
+    footer: { elements: [] },
+  };
+}
 
 describe('boxDecorationStyle (E4-S2)', () => {
   it('maps fill, per-side border (mm→px), padding and vertical alignment', () => {
