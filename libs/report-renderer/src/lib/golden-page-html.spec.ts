@@ -3,7 +3,12 @@ import { dirname, join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { renderCertificatePageHtml, renderElementTypesPageHtml } from './golden-page-html';
+import {
+  renderCertificatePageHtml,
+  renderElementTypesPageHtml,
+  renderGroupedTablePageHtml,
+  renderPlainTablePageHtml,
+} from './golden-page-html';
 
 /** Walks up from `process.cwd()` to the workspace root (the dir holding `nx.json`). */
 function workspaceRoot(): string {
@@ -61,5 +66,39 @@ describe('renderElementTypesPageHtml (E4-S2)', () => {
     expect(html).toContain('<ellipse'); // ellipse shape
     expect(html).toContain('<img class="rdr-image"'); // image
     expect(html).toContain('src="data:image/png;base64,'); // safe data-URI src
+  });
+});
+
+describe('renderPlainTablePageHtml (E4-S3)', () => {
+  it('matches the committed visual fixture (regenerate with render-fixtures:generate)', () => {
+    const committed = readFileSync(fixturePath('plain-table-page.html'), 'utf8');
+    expect(committed.trimEnd()).toBe(renderPlainTablePageHtml());
+  });
+
+  it('paints a header, detail rows and a grand-total footer', () => {
+    const html = renderPlainTablePageHtml();
+    expect(html).toContain('class="rdr-table"');
+    expect(html).toContain('data-row-kind="header"');
+    expect(html).toContain('data-row-kind="detail"');
+    expect(html).toContain('data-row-kind="columnFooter"');
+    expect(html).toContain('Aurora Desk Lamp'); // a detail cell
+    expect(html).toContain('$1,590.00'); // the grand total
+  });
+});
+
+describe('renderGroupedTablePageHtml (E4-S3)', () => {
+  it('matches the committed visual fixture (regenerate with render-fixtures:generate)', () => {
+    const committed = readFileSync(fixturePath('grouped-table-page.html'), 'utf8');
+    expect(committed.trimEnd()).toBe(renderGroupedTablePageHtml());
+  });
+
+  it('paints group header labels, subtotal footers and a grand total', () => {
+    const html = renderGroupedTablePageHtml();
+    expect(html).toContain('data-row-kind="groupHeader"');
+    expect(html).toContain('data-row-kind="groupFooter"');
+    expect(html).toContain('class="rdr-table-label"');
+    expect(html).toContain('Region: North'); // a band label
+    expect(html).toContain('Region: South');
+    expect(html).toContain('$23,765.00'); // grand total revenue
   });
 });

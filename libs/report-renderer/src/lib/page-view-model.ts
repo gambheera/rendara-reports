@@ -25,7 +25,14 @@
  *    shape primitive, or the (URL-sanitised) image — plus the resolved per-type
  *    **style**, sourced from the supplied {@link PageViewOptions.template}
  *    elements and the optional {@link PageViewOptions.resolvedValues} map of
- *    binding display strings.
+ *    binding display strings;
+ *  - **(E4-S3)** positions the page's **data-table slices** ({@link
+ *    PaginatedPage.tables}) into {@link TableView}s — one container per slice, its
+ *    rows (header / detail / group header+footer / column footer) re-stacked from
+ *    the engine's page-absolute `yPx`, each row's per-column cells and full-width
+ *    band labels carrying the engine's already-resolved text, alignment and a
+ *    default professional table style (header emphasis, row separators, total
+ *    rules, cell padding matching the engine's measurement).
  *
  * ## Content sourcing (E4-S2)
  * The page model carries geometry + page-token text only, so content is joined
@@ -41,7 +48,6 @@
  * need geometry keep working.
  *
  * ## What this pass does NOT do (deferred, later E4 stories)
- *  - **Data-table slices** (`page.tables`) — E4-S3.
  *  - **Watermark** (`page.watermark`) — E4-S7.
  *  - **Style isolation / Shadow DOM** — E4-S5.
  * A `null`-height element (a growing box) is passed through with `heightPx: null`
@@ -49,10 +55,21 @@
  * page always carry a concrete height, so this only matters defensively.
  */
 
-import { DEFAULT_DPI, mmToPx, ptToPx } from '@rendara/report-engine';
-import type { PageGeometry, PaginatedPage, PlacedElement } from '@rendara/report-engine';
+import { DEFAULT_CELL_PADDING_MM, DEFAULT_DPI, mmToPx, ptToPx } from '@rendara/report-engine';
+import type {
+  CellPaddingMm,
+  MeasuredRow,
+  MeasuredRowKind,
+  PageGeometry,
+  PaginatedPage,
+  PlacedElement,
+  TableColumnLayout,
+  TableSlice,
+} from '@rendara/report-engine';
 import type {
   BorderSide,
+  ColumnAlign,
+  DataTableElement,
   ElementStyle,
   ElementType,
   FontSpec,
@@ -92,11 +109,26 @@ export interface ShapeContentView {
   /** Height of the `<svg>` canvas in px (the host box height; `0` for a rule line). */
   readonly svgHeightPx: number;
   /** Endpoints for a `line` shape (corner-to-corner of the frame). */
-  readonly line?: { readonly x1: number; readonly y1: number; readonly x2: number; readonly y2: number };
+  readonly line?: {
+    readonly x1: number;
+    readonly y1: number;
+    readonly x2: number;
+    readonly y2: number;
+  };
   /** Geometry for a `rect` shape, inset by half the stroke so it is not clipped. */
-  readonly rect?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  readonly rect?: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
   /** Geometry for an `ellipse` shape, inset by half the stroke. */
-  readonly ellipse?: { readonly cx: number; readonly cy: number; readonly rx: number; readonly ry: number };
+  readonly ellipse?: {
+    readonly cx: number;
+    readonly cy: number;
+    readonly rx: number;
+    readonly ry: number;
+  };
   /** Resolved stroke, or `null` when the shape has no visible outline. */
   readonly stroke: ShapeStrokeView | null;
   /** Resolved interior fill (CSS colour), or `null` for no fill. */
@@ -164,6 +196,76 @@ export interface RectPx {
   readonly heightPx: number;
 }
 
+// ---------------------------------------------------------------------------
+// Table view types (E4-S3): one on-page data-table slice, ready to position.
+// ---------------------------------------------------------------------------
+
+/** One cell of a rendered table row: its column-relative box and resolved text. */
+export interface TableCellView {
+  readonly columnKey: string;
+  /** The engine's already-resolved & formatted display string. */
+  readonly text: string;
+  /** Left offset from the table's left edge, in px (the column's `xPx`). */
+  readonly leftPx: number;
+  readonly widthPx: number;
+  /** Inline styles for the cell (padding, font, alignment, clipping). */
+  readonly cellStyle: StyleMap;
+}
+
+/** A full-table-width band label (group header/footer), spanning every column. */
+export interface TableLabelView {
+  /** The engine's already-resolved label string (e.g. `"Region: North"`). */
+  readonly text: string;
+  /** Inline styles for the label (padding, emphasised font, alignment). */
+  readonly labelStyle: StyleMap;
+}
+
+/**
+ * One rendered table row, positioned relative to its slice container's top. Its
+ * {@link kind} drives the default decoration (header fill + rule, detail
+ * separator, group-band fill, total rules); {@link cells} are the per-column
+ * boxes and {@link label} the optional full-width band label.
+ */
+export interface TableRowView {
+  readonly kind: MeasuredRowKind;
+  /** Top offset from the slice container's top, in px (`row.yPx − slice.yPx`). */
+  readonly topPx: number;
+  readonly heightPx: number;
+  /** Full table width in px (every row track spans the table). */
+  readonly widthPx: number;
+  /** Per-column cells in declared order. */
+  readonly cells: readonly TableCellView[];
+  /** A full-width band label for a group header/footer, else `null`. */
+  readonly label: TableLabelView | null;
+  /** Inline styles for the row track (background + separators per kind). */
+  readonly rowStyle: StyleMap;
+  /** `true` on a continuation group header repeated after a page break (E3-S6). */
+  readonly continued: boolean;
+}
+
+/**
+ * One on-page slice of a data table (E4-S3), positioned for rendering. The
+ * container sits at the table's page-absolute left and the slice's page-absolute
+ * top; its {@link rows} carry slice-relative offsets so a renderer drops them in
+ * directly.
+ */
+export interface TableView {
+  /** Id of the source {@link DataTableElement}. */
+  readonly elementId: string;
+  /** Page-absolute left of the table (the element frame's x), in px. */
+  readonly leftPx: number;
+  /** Page-absolute top of the slice (its first row's `yPx`), in px. */
+  readonly topPx: number;
+  /** Table width in px (sum of column widths). */
+  readonly widthPx: number;
+  /** Slice height in px. */
+  readonly heightPx: number;
+  /** Paint depth, mapped to CSS `z-index`, from the source element's `z`. */
+  readonly zIndex: number;
+  /** Rows on this slice in paint order, slice-relative. */
+  readonly rows: readonly TableRowView[];
+}
+
 /** Everything a renderer needs to paint one page: sheet, printable area, background, zoom, element boxes. */
 export interface PageViewModel {
   /** 1-based page number (mirrors {@link PaginatedPage.pageNumber}). */
@@ -178,6 +280,8 @@ export interface PageViewModel {
   readonly background: string;
   /** Fixed (non-table) element host boxes in paint order (z asc, then header→body→footer). */
   readonly elements: readonly ElementBoxView[];
+  /** Data-table slices on this page (E4-S3), in document then slice order. */
+  readonly tables: readonly TableView[];
 }
 
 /** Options for {@link buildPageViewModel}. */
@@ -232,6 +336,20 @@ export function buildPageViewModel(
       toElementBoxView(placed, elementsById?.get(placed.id), resolvedValues, defaultFont, dpi),
   );
 
+  // Table slices (E4-S3): position each slice against its source element's frame
+  // (for the page-absolute left + z). The slice cells already carry resolved text,
+  // so this only needs geometry + the default table style. A slice whose source
+  // element is absent (no template, or an unknown id) is dropped — it cannot be
+  // placed without the frame's left edge.
+  const tables: TableView[] = [];
+  for (const slice of page.tables) {
+    const source = elementsById?.get(slice.elementId);
+    if (source?.type !== 'dataTable') {
+      continue;
+    }
+    tables.push(toTableView(slice, source, defaultFont, dpi));
+  }
+
   return {
     pageNumber: page.pageNumber,
     zoom,
@@ -244,6 +362,7 @@ export function buildPageViewModel(
     },
     background,
     elements,
+    tables,
   };
 }
 
@@ -357,7 +476,11 @@ function resolveTextString(
 }
 
 /** Maps font + colour + horizontal alignment + wrapping to the text-run inline style. */
-function textRunStyle(style: ElementStyle | undefined, defaultFont: FontSpec, dpi: number): StyleMap {
+function textRunStyle(
+  style: ElementStyle | undefined,
+  defaultFont: FontSpec,
+  dpi: number,
+): StyleMap {
   const font = style?.font;
   const family = font?.family ?? defaultFont.family;
   const sizePt = font?.sizePt ?? defaultFont.sizePt;
@@ -554,6 +677,170 @@ export function sanitizeImageUrl(url: string | null | undefined): string | null 
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Table content + default style (E4-S3).
+//
+// The v1 schema's `DataTableElement` carries no per-row/cell style fields (the
+// contract is frozen; brief §5's `rowStyle` is illustrative only), so the
+// renderer supplies a single, professional default table look: an emphasised
+// header with a rule, faint detail-row separators, tinted group-header bands,
+// and stronger rules under subtotal/grand-total rows — modelled on the invoice
+// preview mockup. Cell padding mirrors the engine's measurement
+// ({@link DEFAULT_CELL_PADDING_MM}) and the font the document default, so the
+// painted rows fit the heights the paginator measured.
+// ---------------------------------------------------------------------------
+
+/** Tinted fill behind the header row (slate-100). */
+const TABLE_HEADER_FILL = '#F1F5F9';
+/** Tinted fill behind a group-header band (indigo-50, the accent tint). */
+const TABLE_GROUP_HEADER_FILL = '#EEF2FF';
+/** Faint separator under each detail row (slate-200). */
+const TABLE_DETAIL_RULE = '#E2E8F0';
+/** Stronger rule under the header and group footers (slate-300). */
+const TABLE_BAND_RULE = '#CBD5E1';
+/** Strongest rule above the grand-total / under the header bottom (slate-700). */
+const TABLE_TOTAL_RULE = '#334155';
+
+/**
+ * Positions one engine {@link TableSlice} into a {@link TableView}: the container
+ * sits at the table's page-absolute left ({@link DataTableElement.frame}'s `xMm`)
+ * and the slice's page-absolute top, with rows re-stacked slice-relative.
+ */
+function toTableView(
+  slice: TableSlice,
+  element: DataTableElement,
+  defaultFont: FontSpec,
+  dpi: number,
+): TableView {
+  const leftPx = mmToPx(element.frame.xMm, dpi);
+  const widthPx = slice.columns.reduce((sum, c) => sum + c.widthPx, 0);
+  const fontSizePx = ptToPx(defaultFont.sizePt, dpi);
+  const padding = DEFAULT_CELL_PADDING_MM;
+
+  const rows = slice.rows.map((row) =>
+    toTableRowView(
+      row,
+      slice.columns,
+      widthPx,
+      slice.yPx,
+      defaultFont.family,
+      fontSizePx,
+      padding,
+      dpi,
+    ),
+  );
+
+  return {
+    elementId: slice.elementId,
+    leftPx,
+    topPx: slice.yPx,
+    widthPx,
+    heightPx: slice.heightPx,
+    zIndex: element.z,
+    rows,
+  };
+}
+
+/** Maps one measured table row to its slice-relative {@link TableRowView}. */
+function toTableRowView(
+  row: MeasuredRow,
+  columns: readonly TableColumnLayout[],
+  widthPx: number,
+  sliceTopPx: number,
+  fontFamily: string,
+  fontSizePx: number,
+  padding: CellPaddingMm,
+  dpi: number,
+): TableRowView {
+  // Header / footer / subtotal / grand-total text is emphasised; detail is plain.
+  const emphasised = row.kind !== 'detail';
+  const cells: TableCellView[] = columns.map((column, i) => {
+    const cell = row.cells[i];
+    return {
+      columnKey: column.key,
+      text: cell?.text ?? '',
+      leftPx: column.xPx,
+      widthPx: column.widthPx,
+      cellStyle: tableTextStyle(column.align, fontFamily, fontSizePx, padding, dpi, emphasised),
+    };
+  });
+
+  const label: TableLabelView | null = row.label
+    ? {
+        text: row.label.text,
+        // A band label spans the table content width; group bands are always bold.
+        labelStyle: tableTextStyle(row.label.align, fontFamily, fontSizePx, padding, dpi, true),
+      }
+    : null;
+
+  return {
+    kind: row.kind,
+    topPx: row.yPx - sliceTopPx,
+    heightPx: row.heightPx,
+    widthPx,
+    cells,
+    label,
+    rowStyle: tableRowDecoration(row.kind),
+    continued: row.continued ?? false,
+  };
+}
+
+/** The text/box style shared by table cells and band labels (padding, font, align). */
+function tableTextStyle(
+  align: ColumnAlign,
+  fontFamily: string,
+  fontSizePx: number,
+  padding: CellPaddingMm,
+  dpi: number,
+  emphasised: boolean,
+): StyleMap {
+  const out: Record<string, string> = {
+    'box-sizing': 'border-box',
+    'font-family': fontFamily,
+    'font-size': `${fontSizePx}px`,
+    // Wrap within the column, matching the engine's greedy word-wrap measurement.
+    'white-space': 'pre-wrap',
+    overflow: 'hidden',
+    'text-align': align,
+    'padding-top': `${mmToPx(padding.top, dpi)}px`,
+    'padding-right': `${mmToPx(padding.right, dpi)}px`,
+    'padding-bottom': `${mmToPx(padding.bottom, dpi)}px`,
+    'padding-left': `${mmToPx(padding.left, dpi)}px`,
+  };
+  if (emphasised) {
+    out['font-weight'] = '700';
+  }
+  return out;
+}
+
+/** The per-kind row-track decoration (fill + separators / rules); empty for none. */
+function tableRowDecoration(kind: MeasuredRowKind): StyleMap {
+  switch (kind) {
+    case 'header':
+      return {
+        'box-sizing': 'border-box',
+        background: TABLE_HEADER_FILL,
+        'border-bottom': `1px solid ${TABLE_TOTAL_RULE}`,
+      };
+    case 'detail':
+      return { 'box-sizing': 'border-box', 'border-bottom': `1px solid ${TABLE_DETAIL_RULE}` };
+    case 'groupHeader':
+      return {
+        'box-sizing': 'border-box',
+        background: TABLE_GROUP_HEADER_FILL,
+        'border-bottom': `1px solid ${TABLE_BAND_RULE}`,
+      };
+    case 'groupFooter':
+      return {
+        'box-sizing': 'border-box',
+        'border-top': `1px solid ${TABLE_BAND_RULE}`,
+        'border-bottom': `1px solid ${TABLE_BAND_RULE}`,
+      };
+    case 'columnFooter':
+      return { 'box-sizing': 'border-box', 'border-top': `2px solid ${TABLE_TOTAL_RULE}` };
+  }
+}
+
 /** A non-empty background string wins; everything else falls back to white paper. */
 function resolveBackground(background: string | null | undefined): string {
   return typeof background === 'string' && background.length > 0
@@ -591,6 +878,58 @@ export function printableStyle(vm: PageViewModel): StyleMap {
     top: `${topPx}px`,
     width: `${widthPx}px`,
     height: `${heightPx}px`,
+  };
+}
+
+/**
+ * Inline styles for one table slice's container (E4-S3): absolutely positioned at
+ * the table's page-absolute left and the slice's top, sized to the table width
+ * and slice height, at the source element's paint depth.
+ */
+export function tableContainerStyle(table: TableView): StyleMap {
+  return {
+    position: 'absolute',
+    left: `${table.leftPx}px`,
+    top: `${table.topPx}px`,
+    width: `${table.widthPx}px`,
+    height: `${table.heightPx}px`,
+    'z-index': `${table.zIndex}`,
+  };
+}
+
+/** Inline styles for one table row track: slice-relative position + per-kind decoration. */
+export function tableRowStyle(row: TableRowView): StyleMap {
+  return {
+    position: 'absolute',
+    left: '0',
+    top: `${row.topPx}px`,
+    width: `${row.widthPx}px`,
+    height: `${row.heightPx}px`,
+    ...row.rowStyle,
+  };
+}
+
+/** Inline styles for one table cell: column-relative position + its text/box style. */
+export function tableCellStyle(cell: TableCellView): StyleMap {
+  return {
+    position: 'absolute',
+    left: `${cell.leftPx}px`,
+    top: '0',
+    width: `${cell.widthPx}px`,
+    height: '100%',
+    ...cell.cellStyle,
+  };
+}
+
+/** Inline styles for a full-table-width band label: spans the row over its cells. */
+export function tableLabelStyle(label: TableLabelView): StyleMap {
+  return {
+    position: 'absolute',
+    left: '0',
+    top: '0',
+    width: '100%',
+    height: '100%',
+    ...label.labelStyle,
   };
 }
 

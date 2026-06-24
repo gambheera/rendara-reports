@@ -16,17 +16,24 @@ import { join } from 'node:path';
 import {
   renderCertificatePageHtml,
   renderElementTypesPageHtml,
+  renderGroupedTablePageHtml,
+  renderPlainTablePageHtml,
 } from '../libs/report-renderer/src/lib/golden-page-html';
 
 const fixturesDir = join(__dirname, '..', 'apps', 'visual-e2e', 'e2e', '__fixtures__');
 
 mkdirSync(fixturesDir, { recursive: true });
 
-const certificate = join(fixturesDir, 'certificate-page.html');
-writeFileSync(certificate, `${renderCertificatePageHtml()}\n`);
+const artifacts: ReadonlyArray<readonly [string, string]> = [
+  ['certificate-page.html', renderCertificatePageHtml()],
+  ['element-types-page.html', renderElementTypesPageHtml()],
+  ['plain-table-page.html', renderPlainTablePageHtml()],
+  ['grouped-table-page.html', renderGroupedTablePageHtml()],
+];
 
-const elementTypes = join(fixturesDir, 'element-types-page.html');
-writeFileSync(elementTypes, `${renderElementTypesPageHtml()}\n`);
-
-// eslint-disable-next-line no-console -- this is a developer CLI script.
-console.log(`Wrote ${certificate}\nWrote ${elementTypes}`);
+for (const [name, html] of artifacts) {
+  const path = join(fixturesDir, name);
+  writeFileSync(path, `${html}\n`);
+  // eslint-disable-next-line no-console -- this is a developer CLI script.
+  console.log(`Wrote ${path}`);
+}

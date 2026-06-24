@@ -7,9 +7,17 @@ import {
   elementStyle,
   printableStyle,
   sheetStyle,
+  tableCellStyle,
+  tableContainerStyle,
+  tableLabelStyle,
+  tableRowStyle,
   type ElementBoxView,
   type PageViewModel,
   type StyleMap,
+  type TableCellView,
+  type TableLabelView,
+  type TableRowView,
+  type TableView,
 } from '../page-view-model';
 
 /**
@@ -32,9 +40,15 @@ import {
  * bindings asynchronously upstream). All content math lives in the pure
  * {@link buildPageViewModel} so it is unit-testable and reused by the serializer.
  *
- * Still deferred: data-table slices are E4-S3, multi-page + zoom controls are
- * E4-S4, style isolation is E4-S5, design-mode hooks are E4-S6, the watermark is
- * E4-S7.
+ * E4-S3 paints the page's **data-table slices** ({@link PaginatedPage.tables}):
+ * each slice becomes an absolutely-positioned container whose rows (header /
+ * detail / group header+footer / grand-total) and per-column cells + full-width
+ * band labels carry the engine's already-resolved text, alignment and a default
+ * professional table style. All table geometry/style lives in the pure
+ * {@link buildPageViewModel} too.
+ *
+ * Still deferred: multi-page + zoom controls are E4-S4, style isolation is
+ * E4-S5, design-mode hooks are E4-S6, the watermark is E4-S7.
  */
 @Component({
   selector: 'rdr-report-renderer',
@@ -84,5 +98,25 @@ export class ReportRenderer {
   /** Inline styles for one element host box (used by the template's `@for`). */
   protected elementStyle(box: ElementBoxView): StyleMap {
     return elementStyle(box);
+  }
+
+  /** Inline styles for one table slice container (E4-S3). */
+  protected tableContainerStyle(table: TableView): StyleMap {
+    return tableContainerStyle(table);
+  }
+
+  /** Inline styles for one table row track (E4-S3). */
+  protected tableRowStyle(row: TableRowView): StyleMap {
+    return tableRowStyle(row);
+  }
+
+  /** Inline styles for one table cell (E4-S3). */
+  protected tableCellStyle(cell: TableCellView): StyleMap {
+    return tableCellStyle(cell);
+  }
+
+  /** Inline styles for one full-width band label (E4-S3). */
+  protected tableLabelStyle(label: TableLabelView): StyleMap {
+    return tableLabelStyle(label);
   }
 }

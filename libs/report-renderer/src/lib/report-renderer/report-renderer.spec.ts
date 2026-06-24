@@ -3,13 +3,20 @@ import { render } from '@testing-library/angular';
 import {
   goldenCertificateData,
   goldenCertificateTemplate,
+  goldenInvoiceData,
+  goldenInvoiceTemplate,
+  goldenTabularReportData,
+  goldenTabularReportTemplate,
+  isDataTableElement,
   type RendaraTemplate,
 } from '@rendara/report-schema';
 import {
   mmToPx,
   paginate,
+  resolveDataTable,
   resolveElement,
   type PaginatedDocument,
+  type ResolvedDataTable,
 } from '@rendara/report-engine';
 
 import { ReportRenderer } from './report-renderer';
@@ -188,5 +195,83 @@ describe('ReportRenderer content (E4-S2)', () => {
     // The dangerous URL is dropped entirely — no <img> with a javascript: src.
     expect(box.querySelector('img')).toBeNull();
     expect(container.innerHTML).not.toContain('javascript:');
+  });
+});
+
+/**
+ * Data-table rendering (E4-S3, QA: "renders the paginated table model … incl.
+ * repeated headers, group headers/footers, aggregates, alignment"). Drives the
+ * real engine over the invoice (plain) and tabular (grouped) goldens and asserts
+ * the live table DOM: container, rows by kind, cells, alignment, and band labels.
+ */
+async function paginateWithTables(
+  template: RendaraTemplate,
+  data: unknown,
+): Promise<PaginatedDocument> {
+  const resolved = new Map<string, ResolvedDataTable>();
+  for (const element of template.body.elements) {
+    if (isDataTableElement(element)) {
+      resolved.set(element.id, await resolveDataTable(element, data));
+    }
+  }
+  return paginate(template, resolved);
+}
+
+async function renderInvoiceTable() {
+  const doc = await paginateWithTables(goldenInvoiceTemplate, goldenInvoiceData);
+  const { container } = await render(ReportRenderer, {
+    inputs: { page: doc.pages[0], geometry: doc.geometry, template: goldenInvoiceTemplate },
+  });
+  return container;
+}
+
+describe('ReportRenderer tables (E4-S3)', () => {
+  it('renders a positioned table container at its element frame left', async () => {
+    const container = await renderInvoiceTable();
+    const table = el(container, '.rdr-table[data-table-id="el_inv_table"]');
+    expect(table.style.position).toBe('absolute');
+    expect(table.style.left).toBe(`${mmToPx(15)}px`);
+  });
+
+  it('renders header, detail and grand-total rows with cell text', async () => {
+    const container = await renderInvoiceTable();
+    const table = el(container, '.rdr-table[data-table-id="el_inv_table"]');
+
+    const header = el(table, '.rdr-table-row[data-row-kind="header"]');
+    const headerTexts = Array.from(header.querySelectorAll('.rdr-table-cell')).map((c) =>
+      c.textContent?.trim(),
+    );
+    expect(headerTexts).toEqual(['Description', 'Qty', 'Unit Price', 'Amount']);
+
+    const details = table.querySelectorAll('.rdr-table-row[data-row-kind="detail"]');
+    expect(details).toHaveLength(goldenInvoiceData.invoice.lineItems.length);
+
+    const footer = el(table, '.rdr-table-row[data-row-kind="columnFooter"]');
+    const amountCell = el(footer, '.rdr-table-cell[data-column-key="amt"]');
+    expect(amountCell.textContent?.trim()).toBe('$3,060.00');
+  });
+
+  it('right-aligns numeric columns via the cell style', async () => {
+    const container = await renderInvoiceTable();
+    const table = el(container, '.rdr-table[data-table-id="el_inv_table"]');
+    const header = el(table, '.rdr-table-row[data-row-kind="header"]');
+    expect(el(header, '.rdr-table-cell[data-column-key="desc"]').style.textAlign).toBe('left');
+    expect(el(header, '.rdr-table-cell[data-column-key="amt"]').style.textAlign).toBe('right');
+  });
+
+  it('renders a group header band label and subtotal footer (grouped)', async () => {
+    const doc = await paginateWithTables(goldenTabularReportTemplate, goldenTabularReportData);
+    const { container } = await render(ReportRenderer, {
+      inputs: { page: doc.pages[0], geometry: doc.geometry, template: goldenTabularReportTemplate },
+    });
+    const table = el(container, '.rdr-table[data-table-id="el_rpt_table"]');
+
+    const groupHeader = el(table, '.rdr-table-row[data-row-kind="groupHeader"]');
+    expect(el(groupHeader, '.rdr-table-label').textContent?.trim()).toBe('Region: North');
+
+    const groupFooter = el(table, '.rdr-table-row[data-row-kind="groupFooter"]');
+    expect(el(groupFooter, '.rdr-table-cell[data-column-key="units"]').textContent?.trim()).toBe(
+      '244',
+    );
   });
 });

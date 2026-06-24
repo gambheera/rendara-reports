@@ -58,5 +58,23 @@
     <img class="rdr-image" [src]="src" alt="" [style]="content.imageStyle" />
     } } }
   </div>
+  } @for (table of model.tables; track table.elementId) {
+  <div class="rdr-table" [style]="tableContainerStyle(table)" [attr.data-table-id]="table.elementId">
+    @for (row of table.rows; track $index) {
+    <div class="rdr-table-row" [style]="tableRowStyle(row)" [attr.data-row-kind]="row.kind">
+      @for (cell of row.cells; track cell.columnKey) {
+      <div
+        class="rdr-table-cell"
+        [style]="tableCellStyle(cell)"
+        [attr.data-column-key]="cell.columnKey"
+      >
+        {{ cell.text }}
+      </div>
+      } @if (row.label; as label) {
+      <div class="rdr-table-label" [style]="tableLabelStyle(label)">{{ label.text }}</div>
+      }
+    </div>
+    }
+  </div>
   }
 </div>
