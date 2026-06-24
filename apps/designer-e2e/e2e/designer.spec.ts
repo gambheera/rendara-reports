@@ -25,6 +25,19 @@ test.describe('Designer shell', () => {
     await expect(page.getByRole('complementary', { name: 'Insert palette' })).toBeVisible();
   });
 
+  test('hosts the shared renderer in design mode and zooms', async ({ page }) => {
+    await page.goto('/');
+
+    // The canvas paints with the shared renderer in design mode (E5-S4).
+    await expect(page.locator('rdr-report-document')).toBeVisible();
+    await expect(page.locator('[data-rdr-mode="design"]').first()).toBeVisible();
+
+    // The status-bar zoom control steps the live percentage.
+    await expect(page.getByText('100%')).toBeVisible();
+    await page.getByRole('button', { name: 'Zoom in' }).click();
+    await expect(page.getByText('110%')).toBeVisible();
+  });
+
   test('switches palette tabs', async ({ page }) => {
     await page.goto('/');
 
@@ -49,11 +62,11 @@ test.describe('Designer shell', () => {
     await expect(dialog).toBeHidden();
     await expect(summary).toHaveText('Letter · Landscape · mm');
 
-    // The canvas paper resized live to the new geometry.
-    const aspect = await page
-      .getByRole('img', { name: 'Report page' })
-      .evaluate((el) => getComputedStyle(el).aspectRatio);
-    expect(aspect.replace(/\s/g, '')).toBe('279.4/215.9');
+    // The canvas re-paginated live: the rendered sheet now has the Letter-landscape
+    // aspect ratio (279.4 × 215.9 mm ≈ 1.294).
+    const box = await page.locator('[data-page-number="1"]').first().boundingBox();
+    if (box === null) throw new Error('rendered page slot has no bounding box');
+    expect(box.width / box.height).toBeCloseTo(279.4 / 215.9, 2);
   });
 
   test('cancelling page setup leaves the page model unchanged', async ({ page }) => {

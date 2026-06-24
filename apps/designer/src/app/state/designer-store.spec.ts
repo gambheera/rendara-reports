@@ -68,6 +68,22 @@ describe('DesignerStore', () => {
     });
   });
 
+  describe('rendered document (E5-S4)', () => {
+    it('paginates the empty document to a single page', () => {
+      expect(store.paginatedDocument().pageCount).toBe(1);
+      expect(store.pageCount()).toBe(1);
+    });
+
+    it('recomputes when the document changes', () => {
+      const first = store.paginatedDocument();
+      store.addElement(textEl('a'));
+      const second = store.paginatedDocument();
+
+      expect(second).not.toBe(first);
+      expect(store.pageCount()).toBe(1);
+    });
+  });
+
   describe('selection invariants', () => {
     beforeEach(() => store.loadTemplate(seededTemplate()));
 

@@ -1,5 +1,6 @@
 import { computed } from '@angular/core';
 import { signalStore, withComputed, withMethods, withState, patchState } from '@ngrx/signals';
+import { paginate, type PaginatedDocument, type ResolvedDataTable } from '@rendara/report-engine';
 import type { Page, RendaraTemplate, TemplateElement } from '@rendara/report-schema';
 import {
   addElementToBody,
@@ -42,14 +43,18 @@ function clampZoom(zoom: number): number {
 }
 
 /**
+ * No resolved data tables yet: data binding and table resolution are E6, so the
+ * canvas paginates the current document with an empty table map. An empty
+ * template (and any v1 fixed elements) paginates without needing this.
+ */
+const NO_TABLES: ReadonlyMap<string, ResolvedDataTable> = new Map();
+
+/**
  * Filters `ids` down to those that exist in `template`, removing duplicates and
  * preserving first-seen order. This is the single chokepoint that keeps the
  * selection invariant true after any selection or document change.
  */
-function sanitizeSelection(
-  template: RendaraTemplate,
-  ids: readonly string[],
-): readonly string[] {
+function sanitizeSelection(template: RendaraTemplate, ids: readonly string[]): readonly string[] {
   const existing = new Set(collectElements(template).map((el) => el.id));
   const seen = new Set<string>();
   const result: string[] = [];
@@ -107,6 +112,17 @@ export const DesignerStore = signalStore(
     selectionCount: computed(() => store.selectedIds().length),
     /** Zoom as an integer percentage for the status bar (e.g. 100). */
     zoomPercent: computed(() => Math.round(store.zoom() * 100)),
+    /**
+     * The current document paginated by the shared engine — the single derived
+     * model the canvas renders (in design mode) and the status bar counts pages
+     * from, so both views stay consistent. Recomputed only when the template
+     * changes. Tables resolve in E6; for now no data tables are supplied.
+     */
+    paginatedDocument: computed<PaginatedDocument>(() => paginate(store.template(), NO_TABLES)),
+  })),
+  withComputed((store) => ({
+    /** Page count of the rendered document (≥ 1). */
+    pageCount: computed(() => store.paginatedDocument().pageCount),
   })),
   withMethods((store) => ({
     /** Replaces the document, clearing selection and the dirty flag. */

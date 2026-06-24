@@ -40,10 +40,16 @@ export class DesignerShell {
   protected readonly MAX_WIDTH = 420;
 
   private readonly pageSetup = viewChild.required(PageSetupDialog);
+  private readonly canvas = viewChild.required(CanvasStage);
 
   /** Opens the Page setup dialog (triggered from the status bar). */
   protected openPageSetup(): void {
     this.pageSetup().open();
+  }
+
+  /** Fits the page width into the canvas (triggered from the status bar). */
+  protected fitToView(): void {
+    this.canvas().fitToView();
   }
 
   protected readonly leftWidth = signal(264);
