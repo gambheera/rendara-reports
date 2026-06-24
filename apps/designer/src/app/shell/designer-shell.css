@@ -1,0 +1,145 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--rdr-color-backdrop);
+}
+
+.rdr-shell__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---- Side panels --------------------------------------------------------- */
+.rdr-shell__side {
+  position: relative;
+  flex: none;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.rdr-shell__side--left {
+  border-right: 1px solid var(--rdr-color-border-hairline);
+}
+
+.rdr-shell__side--right {
+  border-left: 1px solid var(--rdr-color-border-hairline);
+}
+
+/* ---- Canvas (the elastic middle) ----------------------------------------- */
+.rdr-shell__canvas {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+/* ---- Resize handles ------------------------------------------------------ */
+.rdr-shell__handle {
+  flex: none;
+  width: 6px;
+  margin: 0 -3px;
+  z-index: 1;
+  cursor: col-resize;
+  background: transparent;
+  transition: background-color var(--rdr-motion-duration) var(--rdr-motion-easing);
+}
+
+.rdr-shell__handle:hover,
+.rdr-shell__handle.rdr-resize-handle--dragging {
+  background: var(--rdr-color-accent-subtle);
+}
+
+.rdr-shell__handle:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+/* ---- Collapse toggles (inner edge of each panel) ------------------------- */
+.rdr-shell__collapse {
+  position: absolute;
+  top: var(--rdr-space-2);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rdr-color-border-hairline);
+  border-radius: var(--rdr-radius-full);
+  background: var(--rdr-color-surface);
+  color: var(--rdr-color-text-secondary);
+  font-size: var(--rdr-font-size-caption);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rdr-shell__collapse:hover {
+  color: var(--rdr-color-accent);
+  border-color: var(--rdr-color-accent);
+}
+
+.rdr-shell__collapse:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+.rdr-shell__collapse--left {
+  right: var(--rdr-space-2);
+}
+
+.rdr-shell__collapse--right {
+  left: var(--rdr-space-2);
+}
+
+/* ---- Collapsed rails ----------------------------------------------------- */
+.rdr-shell__rail {
+  flex: none;
+  width: 36px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  padding-top: var(--rdr-space-2);
+  box-sizing: border-box;
+  background: var(--rdr-color-recessed);
+}
+
+.rdr-shell__rail--left {
+  border-right: 1px solid var(--rdr-color-border-hairline);
+}
+
+.rdr-shell__rail--right {
+  border-left: 1px solid var(--rdr-color-border-hairline);
+}
+
+.rdr-shell__rail-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rdr-color-border-hairline);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-surface);
+  color: var(--rdr-color-text-secondary);
+  cursor: pointer;
+}
+
+.rdr-shell__rail-btn:hover {
+  color: var(--rdr-color-accent);
+  border-color: var(--rdr-color-accent);
+}
+
+.rdr-shell__rail-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+/* ---- Responsive: keep the canvas usable on narrower desktops ------------- */
+@media (max-width: 1024px) {
+  .rdr-shell__side {
+    max-width: 40vw;
+  }
+}

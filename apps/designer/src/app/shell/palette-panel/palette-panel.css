@@ -1,0 +1,106 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--rdr-color-recessed);
+  overflow: hidden;
+}
+
+.rdr-palette__tabs {
+  display: flex;
+  flex: none;
+  border-bottom: 1px solid var(--rdr-color-border-hairline);
+}
+
+.rdr-palette__tab {
+  flex: 1;
+  height: 44px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--rdr-color-text-secondary);
+  font-family: var(--rdr-font-ui);
+  font-size: var(--rdr-font-size-body);
+  font-weight: var(--rdr-font-weight-medium);
+  cursor: pointer;
+}
+
+.rdr-palette__tab:hover {
+  color: var(--rdr-color-text-primary);
+}
+
+.rdr-palette__tab--active {
+  color: var(--rdr-color-accent);
+  border-bottom-color: var(--rdr-color-accent);
+}
+
+.rdr-palette__tab:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+.rdr-palette__body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--rdr-space-panel);
+  overflow-y: auto;
+}
+
+.rdr-palette__group + .rdr-palette__group {
+  margin-top: var(--rdr-space-6);
+}
+
+.rdr-palette__group-title {
+  margin: 0 0 var(--rdr-space-3);
+  color: var(--rdr-color-text-secondary);
+  font-size: var(--rdr-font-size-caption);
+  font-weight: var(--rdr-font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rdr-palette__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--rdr-space-3);
+}
+
+.rdr-palette__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rdr-space-2);
+  height: 72px;
+  border: 1px solid var(--rdr-color-border-hairline);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-surface);
+  color: var(--rdr-color-text-primary);
+  font-size: var(--rdr-font-size-label);
+}
+
+.rdr-palette__item-glyph {
+  font-size: var(--rdr-size-icon-toolbar);
+  color: var(--rdr-color-text-secondary);
+}
+
+.rdr-palette__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rdr-space-1);
+  text-align: center;
+  color: var(--rdr-color-text-secondary);
+  font-size: var(--rdr-font-size-label);
+}
+
+.rdr-palette__empty-hint {
+  margin: 0;
+  color: var(--rdr-color-text-secondary);
+  font-size: var(--rdr-font-size-caption);
+}
+
+.rdr-palette__empty p {
+  margin: 0;
+}

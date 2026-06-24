@@ -3,17 +3,14 @@ import { render, screen } from '@testing-library/angular';
 import { App } from './app';
 
 describe('Designer App', () => {
-  it('renders the designer shell heading', async () => {
+  it('mounts the four-zone designer shell', async () => {
     await render(App);
 
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
-      'Rendara Reports — Designer',
-    );
-  });
-
-  it('surfaces the schema contract version it targets', async () => {
-    await render(App);
-
-    expect(screen.getByText(/Schema contract: 1\.0\.0/)).toBeTruthy();
+    // The shell stands up all four landmarks (banner / main / complementary x2 /
+    // contentinfo); asserting the canonical zones proves the root wires it in.
+    expect(screen.getByRole('banner')).toBeTruthy();
+    expect(screen.getByRole('main', { name: 'Report canvas' })).toBeTruthy();
+    expect(screen.getByRole('contentinfo')).toBeTruthy();
+    expect(screen.getByText('Rendara')).toBeTruthy();
   });
 });
