@@ -1,8 +1,12 @@
 <div class="rdr-status-bar__group">
-  <button type="button" class="rdr-status-bar__zoom-btn" aria-label="Zoom out" disabled>−</button>
-  <span class="rdr-status-bar__zoom">{{ zoom }}</span>
-  <button type="button" class="rdr-status-bar__zoom-btn" aria-label="Zoom in" disabled>+</button>
-  <button type="button" class="rdr-status-bar__fit" disabled>Fit</button>
+  <button type="button" class="rdr-status-bar__zoom-btn" aria-label="Zoom out" (click)="zoomOut()">
+    −
+  </button>
+  <span class="rdr-status-bar__zoom">{{ zoom() }}</span>
+  <button type="button" class="rdr-status-bar__zoom-btn" aria-label="Zoom in" (click)="zoomIn()">
+    +
+  </button>
+  <button type="button" class="rdr-status-bar__fit" (click)="fitToView.emit()">Fit</button>
 </div>
 
 <div class="rdr-status-bar__group rdr-status-bar__center">
@@ -18,6 +22,6 @@
 </div>
 
 <div class="rdr-status-bar__group">
-  <span>{{ pageCounter }}</span>
+  <span>{{ pageCounter() }}</span>
   <span class="rdr-status-bar__hint">⌘D Duplicate · Shift Snap to grid</span>
 </div>
