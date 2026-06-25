@@ -260,3 +260,134 @@
   color: var(--rdr-color-danger);
   font-size: var(--rdr-font-size-label);
 }
+
+/* Data-table structure editor (E6-S4). */
+.rdr-properties__col-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rdr-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rdr-properties__col-row {
+  display: flex;
+  align-items: center;
+  gap: var(--rdr-space-2);
+  padding: 2px;
+  border: 1px solid var(--rdr-color-border-input);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-surface);
+}
+
+.rdr-properties__col-row--active {
+  border-color: var(--rdr-color-accent);
+  box-shadow: var(--rdr-focus-ring);
+}
+
+/* CDK drag affordance: the placeholder leaves a visible gap while reordering. */
+.rdr-properties__col-row.cdk-drag-placeholder {
+  opacity: 0.4;
+}
+
+.rdr-properties__col-grip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--rdr-color-text-secondary);
+  font: inherit;
+  cursor: grab;
+}
+
+.rdr-properties__col-grip:active {
+  cursor: grabbing;
+}
+
+.rdr-properties__col-name {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--rdr-space-2);
+  border: none;
+  border-radius: calc(var(--rdr-radius-control) - 2px);
+  background: transparent;
+  color: var(--rdr-color-text-primary);
+  font: inherit;
+  font-size: var(--rdr-font-size-body);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rdr-properties__icon-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--rdr-radius-control);
+  background: transparent;
+  color: var(--rdr-color-text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rdr-properties__icon-btn:hover:not(:disabled) {
+  color: var(--rdr-color-danger);
+}
+
+.rdr-properties__icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.rdr-properties__add-btn {
+  width: 100%;
+  height: var(--rdr-size-control);
+  border: 1px dashed var(--rdr-color-border-input);
+  border-radius: var(--rdr-radius-control);
+  background: transparent;
+  color: var(--rdr-color-text-secondary);
+  font: inherit;
+  font-size: var(--rdr-font-size-label);
+  cursor: pointer;
+}
+
+.rdr-properties__add-btn:hover {
+  color: var(--rdr-color-accent);
+  border-color: var(--rdr-color-accent);
+}
+
+.rdr-properties__col-grip:focus-visible,
+.rdr-properties__col-name:focus-visible,
+.rdr-properties__icon-btn:focus-visible,
+.rdr-properties__add-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+.rdr-properties__subsection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rdr-space-3);
+  padding: var(--rdr-space-3);
+  border: 1px solid var(--rdr-color-border-hairline);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-surface);
+}
+
+.rdr-properties__group-row {
+  display: flex;
+  align-items: center;
+  gap: var(--rdr-space-2);
+}

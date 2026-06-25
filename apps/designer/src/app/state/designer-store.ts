@@ -107,11 +107,25 @@ function clampZoom(zoom: number): number {
 }
 
 /**
- * No resolved data tables yet: data binding and table resolution are E6, so the
- * canvas paginates the current document with an empty table map. An empty
- * template (and any v1 fixed elements) paginates without needing this.
+ * A header-only **structural preview** of every data-table element (E6-S4): the
+ * paginator *skips* any table absent from its resolved map, so without an entry a
+ * data table would render nothing and its columns could not be seen or edited on
+ * the canvas. Until data binding lands (E6-S6/S8 supply real resolved rows), each
+ * table is resolved as an empty body — `layoutTable` still emits the column
+ * **header row**, so adding / removing / reordering / resizing columns is live and
+ * WYSIWYG. Detail-row and aggregate previews arrive with binding.
  */
-const NO_TABLES: ReadonlyMap<string, ResolvedDataTable> = new Map();
+function placeholderResolvedTables(
+  template: RendaraTemplate,
+): ReadonlyMap<string, ResolvedDataTable> {
+  const tables = new Map<string, ResolvedDataTable>();
+  for (const element of collectElements(template)) {
+    if (element.type === 'dataTable') {
+      tables.set(element.id, { rows: [], columnFooters: [], errors: [], diagnostics: [] });
+    }
+  }
+  return tables;
+}
 
 /**
  * Filters `ids` down to those that exist in `template`, removing duplicates and
@@ -211,9 +225,12 @@ export const DesignerStore = signalStore(
      * The current document paginated by the shared engine — the single derived
      * model the canvas renders (in design mode) and the status bar counts pages
      * from, so both views stay consistent. Recomputed only when the template
-     * changes. Tables resolve in E6; for now no data tables are supplied.
+     * changes. Data tables get a header-only structural preview (E6-S4) until data
+     * binding supplies real rows (E6-S6/S8).
      */
-    paginatedDocument: computed<PaginatedDocument>(() => paginate(store.template(), NO_TABLES)),
+    paginatedDocument: computed<PaginatedDocument>(() =>
+      paginate(store.template(), placeholderResolvedTables(store.template())),
+    ),
   })),
   withComputed((store) => ({
     /** Page count of the rendered document (≥ 1). */

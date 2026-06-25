@@ -1,5 +1,9 @@
 import { Component, ViewEncapsulation, computed, effect, inject, signal } from '@angular/core';
+import { CdkDrag, CdkDragHandle, CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
 import type {
+  ColumnAlign,
+  DataTableColumn,
+  DataTableElement,
   FontWeight,
   Frame,
   ImageElement,
@@ -25,6 +29,17 @@ import {
   setTextFont,
   type FrameField,
 } from '../../state/element-props';
+import {
+  addTableColumn,
+  addTableGroup,
+  moveTableColumn,
+  removeTableColumn,
+  removeTableGroup,
+  setTableColumnAlign,
+  setTableColumnHeader,
+  setTableColumnWidth,
+  setTableGroupBy,
+} from '../../state/table-ops';
 
 /** A curated set of font families offered in the Text section's family picker. */
 const FONT_FAMILIES = [
@@ -39,8 +54,11 @@ const FONT_FAMILIES = [
 /** The line styles offered in the Shape section's stroke-style picker (mirrors {@link LineStyle}). */
 const STROKE_STYLES: readonly LineStyle[] = ['solid', 'dashed', 'dotted', 'double', 'none'];
 
-/** The collapsible Properties sections (Layout for any element, Text for text, Shape for shapes, Image for images). */
-type Section = 'layout' | 'text' | 'shape' | 'image';
+/** The column alignments offered in the Table section's Align segmented control. */
+const COLUMN_ALIGNS: readonly ColumnAlign[] = ['left', 'center', 'right'];
+
+/** The collapsible Properties sections (one per element kind, plus generic Layout). */
+type Section = 'layout' | 'text' | 'shape' | 'image' | 'table';
 
 /**
  * Right-hand Properties panel (E5-S1 shell → wired in E6-S1). It is the
@@ -52,7 +70,10 @@ type Section = 'layout' | 'text' | 'shape' | 'image';
  *    Reg/Bold weight); for a shape, a **Shape** section (stroke style/width/colour
  *    and an optional interior fill — E6-S2; fill is hidden for a line); or for an
  *    image, an **Image** section (source URL or upload + fit mode — E6-S3, with the
- *    same {@link sanitizeImageUrl} safety check the renderer applies);
+ *    same {@link sanitizeImageUrl} safety check the renderer applies); or for a data
+ *    table, a **Table** section (E6-S4 — reorderable columns with add/remove, a
+ *    Selected-Column editor for header text / width / align, header & layout options,
+ *    and grouping bands);
  *  - **many selected** → a count note (multi-element editing is E6-S5).
  *
  * Edits flow straight through {@link DesignerStore.updateElement}, so the canvas —
@@ -63,12 +84,14 @@ type Section = 'layout' | 'text' | 'shape' | 'image';
  * coalesces into a single undo step (E5-S9) rather than one per keystroke.
  *
  * The per-field guards and the override→default font resolution live in the pure
- * `element-props` helpers; this component only binds them to the DOM. The full
- * dynamic per-type panel framework, style editors (colour/border/fill/padding) and
- * multi-select editing are E6-S5; data binding is E6-S6/S7.
+ * `element-props`/`table-ops` helpers; this component only binds them to the DOM.
+ * The full dynamic per-type panel framework, style editors (colour/border/fill/
+ * padding) and multi-select editing are E6-S5; data binding — the table's array
+ * source, column cell expressions and footer aggregates — is E6-S6/S7/S8.
  */
 @Component({
   selector: 'rdr-properties-panel',
+  imports: [CdkDropList, CdkDrag, CdkDragHandle],
   templateUrl: './properties-panel.html',
   styleUrl: './properties-panel.css',
   encapsulation: ViewEncapsulation.Emulated,
@@ -80,6 +103,7 @@ export class PropertiesPanel {
   protected readonly fontFamilies = FONT_FAMILIES;
   protected readonly strokeStyles = STROKE_STYLES;
   protected readonly imageFits = IMAGE_FITS;
+  protected readonly columnAligns = COLUMN_ALIGNS;
 
   /** The single selected element being edited, or `undefined` for none / multi. */
   protected readonly element = computed(() =>
@@ -103,6 +127,37 @@ export class PropertiesPanel {
   protected readonly imageElement = computed<ImageElement | undefined>(() => {
     const el = this.element();
     return el?.type === 'image' ? el : undefined;
+  });
+
+  /** True when exactly one data-table element is selected — gates the Table section. */
+  protected readonly tableElement = computed<DataTableElement | undefined>(() => {
+    const el = this.element();
+    return el?.type === 'dataTable' ? el : undefined;
+  });
+
+  /** The columns of the selected table (empty when no table is selected). */
+  protected readonly columns = computed<readonly DataTableColumn[]>(
+    () => this.tableElement()?.columns ?? [],
+  );
+
+  /** The grouping bands of the selected table (empty when none / no table). */
+  protected readonly groups = computed(() => this.tableElement()?.groups ?? []);
+
+  /** Key of the column shown in the Selected-Column editor; resolved against live columns. */
+  private readonly selectedColumnKey = signal<string | null>(null);
+
+  /**
+   * The column being edited: the {@link selectedColumnKey} match, falling back to
+   * the first column so the editor always targets a real column (a stale key after
+   * a remove/reorder resolves to the first). `undefined` only when no table.
+   */
+  protected readonly selectedColumn = computed<DataTableColumn | undefined>(() => {
+    const el = this.tableElement();
+    if (!el) {
+      return undefined;
+    }
+    const key = this.selectedColumnKey();
+    return el.columns.find((column) => column.key === key) ?? el.columns[0];
   });
 
   /** The image element's current static source (URL or data URI), or '' when none/bound. */
@@ -162,6 +217,7 @@ export class PropertiesPanel {
     text: false,
     shape: false,
     image: false,
+    table: false,
   });
 
   constructor() {
@@ -387,5 +443,135 @@ export class PropertiesPanel {
     reader.onerror = () => this.imageError.set('Could not read that file.');
     reader.readAsDataURL(file);
     input.value = '';
+  }
+
+  // --- Data table structure (E6-S4) ---------------------------------------
+
+  /** Selects a column for the Selected-Column editor (click on a Columns-list row). */
+  protected selectColumn(key: string): void {
+    this.selectedColumnKey.set(key);
+  }
+
+  /** Appends a new column to the selected table and focuses it in the editor (one undo step). */
+  protected onAddColumn(): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    const { columns, key } = addTableColumn(el);
+    this.commitTable(el.id, { columns });
+    this.selectedColumnKey.set(key);
+  }
+
+  /** Removes a column (and any group aggregate under it); inert on the last column. */
+  protected onRemoveColumn(key: string): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    const patch = removeTableColumn(el, key);
+    if (patch !== null) {
+      this.commitTable(el.id, patch);
+    }
+  }
+
+  /** Reorders columns after a drag-drop in the Columns list (one undo step). */
+  protected onColumnDrop(event: CdkDragDrop<readonly DataTableColumn[]>): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    const columns = moveTableColumn(el, event.previousIndex, event.currentIndex);
+    if (columns !== null) {
+      this.commitTable(el.id, { columns });
+    }
+  }
+
+  /** Sets the selected column's header label. Coalesced via focus/blur into one undo step. */
+  protected onColumnHeader(key: string, header: string): void {
+    const el = this.tableElement();
+    if (el) {
+      this.store.updateElement(el.id, { columns: setTableColumnHeader(el, key, header) });
+    }
+  }
+
+  /** Sets the selected column's width (mm); a blank/invalid value is ignored. Coalesced via focus/blur. */
+  protected onColumnWidth(key: string, widthMm: number): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    const columns = setTableColumnWidth(el, key, widthMm);
+    if (columns !== null) {
+      this.store.updateElement(el.id, { columns });
+    }
+  }
+
+  /** Sets the selected column's alignment — a discrete edit → one undo step. */
+  protected onColumnAlign(key: string, align: ColumnAlign): void {
+    const el = this.tableElement();
+    if (el) {
+      this.commitTable(el.id, { columns: setTableColumnAlign(el, key, align) });
+    }
+  }
+
+  /** Toggles "repeat header on each page" — one undo step. */
+  protected onRepeatHeader(repeatHeaderOnEachPage: boolean): void {
+    const el = this.tableElement();
+    if (el) {
+      this.commitTable(el.id, { repeatHeaderOnEachPage });
+    }
+  }
+
+  /** Toggles "keep table together" — one undo step. */
+  protected onKeepTogether(keepTogether: boolean): void {
+    const el = this.tableElement();
+    if (el) {
+      this.commitTable(el.id, { keepTogether });
+    }
+  }
+
+  /** Appends a grouping band to the selected table — one undo step. */
+  protected onAddGroup(): void {
+    const el = this.tableElement();
+    if (el) {
+      this.commitTable(el.id, { groups: addTableGroup(el) });
+    }
+  }
+
+  /** Removes the grouping band at `index` (omitting `groups` when it empties) — one undo step. */
+  protected onRemoveGroup(index: number): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    const groups = removeTableGroup(el, index);
+    if (groups !== null) {
+      this.commitTable(el.id, { groups });
+    }
+  }
+
+  /** Sets a grouping band's `groupBy` expression. Coalesced via focus/blur into one undo step. */
+  protected onGroupBy(index: number, groupBy: string): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    const groups = setTableGroupBy(el, index, groupBy);
+    if (groups !== null) {
+      this.store.updateElement(el.id, { groups });
+    }
+  }
+
+  /** Reads a checkbox/toggle's checked state. */
+  protected checkedFrom(event: Event): boolean {
+    return (event.target as HTMLInputElement).checked;
+  }
+
+  /** A discrete table-structure edit: its own self-contained undo step. */
+  private commitTable(id: string, changes: Partial<DataTableElement>): void {
+    this.store.beginInteraction();
+    this.store.updateElement(id, changes);
+    this.store.endInteraction();
   }
 }

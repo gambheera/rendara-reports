@@ -51,6 +51,29 @@ function imageEl(id: string, over: Partial<TemplateElement> = {}): TemplateEleme
   } as TemplateElement;
 }
 
+function tableEl(id: string, over: Partial<TemplateElement> = {}): TemplateElement {
+  return {
+    id,
+    type: 'dataTable',
+    frame: { xMm: 15, yMm: 60, wMm: 120, hMm: null },
+    z: 1,
+    source: { arrayExpr: 'items' },
+    columns: [
+      { key: 'col1', header: 'Description', cell: { expr: '$.col1' }, widthMm: 60 },
+      { key: 'col2', header: 'Amount', cell: { expr: '$.col2' }, widthMm: 60 },
+    ],
+    repeatHeaderOnEachPage: true,
+    keepTogether: false,
+    ...over,
+  } as TemplateElement;
+}
+
+/** Reads the selected data-table element from the store. */
+function tableOf(store: Store) {
+  const el = store.primarySelection();
+  return el?.type === 'dataTable' ? el : undefined;
+}
+
 /** Reads the selected image element's static source from the store. */
 function srcOf(store: Store): string | undefined {
   const el = store.primarySelection();
@@ -294,9 +317,9 @@ describe('PropertiesPanel', () => {
     // The dangerous URL never reaches the model; an inline error is announced.
     expect(srcOf(store)).toBe('https://cdn.example.com/logo.png');
     expect(screen.getByRole('alert').textContent).toMatch(/blocked for security/i);
-    expect((screen.getByLabelText(/Source URL/i) as HTMLInputElement).getAttribute('aria-invalid')).toBe(
-      'true',
-    );
+    expect(
+      (screen.getByLabelText(/Source URL/i) as HTMLInputElement).getAttribute('aria-invalid'),
+    ).toBe('true');
   });
 
   it('clears the source when the URL field is emptied', async () => {
@@ -364,6 +387,137 @@ describe('PropertiesPanel', () => {
 
     expect(screen.getByRole('alert').textContent).toMatch(/too large/i);
     expect(srcOf(store)).toBe('https://cdn.example.com/logo.png');
+  });
+
+  it('shows the Table section (columns + options) for a data table, but not for text', async () => {
+    await renderPanel((store) => {
+      store.addElement(tableEl('tbl'));
+      store.selectOne('tbl');
+    });
+    expect(screen.getByRole('button', { name: /Remove column Description/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Add column/i })).toBeTruthy();
+    expect(screen.getByLabelText(/Repeat header on each page/i)).toBeTruthy();
+    expect(screen.getByLabelText(/Keep table together/i)).toBeTruthy();
+  });
+
+  it('does not show the Table section for a text element', async () => {
+    await renderPanel((store) => {
+      store.addElement(textEl('t'));
+      store.selectOne('t');
+    });
+    expect(screen.queryByRole('button', { name: /Add column/i })).toBeNull();
+  });
+
+  it('adds a column and focuses it in the Selected-Column editor', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add column/i }));
+
+    expect(tableOf(store)?.columns).toHaveLength(3);
+    // The new column becomes the selected one (its header is in the editor input).
+    expect((screen.getByLabelText(/Header text/i) as HTMLInputElement).value).toBe('Column 3');
+    expect(store.dirty()).toBe(true);
+  });
+
+  it('removes a column and disables removal of the last one', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Remove column Description/i }));
+    expect(tableOf(store)?.columns.map((c) => c.key)).toEqual(['col2']);
+
+    // Only one column left → its remove button is disabled (≥1 column rule).
+    const lastRemove = screen.getByRole('button', { name: /Remove column Amount/i });
+    expect((lastRemove as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('edits the selected column header, width and alignment', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Header text/i), { target: { value: 'Item' } });
+    expect(tableOf(store)?.columns[0].header).toBe('Item');
+
+    fireEvent.input(screen.getByLabelText(/Column width/i), { target: { value: '85' } });
+    expect(tableOf(store)?.columns[0].widthMm).toBe(85);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Align right' }));
+    expect(tableOf(store)?.columns[0].align).toBe('right');
+  });
+
+  it('ignores an invalid (zero) column width', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Column width/i), { target: { value: '0' } });
+    expect(tableOf(store)?.columns[0].widthMm).toBe(60);
+  });
+
+  it('edits the selected column after switching with the column row buttons', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    // Select the second column, then rename it.
+    fireEvent.click(screen.getByRole('button', { name: 'Amount', exact: true }));
+    fireEvent.input(screen.getByLabelText(/Header text/i), { target: { value: 'Total' } });
+    expect(tableOf(store)?.columns[1].header).toBe('Total');
+  });
+
+  it('reorders columns through the drag-drop handler', async () => {
+    const { view, store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    const panel = view.fixture.componentInstance as unknown as {
+      onColumnDrop(event: { previousIndex: number; currentIndex: number }): void;
+    };
+    panel.onColumnDrop({ previousIndex: 0, currentIndex: 1 });
+
+    expect(tableOf(store)?.columns.map((c) => c.key)).toEqual(['col2', 'col1']);
+  });
+
+  it('toggles header-repeat and keep-together options', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.click(screen.getByLabelText(/Repeat header on each page/i));
+    expect(tableOf(store)?.repeatHeaderOnEachPage).toBe(false);
+
+    fireEvent.click(screen.getByLabelText(/Keep table together/i));
+    expect(tableOf(store)?.keepTogether).toBe(true);
+  });
+
+  it('adds and removes a grouping band and edits its groupBy', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Add group/i }));
+    expect(tableOf(store)?.groups).toEqual([{ groupBy: '$' }]);
+
+    fireEvent.input(screen.getByLabelText(/Group by expression/i), {
+      target: { value: '$.category' },
+    });
+    expect(tableOf(store)?.groups?.[0].groupBy).toBe('$.category');
+
+    fireEvent.click(screen.getByRole('button', { name: /Remove group/i }));
+    // Removing the only group omits the key entirely.
+    expect(tableOf(store)?.groups).toBeUndefined();
   });
 
   it('collapses a section, hiding its body', async () => {
