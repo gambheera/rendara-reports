@@ -14,3 +14,18 @@ body {
   font-size: var(--rdr-font-size-body);
   line-height: var(--rdr-line-height-body);
 }
+
+/**
+ * Angular CDK drag-and-drop (E5-S5). The floating palette-tile preview is
+ * appended to <body>, outside component style scopes, so its elevation and the
+ * drop settle are themed here with global tokens.
+ */
+.cdk-drag-preview {
+  border-radius: var(--rdr-radius-control);
+  box-shadow: var(--rdr-elevation-2);
+  opacity: 0.95;
+}
+
+.cdk-drag-animating {
+  transition: transform 180ms cubic-bezier(0, 0, 0.2, 1);
+}

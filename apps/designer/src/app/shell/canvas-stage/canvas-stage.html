@@ -22,7 +22,13 @@
       }
     </div>
 
-    <div class="rdr-canvas__pages">
+    <div
+      class="rdr-canvas__pages"
+      cdkDropList
+      [id]="canvasDropListId"
+      cdkDropListSortingDisabled
+      (cdkDropListDropped)="onDrop($event)"
+    >
       <rdr-report-document
         class="rdr-canvas__doc"
         [style.width.px]="pageBox().widthPx"

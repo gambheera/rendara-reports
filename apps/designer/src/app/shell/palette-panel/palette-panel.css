@@ -71,17 +71,46 @@
   align-items: center;
   justify-content: center;
   gap: var(--rdr-space-2);
+  width: 100%;
   height: 72px;
+  box-sizing: border-box;
   border: 1px solid var(--rdr-color-border-hairline);
   border-radius: var(--rdr-radius-control);
   background: var(--rdr-color-surface);
   color: var(--rdr-color-text-primary);
+  font-family: var(--rdr-font-ui);
   font-size: var(--rdr-font-size-label);
+  cursor: grab;
+}
+
+.rdr-palette__item:hover {
+  border-color: var(--rdr-color-accent);
+  color: var(--rdr-color-accent);
+}
+
+.rdr-palette__item:hover .rdr-palette__item-glyph {
+  color: var(--rdr-color-accent);
+}
+
+.rdr-palette__item:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+/* While a tile is being dragged the cursor switches to the grabbing affordance. */
+.rdr-palette__item.cdk-drag-dragging {
+  cursor: grabbing;
 }
 
 .rdr-palette__item-glyph {
   font-size: var(--rdr-size-icon-toolbar);
   color: var(--rdr-color-text-secondary);
+}
+
+/* The drag placeholder is intentionally empty so nothing is dropped into the
+   canvas DOM while dragging; the source tile's slot simply collapses. */
+.rdr-palette__placeholder {
+  display: none;
 }
 
 .rdr-palette__empty {

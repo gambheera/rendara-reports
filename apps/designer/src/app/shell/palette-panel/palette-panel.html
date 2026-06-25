@@ -1,73 +1,92 @@
 <div class="rdr-palette__tabs" role="tablist" aria-label="Palette">
   @for (tab of tabs; track tab.id) {
-    <button
-      type="button"
-      role="tab"
-      class="rdr-palette__tab"
-      [class.rdr-palette__tab--active]="activeTab() === tab.id"
-      [id]="'palette-tab-' + tab.id"
-      [attr.aria-selected]="activeTab() === tab.id"
-      [attr.aria-controls]="'palette-panel-' + tab.id"
-      [attr.tabindex]="activeTab() === tab.id ? 0 : -1"
-      (click)="select(tab.id)"
-    >
-      {{ tab.label }}
-    </button>
+  <button
+    type="button"
+    role="tab"
+    class="rdr-palette__tab"
+    [class.rdr-palette__tab--active]="activeTab() === tab.id"
+    [id]="'palette-tab-' + tab.id"
+    [attr.aria-selected]="activeTab() === tab.id"
+    [attr.aria-controls]="'palette-panel-' + tab.id"
+    [attr.tabindex]="activeTab() === tab.id ? 0 : -1"
+    (click)="select(tab.id)"
+  >
+    {{ tab.label }}
+  </button>
   }
 </div>
 
 @if (activeTab() === 'insert') {
-  <div
-    role="tabpanel"
-    id="palette-panel-insert"
-    aria-labelledby="palette-tab-insert"
-    class="rdr-palette__body"
-  >
-    <section class="rdr-palette__group">
-      <h2 class="rdr-palette__group-title">Basic</h2>
-      <div class="rdr-palette__grid">
-        @for (item of basicItems; track item.label) {
-          <div class="rdr-palette__item">
-            <span class="rdr-palette__item-glyph" aria-hidden="true">{{ item.glyph }}</span>
-            <span class="rdr-palette__item-label">{{ item.label }}</span>
-          </div>
-        }
-      </div>
-    </section>
-    <section class="rdr-palette__group">
-      <h2 class="rdr-palette__group-title">Data</h2>
-      <div class="rdr-palette__grid">
-        @for (item of dataItems; track item.label) {
-          <div class="rdr-palette__item">
-            <span class="rdr-palette__item-glyph" aria-hidden="true">{{ item.glyph }}</span>
-            <span class="rdr-palette__item-label">{{ item.label }}</span>
-          </div>
-        }
-      </div>
-    </section>
-  </div>
-}
-
-@if (activeTab() === 'layers') {
-  <div
-    role="tabpanel"
-    id="palette-panel-layers"
-    aria-labelledby="palette-tab-layers"
-    class="rdr-palette__body rdr-palette__empty"
-  >
-    <p>No elements yet</p>
-    <p class="rdr-palette__empty-hint">Add a control to see it listed here.</p>
-  </div>
-}
-
-@if (activeTab() === 'data') {
-  <div
-    role="tabpanel"
-    id="palette-panel-data"
-    aria-labelledby="palette-tab-data"
-    class="rdr-palette__body rdr-palette__empty"
-  >
-    <p>No data imported</p>
-    <p class="rdr-palette__empty-hint">Import sample data to bind fields.</p>
-  </div>
+<div
+  role="tabpanel"
+  id="palette-panel-insert"
+  aria-labelledby="palette-tab-insert"
+  class="rdr-palette__body"
+  cdkDropList
+  cdkDropListSortingDisabled
+  [cdkDropListConnectedTo]="[canvasDropListId]"
+>
+  <section class="rdr-palette__group">
+    <h2 class="rdr-palette__group-title">Basic</h2>
+    <div class="rdr-palette__grid">
+      @for (item of basicItems; track item.kind) {
+      <button
+        type="button"
+        class="rdr-palette__item"
+        cdkDrag
+        [cdkDragData]="item.kind"
+        [attr.aria-label]="'Add ' + item.label"
+        (pointerdown)="onPointerDown()"
+        (cdkDragStarted)="onDragStarted()"
+        (click)="addOnClick(item.kind)"
+      >
+        <span class="rdr-palette__item-glyph" aria-hidden="true">{{ item.glyph }}</span>
+        <span class="rdr-palette__item-label">{{ item.label }}</span>
+        <span class="rdr-palette__placeholder" *cdkDragPlaceholder></span>
+      </button>
+      }
+    </div>
+  </section>
+  <section class="rdr-palette__group">
+    <h2 class="rdr-palette__group-title">Data</h2>
+    <div class="rdr-palette__grid">
+      @for (item of dataItems; track item.kind) {
+      <button
+        type="button"
+        class="rdr-palette__item"
+        cdkDrag
+        [cdkDragData]="item.kind"
+        [attr.aria-label]="'Add ' + item.label"
+        (pointerdown)="onPointerDown()"
+        (cdkDragStarted)="onDragStarted()"
+        (click)="addOnClick(item.kind)"
+      >
+        <span class="rdr-palette__item-glyph" aria-hidden="true">{{ item.glyph }}</span>
+        <span class="rdr-palette__item-label">{{ item.label }}</span>
+        <span class="rdr-palette__placeholder" *cdkDragPlaceholder></span>
+      </button>
+      }
+    </div>
+  </section>
+</div>
+} @if (activeTab() === 'layers') {
+<div
+  role="tabpanel"
+  id="palette-panel-layers"
+  aria-labelledby="palette-tab-layers"
+  class="rdr-palette__body rdr-palette__empty"
+>
+  <p>No elements yet</p>
+  <p class="rdr-palette__empty-hint">Add a control to see it listed here.</p>
+</div>
+} @if (activeTab() === 'data') {
+<div
+  role="tabpanel"
+  id="palette-panel-data"
+  aria-labelledby="palette-tab-data"
+  class="rdr-palette__body rdr-palette__empty"
+>
+  <p>No data imported</p>
+  <p class="rdr-palette__empty-hint">Import sample data to bind fields.</p>
+</div>
 }
