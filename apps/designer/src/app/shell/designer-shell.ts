@@ -36,6 +36,41 @@ export function arrangeShortcut(event: {
   return null;
 }
 
+/** The undo/redo + clipboard commands reachable by keyboard (E5-S9). */
+export type EditCommand = 'undo' | 'redo' | 'copy' | 'cut' | 'paste' | 'duplicate' | 'delete';
+
+/**
+ * Resolves a keydown to an edit command (E5-S9), or `null` when it is not one.
+ * Standard editor bindings on the Ctrl/⌘ modifier: `Z` undo (`+Shift` or `Ctrl+Y`
+ * redo), `C`/`X`/`V` copy/cut/paste, `D` duplicate; plus bare `Delete`/`Backspace`
+ * to delete the selection. Matching is case-insensitive via `key`.
+ */
+export function editShortcut(event: {
+  readonly ctrlKey: boolean;
+  readonly metaKey: boolean;
+  readonly shiftKey: boolean;
+  readonly key: string;
+}): EditCommand | null {
+  if (event.key === 'Delete' || event.key === 'Backspace') return 'delete';
+  if (!(event.ctrlKey || event.metaKey)) return null;
+  switch (event.key.toLowerCase()) {
+    case 'z':
+      return event.shiftKey ? 'redo' : 'undo';
+    case 'y':
+      return 'redo';
+    case 'c':
+      return 'copy';
+    case 'x':
+      return 'cut';
+    case 'v':
+      return 'paste';
+    case 'd':
+      return 'duplicate';
+    default:
+      return null;
+  }
+}
+
 /** True when the event target is a text-entry control, so shortcuts should stand down. */
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -85,6 +120,12 @@ export class DesignerShell {
    */
   protected onKeyDown(event: KeyboardEvent): void {
     if (isEditableTarget(event.target)) return;
+    const edit = editShortcut(event);
+    if (edit !== null) {
+      event.preventDefault();
+      this.runEdit(edit);
+      return;
+    }
     const command = arrangeShortcut(event);
     if (command === null) return;
     event.preventDefault();
@@ -97,6 +138,33 @@ export class DesignerShell {
         break;
       default:
         this.store.reorderSelection(command);
+    }
+  }
+
+  /** Dispatches an {@link EditCommand} to the store (E5-S9). */
+  private runEdit(command: EditCommand): void {
+    switch (command) {
+      case 'undo':
+        this.store.undo();
+        break;
+      case 'redo':
+        this.store.redo();
+        break;
+      case 'copy':
+        this.store.copySelection();
+        break;
+      case 'cut':
+        this.store.cutSelection();
+        break;
+      case 'paste':
+        this.store.paste();
+        break;
+      case 'duplicate':
+        this.store.duplicateSelection();
+        break;
+      case 'delete':
+        this.store.removeSelection();
+        break;
     }
   }
 
