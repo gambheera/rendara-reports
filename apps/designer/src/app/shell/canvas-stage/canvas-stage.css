@@ -108,6 +108,14 @@
   display: block;
 }
 
+/* Selection overlay, laid over the first page sheet (same origin as the sheet:
+   the pages area's --pad inset). Click-through except its own box + handles. */
+.rdr-canvas__overlay {
+  position: absolute;
+  top: var(--pad);
+  left: var(--pad);
+}
+
 /* Empty placeholder, laid over the (blank) page sheet. */
 .rdr-canvas__empty {
   position: absolute;

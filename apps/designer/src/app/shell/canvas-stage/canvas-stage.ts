@@ -12,6 +12,7 @@ import { mmToPx, pxToMm } from '@rendara/report-engine';
 import { DesignerStore } from '../../state/designer-store';
 import { ElementCreator } from '../../state/element-creator';
 import { CANVAS_DROP_LIST_ID, type PaletteKind } from '../../state/drag-create';
+import { SelectionOverlay } from './selection-overlay';
 
 /** One ruler graduation: its offset (px, page-relative) and optional mm label. */
 export interface RulerTick {
@@ -77,6 +78,24 @@ export function clientPointToPageMm(
   return { xMm: pxToMm(naturalX), yMm: pxToMm(naturalY) };
 }
 
+/**
+ * Resolves the store element id a canvas pointer hit, or `null` for empty space
+ * (E5-S6 click-select). Walks up from the event target to the nearest design-mode
+ * hit target ({@link RdrDesignAttrs}'s `[data-rdr-hit]`) and reads its element /
+ * table id — the ids the renderer stamps in design mode (`data-element-id` /
+ * `data-table-id`). Kept pure so the click → selection mapping is unit-testable.
+ */
+export function hitElementId(target: EventTarget | null): string | null {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+  const hit = target.closest<HTMLElement>('[data-rdr-hit]');
+  if (hit === null) {
+    return null;
+  }
+  return hit.getAttribute('data-element-id') ?? hit.getAttribute('data-table-id');
+}
+
 /** Extracts the viewport client point a CDK drop ended at, mouse or touch. */
 function dropClientPoint(event: CdkDragDrop<unknown, unknown, PaletteKind>): {
   x: number;
@@ -106,7 +125,7 @@ function dropClientPoint(event: CdkDragDrop<unknown, unknown, PaletteKind>): {
  */
 @Component({
   selector: 'rdr-canvas-stage',
-  imports: [ReportDocument, CdkDropList],
+  imports: [ReportDocument, CdkDropList, SelectionOverlay],
   templateUrl: './canvas-stage.html',
   styleUrl: './canvas-stage.css',
   encapsulation: ViewEncapsulation.Emulated,
@@ -182,5 +201,24 @@ export class CanvasStage {
     const { x, y } = dropClientPoint(event);
     const atMm = clientPointToPageMm(x, y, sheet.getBoundingClientRect(), this.store.zoom());
     this.creator.addAtPoint(event.item.data, atMm);
+  }
+
+  /**
+   * Click-select (E5-S6): a pointerdown on a rendered element selects it; a press
+   * on empty canvas clears the selection. The selection overlay's box/handles stop
+   * their own pointer events, so a drag-move/resize never reaches here — only a
+   * genuine click on the page does. The store sanitises the id, so a stale hit is a
+   * safe no-op.
+   */
+  protected onCanvasPointerDown(event: PointerEvent): void {
+    if (event.button !== 0) {
+      return;
+    }
+    const id = hitElementId(event.target);
+    if (id === null) {
+      this.store.clearSelection();
+      return;
+    }
+    this.store.selectOne(id);
   }
 }

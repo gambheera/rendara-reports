@@ -3,8 +3,24 @@ import { TestBed } from '@angular/core/testing';
 import { render, screen } from '@testing-library/angular';
 import { resolvePage } from '@rendara/report-schema';
 import { mmToPx } from '@rendara/report-engine';
-import { CanvasStage, buildRulerTicks, clientPointToPageMm, fitWidthZoom } from './canvas-stage';
+import {
+  CanvasStage,
+  buildRulerTicks,
+  clientPointToPageMm,
+  fitWidthZoom,
+  hitElementId,
+} from './canvas-stage';
 import { DesignerStore } from '../../state/designer-store';
+
+/** A text element for the selection tests. */
+const TEXT = {
+  id: 'el_1',
+  type: 'text' as const,
+  frame: { xMm: 10, yMm: 10, wMm: 40, hMm: 8 },
+  text: 'Hello',
+  style: {},
+  z: 1,
+};
 
 /** Overrides an element's layout box (jsdom reports zeros) so drop mapping is testable. */
 function stubRect(el: HTMLElement, left: number, top: number): void {
@@ -73,6 +89,25 @@ describe('clientPointToPageMm', () => {
   it('divides out the zoom before converting (a 2× sheet halves the mm)', () => {
     const { xMm } = clientPointToPageMm(106, 20, { left: 10, top: 20 }, 2);
     expect(xMm).toBeCloseTo(12.7, 6);
+  });
+});
+
+describe('hitElementId', () => {
+  it('reads the element id from the nearest design hit target', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<div data-rdr-hit="element" data-element-id="el_9"><span></span></div>';
+    expect(hitElementId(root.querySelector('span'))).toBe('el_9');
+  });
+
+  it('reads the table id from a table hit target', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<div data-rdr-hit="table" data-table-id="el_t"></div>';
+    expect(hitElementId(root.firstElementChild)).toBe('el_t');
+  });
+
+  it('returns null off any hit target (empty canvas)', () => {
+    expect(hitElementId(document.createElement('div'))).toBeNull();
+    expect(hitElementId(null)).toBeNull();
   });
 });
 
@@ -199,6 +234,33 @@ describe('CanvasStage', () => {
     expect(store.bodyElements()).toHaveLength(1);
     // 40×25 rect centred on (50, 40) mm → top-left (30, 27.5).
     expect(store.bodyElements()[0].frame).toEqual({ xMm: 30, yMm: 27.5, wMm: 40, hMm: 25 });
+  });
+
+  it('selects an element when its rendered box is pressed (E5-S6)', async () => {
+    const view = await render(CanvasStage);
+    const store = TestBed.inject(DesignerStore);
+    store.addElement(TEXT);
+    view.detectChanges();
+
+    const boxEl = view.container.querySelector('[data-element-id="el_1"]');
+    if (boxEl === null) throw new Error('expected a rendered element box');
+    boxEl.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+
+    expect(store.selectedIds()).toEqual(['el_1']);
+  });
+
+  it('clears the selection when empty canvas is pressed (E5-S6)', async () => {
+    const view = await render(CanvasStage);
+    const store = TestBed.inject(DesignerStore);
+    store.addElement(TEXT);
+    store.selectOne('el_1');
+    view.detectChanges();
+
+    const pages = view.container.querySelector('.rdr-canvas__pages');
+    if (pages === null) throw new Error('expected the pages area');
+    pages.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+
+    expect(store.hasSelection()).toBe(false);
   });
 
   it('does nothing when there is no rendered sheet to map against', async () => {

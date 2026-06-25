@@ -28,6 +28,7 @@
       [id]="canvasDropListId"
       cdkDropListSortingDisabled
       (cdkDropListDropped)="onDrop($event)"
+      (pointerdown)="onCanvasPointerDown($event)"
     >
       <rdr-report-document
         class="rdr-canvas__doc"
@@ -49,6 +50,12 @@
         <p class="rdr-canvas__empty-text">Drag a control here to begin</p>
       </div>
       }
+
+      <rdr-selection-overlay
+        class="rdr-canvas__overlay"
+        [style.width.px]="pageBox().widthPx"
+        [style.height.px]="pageBox().heightPx"
+      />
     </div>
   </div>
 </div>
