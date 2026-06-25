@@ -223,3 +223,40 @@
   color: var(--rdr-color-accent);
   box-shadow: var(--rdr-elevation-1);
 }
+
+/* Image source: file picker + inline source error (E6-S3). */
+.rdr-properties__file {
+  width: 100%;
+  color: var(--rdr-color-text-secondary);
+  font: inherit;
+  font-size: var(--rdr-font-size-label);
+}
+
+.rdr-properties__file::file-selector-button {
+  margin-right: var(--rdr-space-3);
+  height: 28px;
+  padding: 0 var(--rdr-space-3);
+  border: 1px solid var(--rdr-color-border-input);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-surface);
+  color: var(--rdr-color-text-primary);
+  font: inherit;
+  font-size: var(--rdr-font-size-label);
+  cursor: pointer;
+}
+
+.rdr-properties__file:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+  border-radius: var(--rdr-radius-control);
+}
+
+.rdr-properties__input[aria-invalid='true'] {
+  border-color: var(--rdr-color-danger);
+}
+
+.rdr-properties__error {
+  margin: 0;
+  color: var(--rdr-color-danger);
+  font-size: var(--rdr-font-size-label);
+}

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { render, screen, fireEvent } from '@testing-library/angular';
 import type { TemplateElement } from '@rendara/report-schema';
@@ -37,6 +37,24 @@ function lineEl(id: string): TemplateElement {
     frame: { xMm: 10, yMm: 10, wMm: 30, hMm: 0 },
     z: 1,
   } as TemplateElement;
+}
+
+function imageEl(id: string, over: Partial<TemplateElement> = {}): TemplateElement {
+  return {
+    id,
+    type: 'image',
+    frame: { xMm: 10, yMm: 10, wMm: 40, hMm: 30 },
+    z: 1,
+    src: 'https://cdn.example.com/logo.png',
+    fit: 'contain',
+    ...over,
+  } as TemplateElement;
+}
+
+/** Reads the selected image element's static source from the store. */
+function srcOf(store: Store): string | undefined {
+  const el = store.primarySelection();
+  return el?.type === 'image' ? el.src : undefined;
 }
 
 /** Reads the resolved stroke of a selected shape element from the store. */
@@ -228,6 +246,124 @@ describe('PropertiesPanel', () => {
     });
     expect(screen.getByLabelText(/Stroke style/i)).toBeTruthy();
     expect(screen.queryByLabelText('Fill')).toBeNull();
+  });
+
+  it('shows the Image section (source + fit) for an image, but not for text', async () => {
+    await renderPanel((store) => {
+      store.addElement(imageEl('img'));
+      store.selectOne('img');
+    });
+    expect((screen.getByLabelText(/Source URL/i) as HTMLInputElement).value).toBe(
+      'https://cdn.example.com/logo.png',
+    );
+    expect((screen.getByLabelText(/^Fit$/i) as HTMLSelectElement).value).toBe('contain');
+    expect(screen.getByLabelText(/Upload image file/i)).toBeTruthy();
+  });
+
+  it('does not show the Image section for a text element', async () => {
+    await renderPanel((store) => {
+      store.addElement(textEl('t'));
+      store.selectOne('t');
+    });
+    expect(screen.queryByLabelText(/Source URL/i)).toBeNull();
+  });
+
+  it('edits a valid source URL live into the store', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(imageEl('img'));
+      s.selectOne('img');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Source URL/i), {
+      target: { value: 'https://cdn.example.com/new.png' },
+    });
+    expect(srcOf(store)).toBe('https://cdn.example.com/new.png');
+    expect(store.dirty()).toBe(true);
+  });
+
+  it('blocks a malicious source URL, keeping the model and showing an error', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(imageEl('img'));
+      s.selectOne('img');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Source URL/i), {
+      target: { value: 'javascript:alert(1)' },
+    });
+
+    // The dangerous URL never reaches the model; an inline error is announced.
+    expect(srcOf(store)).toBe('https://cdn.example.com/logo.png');
+    expect(screen.getByRole('alert').textContent).toMatch(/blocked for security/i);
+    expect((screen.getByLabelText(/Source URL/i) as HTMLInputElement).getAttribute('aria-invalid')).toBe(
+      'true',
+    );
+  });
+
+  it('clears the source when the URL field is emptied', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(imageEl('img'));
+      s.selectOne('img');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Source URL/i), { target: { value: '' } });
+    expect(srcOf(store)).toBe('');
+  });
+
+  it('changes the fit mode live into the store', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(imageEl('img'));
+      s.selectOne('img');
+    });
+
+    fireEvent.change(screen.getByLabelText(/^Fit$/i), { target: { value: 'cover' } });
+    const el = store.primarySelection();
+    expect(el?.type === 'image' && el.fit).toBe('cover');
+  });
+
+  it('reads an uploaded image file into a data-URI source', async () => {
+    const dataUri = 'data:image/png;base64,AAAA';
+    // A deterministic FileReader so the test asserts the wiring, not jsdom's base64.
+    const fakeReader = {
+      result: dataUri as string | ArrayBuffer | null,
+      onload: null as null | (() => void),
+      onerror: null as null | (() => void),
+      readAsDataURL() {
+        this.onload?.();
+      },
+    };
+    const original = globalThis.FileReader;
+    vi.stubGlobal(
+      'FileReader',
+      vi.fn(() => fakeReader),
+    );
+
+    try {
+      const { store } = await renderPanel((s) => {
+        s.addElement(imageEl('img'));
+        s.selectOne('img');
+      });
+
+      const file = new File(['x'], 'logo.png', { type: 'image/png' });
+      fireEvent.change(screen.getByLabelText(/Upload image file/i), { target: { files: [file] } });
+
+      expect(srcOf(store)).toBe(dataUri);
+    } finally {
+      vi.stubGlobal('FileReader', original);
+    }
+  });
+
+  it('rejects an oversized upload with an error and leaves the source unchanged', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(imageEl('img'));
+      s.selectOne('img');
+    });
+
+    const big = new File(['x'], 'huge.png', { type: 'image/png' });
+    Object.defineProperty(big, 'size', { value: 5 * 1024 * 1024 });
+    fireEvent.change(screen.getByLabelText(/Upload image file/i), { target: { files: [big] } });
+
+    expect(screen.getByRole('alert').textContent).toMatch(/too large/i);
+    expect(srcOf(store)).toBe('https://cdn.example.com/logo.png');
   });
 
   it('collapses a section, hiding its body', async () => {
