@@ -3,6 +3,7 @@ import type {
   FontSpec,
   FontWeight,
   Frame,
+  ImageFit,
   LineStyle,
   StrokeStyle,
   TemplateElement,
@@ -186,6 +187,55 @@ export function effectiveStroke(style: ElementStyle | undefined): EffectiveStrok
 /** The shape's interior fill colour, or `null` for no fill (matches the renderer). */
 export function effectiveFill(style: ElementStyle | undefined): string | null {
   return style?.fill ?? null;
+}
+
+/**
+ * The fit mode the renderer will paint for an image element (E6-S3): the
+ * element's `fit` when present, else `'contain'` (the same default the palette
+ * stamps on a freshly-dropped image, and a safe scale-to-fit for an unknown
+ * value). Mirrors the {@link effectiveStroke}/{@link effectiveFont} pattern so the
+ * panel always shows a concrete option.
+ */
+export function effectiveImageFit(element: TemplateElement): ImageFit {
+  return element.type === 'image' ? element.fit : DEFAULT_IMAGE_FIT;
+}
+
+/** The fit a new/unknown image falls back to (matches the palette default and the schema's safe scale-to-fit). */
+export const DEFAULT_IMAGE_FIT: ImageFit = 'contain';
+
+/**
+ * The largest image file the designer accepts as an upload (2 MB). An uploaded
+ * image is embedded into the Template JSON as a base64 `data:` URI, so an
+ * oversized file would bloat the contract document and the in-memory store —
+ * this cap keeps templates portable. URL sources are unaffected (they reference
+ * the image, they don't embed it).
+ */
+export const MAX_IMAGE_UPLOAD_BYTES = 2 * 1024 * 1024;
+
+/** The minimal shape of a picked {@link File} the upload guard inspects (so the helper stays DOM-free and unit-testable). */
+export interface UploadCandidate {
+  /** The file's MIME type (e.g. `image/png`); a non-`image/*` type is rejected. */
+  readonly type: string;
+  /** The file's size in bytes; checked against {@link MAX_IMAGE_UPLOAD_BYTES}. */
+  readonly size: number;
+}
+
+/**
+ * Validates a picked file before it is read into a `data:` URI (E6-S3): rejects a
+ * non-image MIME type and a file over {@link MAX_IMAGE_UPLOAD_BYTES}, returning a
+ * human-readable message for the panel's inline error, or `null` when the file is
+ * acceptable. Pure so the size/type policy carries the high coverage bar; the
+ * actual `FileReader` read (the stateful, browser-only bit) stays in the component.
+ */
+export function imageUploadError(file: UploadCandidate): string | null {
+  if (!file.type.startsWith('image/')) {
+    return 'Please choose an image file.';
+  }
+  if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+    const maxMb = Math.round(MAX_IMAGE_UPLOAD_BYTES / (1024 * 1024));
+    return `Image is too large (max ${maxMb} MB).`;
+  }
+  return null;
 }
 
 /** Renderer-mirrored stroke defaults (page-view-model `resolveStroke`), for the panel inputs. */

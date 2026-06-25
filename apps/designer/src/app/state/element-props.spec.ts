@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { ElementStyle, Frame, TemplateElement } from '@rendara/report-schema';
 import {
   DEFAULT_FILL_COLOR,
+  DEFAULT_IMAGE_FIT,
+  MAX_IMAGE_UPLOAD_BYTES,
   effectiveFill,
   effectiveFont,
+  effectiveImageFit,
   effectiveStroke,
+  imageUploadError,
   isBoldWeight,
   patchFrameField,
   patchStrokeWidth,
@@ -208,5 +212,51 @@ describe('isBoldWeight', () => {
     expect(isBoldWeight('normal')).toBe(false);
     expect(isBoldWeight(400)).toBe(false);
     expect(isBoldWeight(undefined)).toBe(false);
+  });
+});
+
+function imageElement(overrides: Partial<TemplateElement> = {}): TemplateElement {
+  return {
+    id: 'el_img',
+    type: 'image',
+    frame: FRAME,
+    z: 1,
+    src: 'https://cdn.example.com/logo.png',
+    fit: 'cover',
+    ...overrides,
+  } as TemplateElement;
+}
+
+describe('effectiveImageFit', () => {
+  it("returns the image element's fit mode", () => {
+    expect(effectiveImageFit(imageElement())).toBe('cover');
+    expect(effectiveImageFit(imageElement({ fit: 'fill' } as Partial<TemplateElement>))).toBe(
+      'fill',
+    );
+  });
+
+  it('falls back to the default fit for a non-image element', () => {
+    expect(effectiveImageFit(textElement())).toBe(DEFAULT_IMAGE_FIT);
+    expect(DEFAULT_IMAGE_FIT).toBe('contain');
+  });
+});
+
+describe('imageUploadError', () => {
+  it('accepts an image file within the size cap', () => {
+    expect(imageUploadError({ type: 'image/png', size: 1024 })).toBeNull();
+    expect(imageUploadError({ type: 'image/svg+xml', size: MAX_IMAGE_UPLOAD_BYTES })).toBeNull();
+  });
+
+  it('rejects a non-image file', () => {
+    expect(imageUploadError({ type: 'application/pdf', size: 10 })).toBe(
+      'Please choose an image file.',
+    );
+    expect(imageUploadError({ type: '', size: 10 })).toBe('Please choose an image file.');
+  });
+
+  it('rejects an oversized image (large image handled)', () => {
+    expect(imageUploadError({ type: 'image/png', size: MAX_IMAGE_UPLOAD_BYTES + 1 })).toBe(
+      'Image is too large (max 2 MB).',
+    );
   });
 });

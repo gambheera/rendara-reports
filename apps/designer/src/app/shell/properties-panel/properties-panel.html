@@ -251,6 +251,63 @@
     }
   </section>
   }
+
+  <!-- Image: source (URL / upload) + fit mode, for an image element only. -->
+  @if (imageElement()) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-image-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('image')"
+      (click)="toggleSection('image')"
+    >
+      <span id="rdr-prop-image-h" class="rdr-properties__section-title">Image</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('image') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('image')) {
+    <div class="rdr-properties__section-body">
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Source URL</span>
+        <input
+          class="rdr-properties__input"
+          type="url"
+          inputmode="url"
+          placeholder="https://… or data:image/…"
+          [attr.aria-invalid]="imageError() ? 'true' : null"
+          [attr.aria-describedby]="imageError() ? 'rdr-prop-image-err' : null"
+          [value]="imageSrc()"
+          (focus)="beginEdit()"
+          (blur)="endEdit()"
+          (input)="onImageUrl(valueFrom($event))"
+        />
+      </label>
+      <div class="rdr-properties__field">
+        <span class="rdr-properties__label">Upload</span>
+        <input
+          class="rdr-properties__file"
+          type="file"
+          accept="image/*"
+          aria-label="Upload image file"
+          (change)="onImageUpload($event)"
+        />
+      </div>
+      @if (imageError(); as err) {
+      <p id="rdr-prop-image-err" class="rdr-properties__error" role="alert">{{ err }}</p>
+      }
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Fit</span>
+        <select class="rdr-properties__select" (change)="onImageFit($any(valueFrom($event)))">
+          @for (f of imageFits; track f) {
+          <option [value]="f" [selected]="f === imageFit()">{{ f }}</option>
+          }
+        </select>
+      </label>
+    </div>
+    }
+  </section>
+  }
 </div>
 } @else if (selectionCount() > 1) {
 <div class="rdr-properties__empty">
