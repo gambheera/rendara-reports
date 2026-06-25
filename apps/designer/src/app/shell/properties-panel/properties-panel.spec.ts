@@ -18,14 +18,31 @@ function textEl(id: string, over: Partial<TemplateElement> = {}): TemplateElemen
   } as TemplateElement;
 }
 
-function rectEl(id: string): TemplateElement {
+function rectEl(id: string, over: Partial<TemplateElement> = {}): TemplateElement {
   return {
     id,
     type: 'shape',
     shape: 'rect',
     frame: { xMm: 10, yMm: 10, wMm: 30, hMm: 20 },
     z: 1,
+    ...over,
   } as TemplateElement;
+}
+
+function lineEl(id: string): TemplateElement {
+  return {
+    id,
+    type: 'shape',
+    shape: 'line',
+    frame: { xMm: 10, yMm: 10, wMm: 30, hMm: 0 },
+    z: 1,
+  } as TemplateElement;
+}
+
+/** Reads the resolved stroke of a selected shape element from the store. */
+function strokeOf(store: Store) {
+  const el = store.primarySelection();
+  return el?.type === 'shape' ? el.style?.stroke : undefined;
 }
 
 /** Renders the panel, then seeds the store (injected after render) and re-renders. */
@@ -136,6 +153,81 @@ describe('PropertiesPanel', () => {
     expect(screen.getByLabelText(/^Width/)).toBeTruthy();
     expect(screen.queryByLabelText(/Content/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Bold' })).toBeNull();
+  });
+
+  it('shows the Shape section (stroke + fill) for a shape, but not for text', async () => {
+    await renderPanel((store) => {
+      store.addElement(rectEl('r'));
+      store.selectOne('r');
+    });
+    expect(screen.getByLabelText(/Stroke style/i)).toBeTruthy();
+    expect(screen.getByLabelText(/Stroke width/i)).toBeTruthy();
+    expect(screen.getByLabelText(/Stroke colour/i)).toBeTruthy();
+  });
+
+  it('does not show the Shape section for a text element', async () => {
+    await renderPanel((store) => {
+      store.addElement(textEl('t'));
+      store.selectOne('t');
+    });
+    expect(screen.queryByLabelText(/Stroke style/i)).toBeNull();
+  });
+
+  it('edits stroke style, width and colour live into the store', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(rectEl('r'));
+      s.selectOne('r');
+    });
+
+    fireEvent.change(screen.getByLabelText(/Stroke style/i), { target: { value: 'dashed' } });
+    fireEvent.input(screen.getByLabelText(/Stroke width/i), { target: { value: '1.5' } });
+    fireEvent.input(screen.getByLabelText(/Stroke colour/i), { target: { value: '#123456' } });
+
+    expect(strokeOf(store)).toEqual({ style: 'dashed', widthMm: 1.5, color: '#123456' });
+    expect(store.dirty()).toBe(true);
+  });
+
+  it('ignores an invalid (negative) stroke width', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(rectEl('r', { style: { stroke: { widthMm: 0.5 } } }));
+      s.selectOne('r');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Stroke width/i), { target: { value: '-2' } });
+    expect(strokeOf(store)?.widthMm).toBe(0.5);
+  });
+
+  it('toggles the interior fill on and off', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(rectEl('r'));
+      s.selectOne('r');
+    });
+
+    // No fill colour control until fill is enabled.
+    expect(screen.queryByLabelText(/Fill colour/i)).toBeNull();
+
+    fireEvent.click(screen.getByLabelText('Fill'));
+    const el = store.primarySelection();
+    expect(el?.type === 'shape' && el.style?.fill).toBe('#FFFFFF');
+
+    // Now the colour control appears and edits the fill.
+    fireEvent.input(screen.getByLabelText(/Fill colour/i), { target: { value: '#00ff00' } });
+    const el2 = store.primarySelection();
+    expect(el2?.type === 'shape' && el2.style?.fill).toBe('#00ff00');
+
+    // Unchecking clears the fill entirely.
+    fireEvent.click(screen.getByLabelText('Fill'));
+    const el3 = store.primarySelection();
+    expect(el3?.type === 'shape' && el3.style && 'fill' in el3.style).toBe(false);
+  });
+
+  it('hides the Fill control for a line shape', async () => {
+    await renderPanel((store) => {
+      store.addElement(lineEl('l'));
+      store.selectOne('l');
+    });
+    expect(screen.getByLabelText(/Stroke style/i)).toBeTruthy();
+    expect(screen.queryByLabelText('Fill')).toBeNull();
   });
 
   it('collapses a section, hiding its body', async () => {

@@ -1,9 +1,21 @@
 import { Component, ViewEncapsulation, computed, inject, signal } from '@angular/core';
-import type { FontWeight, Frame, TextElement } from '@rendara/report-schema';
+import type {
+  FontWeight,
+  Frame,
+  LineStyle,
+  ShapeElement,
+  TextElement,
+} from '@rendara/report-schema';
 import { DesignerStore } from '../../state/designer-store';
 import {
+  DEFAULT_FILL_COLOR,
+  effectiveFill,
   effectiveFont,
+  effectiveStroke,
   patchFrameField,
+  patchStrokeWidth,
+  setShapeFill,
+  setShapeStroke,
   setTextFont,
   type FrameField,
 } from '../../state/element-props';
@@ -18,8 +30,11 @@ const FONT_FAMILIES = [
   'Courier New',
 ] as const;
 
-/** The collapsible Properties sections (E6-S1: Layout for any element, Text for text). */
-type Section = 'layout' | 'text';
+/** The line styles offered in the Shape section's stroke-style picker (mirrors {@link LineStyle}). */
+const STROKE_STYLES: readonly LineStyle[] = ['solid', 'dashed', 'dotted', 'double', 'none'];
+
+/** The collapsible Properties sections (Layout for any element, Text for text, Shape for shapes). */
+type Section = 'layout' | 'text' | 'shape';
 
 /**
  * Right-hand Properties panel (E5-S1 shell → wired in E6-S1). It is the
@@ -28,7 +43,8 @@ type Section = 'layout' | 'text';
  *  - **nothing selected** → the "select an element" empty state;
  *  - **one element** → a generic **Layout** section (frame X/Y/W/H in mm) plus,
  *    for a text element, a **Text** section (literal content, font family, size,
- *    Reg/Bold weight);
+ *    Reg/Bold weight), or for a shape, a **Shape** section (stroke style/width/colour
+ *    and an optional interior fill — E6-S2; fill is hidden for a line);
  *  - **many selected** → a count note (multi-element editing is E6-S5).
  *
  * Edits flow straight through {@link DesignerStore.updateElement}, so the canvas —
@@ -54,6 +70,7 @@ export class PropertiesPanel {
   private readonly store = inject(DesignerStore);
 
   protected readonly fontFamilies = FONT_FAMILIES;
+  protected readonly strokeStyles = STROKE_STYLES;
 
   /** The single selected element being edited, or `undefined` for none / multi. */
   protected readonly element = computed(() =>
@@ -67,8 +84,32 @@ export class PropertiesPanel {
     return el?.type === 'text' ? el : undefined;
   });
 
+  /** True when exactly one shape element is selected — gates the Shape section. */
+  protected readonly shapeElement = computed<ShapeElement | undefined>(() => {
+    const el = this.element();
+    return el?.type === 'shape' ? el : undefined;
+  });
+
   /** The selected element's frame (for the Layout inputs). */
   protected readonly frame = computed<Frame | undefined>(() => this.element()?.frame);
+
+  /** The resolved stroke (override over renderer default) shown in the Shape inputs. */
+  protected readonly stroke = computed(() => {
+    const el = this.shapeElement();
+    return el ? effectiveStroke(el.style) : undefined;
+  });
+
+  /** The shape's interior fill colour, or `null` for no fill. */
+  protected readonly fill = computed<string | null>(() => {
+    const el = this.shapeElement();
+    return el ? effectiveFill(el.style) : null;
+  });
+
+  /** Whether the selected shape's interior is filled (drives the Fill None↔colour toggle). */
+  protected readonly hasFill = computed(() => this.fill() !== null);
+
+  /** A line shape has no fillable interior, so the Fill control is hidden for it. */
+  protected readonly fillable = computed(() => this.shapeElement()?.shape !== 'line');
 
   /** The resolved font (override over document default) shown in the Text inputs. */
   protected readonly font = computed(() => {
@@ -84,10 +125,11 @@ export class PropertiesPanel {
       : [fallback, ...FONT_FAMILIES];
   });
 
-  /** Which sections are collapsed (both open by default). */
+  /** Which sections are collapsed (all open by default). */
   private readonly collapsed = signal<Readonly<Record<Section, boolean>>>({
     layout: false,
     text: false,
+    shape: false,
   });
 
   protected isOpen(section: Section): boolean {
@@ -171,6 +213,60 @@ export class PropertiesPanel {
   private commitFont(patch: Parameters<typeof setTextFont>[1]): void {
     this.store.beginInteraction();
     this.applyFont(patch);
+    this.store.endInteraction();
+  }
+
+  /** Sets the shape's stroke colour — a discrete edit → one undo step. */
+  protected onStrokeColor(color: string): void {
+    this.commitStroke({ color });
+  }
+
+  /** Sets the shape's stroke line style (solid/dashed/…/none) — one undo step. */
+  protected onStrokeStyle(style: LineStyle): void {
+    this.commitStroke({ style });
+  }
+
+  /** Sets the shape's stroke width (mm); a blank/invalid value is ignored. Coalesced via focus/blur. */
+  protected onStrokeWidth(value: number): void {
+    const widthMm = patchStrokeWidth(value);
+    if (widthMm !== null) {
+      this.applyStroke({ widthMm });
+    }
+  }
+
+  /** Toggles the shape's interior fill on (a default colour) or off (no fill) — one undo step. */
+  protected onFillToggle(enabled: boolean): void {
+    this.commitFill(enabled ? DEFAULT_FILL_COLOR : undefined);
+  }
+
+  /** Sets the shape's interior fill colour — one undo step. */
+  protected onFillColor(color: string): void {
+    this.commitFill(color);
+  }
+
+  /** Merges a stroke patch into the selected shape's style, within the open transaction. */
+  private applyStroke(patch: Parameters<typeof setShapeStroke>[1]): void {
+    const el = this.shapeElement();
+    if (el) {
+      this.store.updateElement(el.id, { style: setShapeStroke(el.style, patch) });
+    }
+  }
+
+  /** A discrete stroke edit: its own self-contained undo step (no open field gesture). */
+  private commitStroke(patch: Parameters<typeof setShapeStroke>[1]): void {
+    this.store.beginInteraction();
+    this.applyStroke(patch);
+    this.store.endInteraction();
+  }
+
+  /** Sets (or clears) the selected shape's fill as a single undo step. */
+  private commitFill(fill: string | undefined): void {
+    const el = this.shapeElement();
+    if (!el) {
+      return;
+    }
+    this.store.beginInteraction();
+    this.store.updateElement(el.id, { style: setShapeFill(el.style, fill) });
     this.store.endInteraction();
   }
 }
