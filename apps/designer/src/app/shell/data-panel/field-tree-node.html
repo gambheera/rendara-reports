@@ -1,0 +1,36 @@
+<div class="rdr-field__row" [style.paddingLeft.px]="indentPx()">
+  @if (hasChildren()) {
+  <button
+    type="button"
+    class="rdr-field__twisty"
+    [class.rdr-field__twisty--open]="expanded()"
+    [attr.aria-label]="(expanded() ? 'Collapse ' : 'Expand ') + node().name"
+    (click)="toggle()"
+  >
+    <span aria-hidden="true">&#9656;</span>
+  </button>
+  } @else {
+  <span class="rdr-field__twisty-spacer" aria-hidden="true"></span>
+  }
+
+  <span class="rdr-field__grip" aria-hidden="true">&#8285;</span>
+  <span class="rdr-field__name">{{ node().name }}</span>
+
+  @if (node().optional) {
+  <span class="rdr-field__optional" title="Not present in every item">?</span>
+  } @if (chip(); as chipText) {
+  <span class="rdr-field__chip" [class.rdr-field__chip--array]="node().kind === 'array'">
+    {{ chipText }}
+  </span>
+  } @if (node().truncated) {
+  <span class="rdr-field__truncated" title="Tree truncated — more fields exist">&hellip;</span>
+  }
+</div>
+
+@if (hasChildren() && expanded()) {
+<div class="rdr-field__children" role="group">
+  @for (child of node().children; track child.name) {
+  <rdr-field-tree-node [node]="child" [level]="level() + 1" />
+  }
+</div>
+}

@@ -35,12 +35,13 @@ describe('PalettePanel', () => {
     expect(screen.queryByText('Rectangle')).toBeNull();
   });
 
-  it('switches to the Data empty state when its tab is selected', async () => {
+  it('switches to the Data tab, showing its sample-data empty state', async () => {
     await render(PalettePanel);
 
     await fireEvent.click(screen.getByRole('tab', { name: 'Data' }));
 
-    expect(screen.getByText('No data imported')).toBeTruthy();
+    expect(screen.getByText('No sample data')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Import sample data' })).toBeTruthy();
   });
 
   // Each palette tile is a button (the WCAG 2.5.7 single-pointer alternative to

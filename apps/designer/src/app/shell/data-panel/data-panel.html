@@ -1,0 +1,54 @@
+<input
+  #fileInput
+  type="file"
+  class="rdr-data__file-input"
+  accept="application/json,.json"
+  (change)="onFileSelected($event)"
+/>
+
+@if (store.sampleData(); as data) {
+<header class="rdr-data__header">
+  <span class="rdr-data__title">SAMPLE DATA</span>
+  <button type="button" class="rdr-data__link" (click)="openPicker()">Replace</button>
+</header>
+
+<div class="rdr-data__file" [title]="data.fileName">
+  <span class="rdr-data__file-icon" aria-hidden="true">&#128196;</span>
+  <span class="rdr-data__file-name">{{ data.fileName }}</span>
+</div>
+
+<div class="rdr-data__filter">
+  <label class="rdr-data__filter-label" for="data-filter">Filter fields</label>
+  <input
+    id="data-filter"
+    type="search"
+    class="rdr-data__filter-input"
+    placeholder="Filter fields"
+    autocomplete="off"
+    [value]="query()"
+    (input)="query.set($any($event.target).value)"
+  />
+</div>
+
+@if (importError(); as error) {
+<p class="rdr-data__error" role="alert">{{ error }}</p>
+} @if (noMatches()) {
+<p class="rdr-data__empty-hint">No fields match &ldquo;{{ query() }}&rdquo;.</p>
+} @else if (filteredRoot(); as root) {
+<div class="rdr-data__tree" role="tree" aria-label="Sample data fields">
+  @for (child of root.children; track child.name) {
+  <rdr-field-tree-node [node]="child" [level]="1" />
+  } @empty {
+  <rdr-field-tree-node [node]="root" [level]="1" />
+  }
+</div>
+} } @else {
+<div class="rdr-data__empty">
+  <p class="rdr-data__empty-title">No sample data</p>
+  <p class="rdr-data__empty-hint">Import a Data JSON file to see bindable fields.</p>
+  <button type="button" class="rdr-data__import" (click)="openPicker()">Import sample data</button>
+  @if (importError(); as error) {
+  <p class="rdr-data__error" role="alert">{{ error }}</p>
+  }
+</div>
+}
