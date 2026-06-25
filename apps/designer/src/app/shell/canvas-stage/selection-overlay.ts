@@ -191,6 +191,8 @@ export class SelectionOverlay {
     if (event.button !== 0 || elements.length === 0) return;
     event.preventDefault();
     event.stopPropagation();
+    // Coalesce the whole drag into one undo step (E5-S9).
+    this.store.beginInteraction();
     const startFrames = elements.map((el) => el.frame);
     const ids = new Set(elements.map((el) => el.id));
     const orderedIds = elements.map((el) => el.id);
@@ -224,6 +226,7 @@ export class SelectionOverlay {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       this.guides.set([]);
+      this.store.endInteraction();
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -235,6 +238,8 @@ export class SelectionOverlay {
     if (event.button !== 0 || !this.isSingle() || element === undefined) return;
     event.preventDefault();
     event.stopPropagation();
+    // Coalesce the whole resize into one undo step (E5-S9).
+    this.store.beginInteraction();
     const startFrame = element.frame;
     const pageMm = this.pageMm();
     const startX = event.clientX;
@@ -253,6 +258,7 @@ export class SelectionOverlay {
     const onUp = (): void => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      this.store.endInteraction();
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);

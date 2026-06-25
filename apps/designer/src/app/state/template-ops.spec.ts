@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { isValidTemplate, type RendaraTemplate, type TextElement } from '@rendara/report-schema';
 import {
   addElementToBody,
+  addElementsToBody,
   collectElements,
   createEmptyTemplate,
   findElement,
   hasElement,
   removeElementById,
+  removeElementsById,
   setPageOf,
   updateElementById,
   updateElementsById,
@@ -155,6 +157,49 @@ describe('removeElementById', () => {
   it('returns the same template when the id is unknown', () => {
     const t = seeded();
     expect(removeElementById(t, 'nope')).toBe(t);
+  });
+});
+
+describe('addElementsToBody', () => {
+  it('appends several elements to the body in order, immutably', () => {
+    const t = seeded();
+    const next = addElementsToBody(t, [textEl('n1'), textEl('n2')]);
+
+    expect(next).not.toBe(t);
+    expect(next.body.elements.map((el) => el.id)).toEqual(['b1', 'b2', 'n1', 'n2']);
+    expect(t.body.elements.map((el) => el.id)).toEqual(['b1', 'b2']);
+  });
+
+  it('returns the same template when given no elements', () => {
+    const t = seeded();
+    expect(addElementsToBody(t, [])).toBe(t);
+  });
+});
+
+describe('removeElementsById', () => {
+  it('removes matched ids across every band in one pass', () => {
+    const t = seeded();
+    const next = removeElementsById(t, new Set(['h1', 'b1', 'f1']));
+
+    expect(next).not.toBe(t);
+    expect(next.header.elements).toEqual([]);
+    expect(next.body.elements.map((el) => el.id)).toEqual(['b2']);
+    expect(next.footer.elements).toEqual([]);
+  });
+
+  it('only rebuilds bands that contain a matched id', () => {
+    const t = seeded();
+    const next = removeElementsById(t, new Set(['b1']));
+
+    expect(next.header).toBe(t.header);
+    expect(next.footer).toBe(t.footer);
+    expect(next.body).not.toBe(t.body);
+  });
+
+  it('returns the same template when nothing matches or the set is empty', () => {
+    const t = seeded();
+    expect(removeElementsById(t, new Set())).toBe(t);
+    expect(removeElementsById(t, new Set(['ghost']))).toBe(t);
   });
 });
 

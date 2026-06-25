@@ -74,6 +74,23 @@ export function addElementToBody(
 }
 
 /**
+ * Returns a copy of `template` with `elements` appended to the body band in
+ * order. Used by multi-element creation — paste and duplicate (E5-S9) — so a
+ * whole batch lands in one new template reference. Appending an empty list
+ * returns the original template unchanged (by identity).
+ */
+export function addElementsToBody(
+  template: RendaraTemplate,
+  elements: readonly TemplateElement[],
+): RendaraTemplate {
+  if (elements.length === 0) return template;
+  return {
+    ...template,
+    body: { elements: [...template.body.elements, ...elements] },
+  };
+}
+
+/**
  * Returns a copy of `template` with the element matching `id` shallow-merged
  * with `changes`. The merge preserves the element's `type` discriminant, so a
  * caller cannot accidentally change an element's kind. If no element matches,
@@ -132,6 +149,29 @@ export function removeElementById(template: RendaraTemplate, id: string): Rendar
 
   const elements = template[key].elements.filter((el) => el.id !== id);
   return { ...template, [key]: { elements } };
+}
+
+/**
+ * Returns a copy of `template` with every element whose id is in `ids` removed
+ * from its band — the batch counterpart of {@link removeElementById}, used by
+ * "delete selection" (E5-S9) so a multi-element delete is a single immutable
+ * update. Only bands that actually contain a matched id are rebuilt; if nothing
+ * matches, the original template is returned unchanged.
+ */
+export function removeElementsById(
+  template: RendaraTemplate,
+  ids: ReadonlySet<string>,
+): RendaraTemplate {
+  if (ids.size === 0) return template;
+  let changed = false;
+  const next: Partial<Record<BandKey, Band>> = {};
+  for (const key of BAND_KEYS) {
+    const band = template[key];
+    if (!band.elements.some((el) => ids.has(el.id))) continue;
+    changed = true;
+    next[key] = { elements: band.elements.filter((el) => !ids.has(el.id)) };
+  }
+  return changed ? { ...template, ...next } : template;
 }
 
 /** Returns a copy of `template` with its page replaced. */
