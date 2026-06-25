@@ -308,6 +308,176 @@
     }
   </section>
   }
+
+  <!-- Table: column structure, selected-column editor, options + grouping (data-table only). -->
+  @if (tableElement(); as tbl) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-table-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('table')"
+      (click)="toggleSection('table')"
+    >
+      <span id="rdr-prop-table-h" class="rdr-properties__section-title">Table</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('table') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('table')) {
+    <div class="rdr-properties__section-body">
+      <!-- Columns: reorderable list with per-column remove + Add column. -->
+      <div class="rdr-properties__field">
+        <span class="rdr-properties__label">Columns</span>
+        <ul
+          class="rdr-properties__col-list"
+          cdkDropList
+          (cdkDropListDropped)="onColumnDrop($event)"
+        >
+          @for (col of columns(); track col.key) {
+          <li
+            class="rdr-properties__col-row"
+            [class.rdr-properties__col-row--active]="col.key === selectedColumn()?.key"
+            cdkDrag
+          >
+            <button
+              type="button"
+              class="rdr-properties__col-grip"
+              cdkDragHandle
+              aria-label="Reorder column"
+            >
+              ⠿
+            </button>
+            <button
+              type="button"
+              class="rdr-properties__col-name"
+              [attr.aria-pressed]="col.key === selectedColumn()?.key"
+              (click)="selectColumn(col.key)"
+            >
+              {{ col.header || '(no header)' }}
+            </button>
+            <button
+              type="button"
+              class="rdr-properties__icon-btn"
+              [disabled]="columns().length <= 1"
+              [attr.aria-label]="'Remove column ' + (col.header || col.key)"
+              (click)="onRemoveColumn(col.key)"
+            >
+              ✕
+            </button>
+          </li>
+          }
+        </ul>
+        <button type="button" class="rdr-properties__add-btn" (click)="onAddColumn()">
+          + Add column
+        </button>
+      </div>
+
+      <!-- Selected-Column editor: header text, width, align (cell expr/aggregate are E6-S8). -->
+      @if (selectedColumn(); as col) {
+      <div class="rdr-properties__subsection">
+        <span class="rdr-properties__label">Selected column</span>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Header text</span>
+          <input
+            class="rdr-properties__input"
+            type="text"
+            [value]="col.header"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onColumnHeader(col.key, valueFrom($event))"
+          />
+        </label>
+        <div class="rdr-properties__pair">
+          <label class="rdr-properties__field">
+            <span class="rdr-properties__label">Width</span>
+            <span class="rdr-properties__suffix-field">
+              <input
+                class="rdr-properties__input"
+                type="number"
+                step="0.1"
+                min="0"
+                aria-label="Column width"
+                [value]="col.widthMm"
+                (focus)="beginEdit()"
+                (blur)="endEdit()"
+                (input)="onColumnWidth(col.key, numberFrom($event))"
+              />
+              <span class="rdr-properties__suffix">mm</span>
+            </span>
+          </label>
+          <div class="rdr-properties__field">
+            <span class="rdr-properties__label">Align</span>
+            <div class="rdr-properties__segmented" role="group" aria-label="Column alignment">
+              @for (a of columnAligns; track a) {
+              <button
+                type="button"
+                class="rdr-properties__segment"
+                [class.rdr-properties__segment--active]="(col.align ?? 'left') === a"
+                [attr.aria-pressed]="(col.align ?? 'left') === a"
+                [attr.aria-label]="'Align ' + a"
+                (click)="onColumnAlign(col.key, a)"
+              >
+                {{ a === 'left' ? '⤝' : a === 'center' ? '↔' : '⤞' }}
+              </button>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+      }
+
+      <!-- Options: header repeat + keep-together. -->
+      <div class="rdr-properties__field">
+        <label class="rdr-properties__check">
+          <input
+            type="checkbox"
+            [checked]="tbl.repeatHeaderOnEachPage"
+            (change)="onRepeatHeader(checkedFrom($event))"
+          />
+          <span class="rdr-properties__label">Repeat header on each page</span>
+        </label>
+        <label class="rdr-properties__check">
+          <input
+            type="checkbox"
+            [checked]="tbl.keepTogether"
+            (change)="onKeepTogether(checkedFrom($event))"
+          />
+          <span class="rdr-properties__label">Keep table together</span>
+        </label>
+      </div>
+
+      <!-- Grouping: add/remove a band + its groupBy expression (aggregates are E6-S8). -->
+      <div class="rdr-properties__field">
+        <span class="rdr-properties__label">Grouping</span>
+        @for (group of groups(); track $index) {
+        <div class="rdr-properties__group-row">
+          <input
+            class="rdr-properties__input"
+            type="text"
+            aria-label="Group by expression"
+            [value]="group.groupBy"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onGroupBy($index, valueFrom($event))"
+          />
+          <button
+            type="button"
+            class="rdr-properties__icon-btn"
+            aria-label="Remove group"
+            (click)="onRemoveGroup($index)"
+          >
+            ✕
+          </button>
+        </div>
+        }
+        <button type="button" class="rdr-properties__add-btn" (click)="onAddGroup()">
+          + Add group
+        </button>
+      </div>
+    </div>
+    }
+  </section>
+  }
 </div>
 } @else if (selectionCount() > 1) {
 <div class="rdr-properties__empty">
