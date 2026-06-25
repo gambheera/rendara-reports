@@ -35,6 +35,14 @@ export class StatusBar {
   /** Live `Page x of y` counter from the rendered document's page count. */
   protected readonly pageCounter = computed(() => `Page 1 of ${this.store.pageCount()}`);
 
+  /** Whether snapping + alignment guides are active (E5-S8) — drives the toggle. */
+  protected readonly snapEnabled = computed(() => this.store.snapEnabled());
+
+  /** Toggles snapping + alignment guides (E5-S8). */
+  protected toggleSnap(): void {
+    this.store.toggleSnap();
+  }
+
   /** Steps the zoom out/in by {@link ZOOM_STEP_PERCENT} percentage points. */
   protected zoomOut(): void {
     this.store.setZoom((this.store.zoomPercent() - ZOOM_STEP_PERCENT) / 100);

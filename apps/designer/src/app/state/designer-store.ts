@@ -22,6 +22,7 @@ import {
 } from './group-ops';
 import { planZOrder, stackOrder, type ZOrderOp } from './z-order-ops';
 import { moveFramesAsGroup } from './frame-ops';
+import { alignFrames, distributeFrames, type AlignEdge, type DistributeAxis } from './align-ops';
 
 /** Zoom bounds for the canvas (1 = 100%). */
 export const MIN_ZOOM = 0.1;
@@ -47,6 +48,13 @@ interface DesignerState {
    * element in two groups) are kept by {@link sanitizeGroups}.
    */
   readonly groups: Groups;
+  /**
+   * Whether grid snapping and smart alignment guides are active during drag
+   * (E5-S8). View-state, like {@link zoom}: it never persists on export and does
+   * not mark the document dirty. A modifier key (Alt) bypasses it per-gesture in
+   * the canvas without changing this flag.
+   */
+  readonly snapEnabled: boolean;
 }
 
 function initialState(): DesignerState {
@@ -56,6 +64,7 @@ function initialState(): DesignerState {
     zoom: DEFAULT_ZOOM,
     dirty: false,
     groups: [],
+    snapEnabled: true,
   };
 }
 
@@ -133,6 +142,10 @@ export const DesignerStore = signalStore(
     selectionCount: computed(() => store.selectedIds().length),
     /** True when 2+ elements are selected, so they can be grouped (E5-S7). */
     canGroup: computed(() => store.selectedIds().length >= 2),
+    /** True when 2+ elements are selected, so they can be aligned (E5-S8). */
+    canAlign: computed(() => store.selectedIds().length >= 2),
+    /** True when 3+ elements are selected, so they can be distributed (E5-S8). */
+    canDistribute: computed(() => store.selectedIds().length >= 3),
     /** True when any selected element belongs to a group, so "ungroup" can act. */
     canUngroup: computed(() => anyGrouped(store.groups(), store.selectedIds())),
     /**
@@ -179,6 +192,14 @@ export const DesignerStore = signalStore(
     /** Sets the canvas zoom (clamped). View state — does not mark dirty. */
     setZoom(zoom: number): void {
       patchState(store, { zoom: clampZoom(zoom) });
+    },
+    /** Enables/disables snapping + alignment guides (E5-S8). View state — not dirty. */
+    setSnapEnabled(snapEnabled: boolean): void {
+      patchState(store, { snapEnabled });
+    },
+    /** Flips the snapping toggle (E5-S8). View state — not dirty. */
+    toggleSnap(): void {
+      patchState(store, (state) => ({ snapEnabled: !state.snapEnabled }));
     },
     /**
      * Replaces the selection with the given ids — **group-expanded** (selecting a
@@ -328,6 +349,53 @@ export const DesignerStore = signalStore(
         );
         const changesById = new Map(selected.map((el, i) => [el.id, { frame: moved[i] }]));
         return { template: updateElementsById(state.template, changesById), dirty: true };
+      });
+    },
+    /**
+     * Aligns the current selection along `edge` (E5-S8) — to the selection's
+     * bounding box, via the pure {@link alignFrames}. Needs 2+ selected elements
+     * (nothing to align a single element against); a no-op leaves the document and
+     * dirty flag untouched.
+     */
+    alignSelection(edge: AlignEdge): void {
+      patchState(store, (state) => {
+        const byId = new Map(collectElements(state.template).map((el) => [el.id, el]));
+        const selected = state.selectedIds.flatMap((id) => {
+          const el = byId.get(id);
+          return el ? [el] : [];
+        });
+        if (selected.length < 2) return {};
+        const aligned = alignFrames(
+          selected.map((el) => el.frame),
+          edge,
+        );
+        const changesById = new Map(selected.map((el, i) => [el.id, { frame: aligned[i] }]));
+        const template = updateElementsById(state.template, changesById);
+        if (template === state.template) return {};
+        return { template, dirty: true };
+      });
+    },
+    /**
+     * Distributes the current selection's centres evenly along `axis` (E5-S8) via
+     * the pure {@link distributeFrames}. Needs 3+ selected elements (no interior to
+     * space otherwise); a no-op leaves the document and dirty flag untouched.
+     */
+    distributeSelection(axis: DistributeAxis): void {
+      patchState(store, (state) => {
+        const byId = new Map(collectElements(state.template).map((el) => [el.id, el]));
+        const selected = state.selectedIds.flatMap((id) => {
+          const el = byId.get(id);
+          return el ? [el] : [];
+        });
+        if (selected.length < 3) return {};
+        const distributed = distributeFrames(
+          selected.map((el) => el.frame),
+          axis,
+        );
+        const changesById = new Map(selected.map((el, i) => [el.id, { frame: distributed[i] }]));
+        const template = updateElementsById(state.template, changesById);
+        if (template === state.template) return {};
+        return { template, dirty: true };
       });
     },
     /** Marks the document clean (e.g. after a save/export). */

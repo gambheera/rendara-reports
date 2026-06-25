@@ -69,6 +69,90 @@
       Ungroup
     </button>
   </div>
+  <div class="rdr-layers__group" role="group" aria-label="Align">
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canAlign()"
+      (click)="align('left')"
+      title="Align left"
+      aria-label="Align left"
+    >
+      L
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canAlign()"
+      (click)="align('hcenter')"
+      title="Align horizontal centres"
+      aria-label="Align horizontal centres"
+    >
+      C
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canAlign()"
+      (click)="align('right')"
+      title="Align right"
+      aria-label="Align right"
+    >
+      R
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canAlign()"
+      (click)="align('top')"
+      title="Align top"
+      aria-label="Align top"
+    >
+      T
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canAlign()"
+      (click)="align('vmiddle')"
+      title="Align vertical middles"
+      aria-label="Align vertical middles"
+    >
+      M
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canAlign()"
+      (click)="align('bottom')"
+      title="Align bottom"
+      aria-label="Align bottom"
+    >
+      B
+    </button>
+  </div>
+  <div class="rdr-layers__group" role="group" aria-label="Distribute">
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canDistribute()"
+      (click)="distribute('horizontal')"
+      title="Distribute horizontally"
+      aria-label="Distribute horizontally"
+    >
+      ⇿
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canDistribute()"
+      (click)="distribute('vertical')"
+      title="Distribute vertically"
+      aria-label="Distribute vertically"
+    >
+      ⇳
+    </button>
+  </div>
 </div>
 
 <ul class="rdr-layers__list" aria-label="Layers, top first">

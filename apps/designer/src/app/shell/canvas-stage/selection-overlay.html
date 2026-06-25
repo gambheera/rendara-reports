@@ -39,4 +39,12 @@
   <span class="rdr-selection__badge" aria-hidden="true">{{ count() }} selected</span>
   }
 </div>
-} }
+} } @for (guide of guides(); track $index) {
+<div
+  class="rdr-selection__guide"
+  [class.rdr-selection__guide--v]="guide.axis === 'x'"
+  [class.rdr-selection__guide--h]="guide.axis === 'y'"
+  [style]="guideStyle(guide)"
+  aria-hidden="true"
+></div>
+}
