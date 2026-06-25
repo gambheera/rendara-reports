@@ -23,6 +23,7 @@
     "format:check": "prettier --check .",
     "schema:generate": "node -r @swc-node/register tools/generate-schema.ts",
     "fixtures:generate": "node -r @swc-node/register tools/generate-fixtures.ts",
+    "render-fixtures:generate": "node -r ./tools/register-swc-paths.cjs tools/generate-render-fixtures.ts",
     "smoke": "nx report && nx graph --file=tmp/graph.json && nx run-many -t lint && prettier --check .",
     "changeset": "changeset",
     "release:status": "changeset status --verbose",
@@ -31,12 +32,14 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@angular/cdk": "21.2.9",
     "@angular/common": "21.2.9",
     "@angular/compiler": "21.2.9",
     "@angular/core": "21.2.9",
     "@angular/forms": "21.2.9",
     "@angular/platform-browser": "21.2.9",
     "@angular/router": "21.2.9",
+    "@ngrx/signals": "21.1.1",
     "jsonata": "2.2.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"

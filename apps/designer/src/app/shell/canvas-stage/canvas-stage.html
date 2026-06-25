@@ -1,0 +1,61 @@
+<div #scroll class="rdr-canvas__scroll" [style.backgroundSize]="gridSizePx() + ' ' + gridSizePx()">
+  <div class="rdr-canvas__grid">
+    <div class="rdr-canvas__corner" aria-hidden="true"></div>
+
+    <div class="rdr-canvas__ruler rdr-canvas__ruler--h" aria-hidden="true">
+      @for (tick of horizontalTicks(); track tick.posPx) {
+      <span class="rdr-canvas__tick" [style.left.px]="tick.posPx + pad">
+        @if (tick.label !== null) {
+        <span class="rdr-canvas__tick-label">{{ tick.label }}</span>
+        }
+      </span>
+      }
+    </div>
+
+    <div class="rdr-canvas__ruler rdr-canvas__ruler--v" aria-hidden="true">
+      @for (tick of verticalTicks(); track tick.posPx) {
+      <span class="rdr-canvas__tick" [style.top.px]="tick.posPx + pad">
+        @if (tick.label !== null) {
+        <span class="rdr-canvas__tick-label">{{ tick.label }}</span>
+        }
+      </span>
+      }
+    </div>
+
+    <div
+      class="rdr-canvas__pages"
+      cdkDropList
+      [id]="canvasDropListId"
+      cdkDropListSortingDisabled
+      (cdkDropListDropped)="onDrop($event)"
+      (pointerdown)="onCanvasPointerDown($event)"
+    >
+      <rdr-report-document
+        class="rdr-canvas__doc"
+        [style.width.px]="pageBox().widthPx"
+        [document]="store.paginatedDocument()"
+        [template]="store.template()"
+        [zoom]="store.zoom()"
+        mode="design"
+        layout="continuous"
+      />
+
+      @if (isEmpty()) {
+      <div
+        class="rdr-canvas__empty"
+        [style.width.px]="pageBox().widthPx"
+        [style.height.px]="pageBox().heightPx"
+      >
+        <span class="rdr-canvas__empty-glyph" aria-hidden="true">✥</span>
+        <p class="rdr-canvas__empty-text">Drag a control here to begin</p>
+      </div>
+      }
+
+      <rdr-selection-overlay
+        class="rdr-canvas__overlay"
+        [style.width.px]="pageBox().widthPx"
+        [style.height.px]="pageBox().heightPx"
+      />
+    </div>
+  </div>
+</div>

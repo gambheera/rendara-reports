@@ -1,0 +1,148 @@
+:host {
+  /* Mirrors the TS `pad` / `rulerSize`. */
+  --pad: 24px;
+  --ruler: 24px;
+  display: block;
+  height: 100%;
+  min-width: 0;
+  background: var(--rdr-color-backdrop);
+  overflow: hidden;
+}
+
+/* The single scroll container; the dotted grid scrolls with its content. */
+.rdr-canvas__scroll {
+  height: 100%;
+  overflow: auto;
+  background-color: var(--rdr-color-backdrop);
+  background-image: radial-gradient(var(--rdr-color-border-hairline) 1px, transparent 1px);
+  background-position: var(--ruler) var(--ruler);
+  background-attachment: local;
+}
+
+/* Two-track grid: ruler gutters + the page area. Sized to its content. */
+.rdr-canvas__grid {
+  display: grid;
+  grid-template-columns: var(--ruler) max-content;
+  grid-template-rows: var(--ruler) max-content;
+  width: max-content;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.rdr-canvas__corner,
+.rdr-canvas__ruler {
+  position: sticky;
+  z-index: 2;
+  background: var(--rdr-color-surface);
+  color: var(--rdr-color-text-secondary);
+}
+
+.rdr-canvas__corner {
+  top: 0;
+  left: 0;
+  z-index: 3;
+  border-right: 1px solid var(--rdr-color-border-hairline);
+  border-bottom: 1px solid var(--rdr-color-border-hairline);
+}
+
+.rdr-canvas__ruler {
+  position: relative; /* containing block for absolutely-placed ticks */
+}
+
+.rdr-canvas__ruler--h {
+  position: sticky;
+  top: 0;
+  height: var(--ruler);
+  border-bottom: 1px solid var(--rdr-color-border-hairline);
+}
+
+.rdr-canvas__ruler--v {
+  position: sticky;
+  left: 0;
+  width: var(--ruler);
+  border-right: 1px solid var(--rdr-color-border-hairline);
+}
+
+.rdr-canvas__tick {
+  position: absolute;
+  font-size: 9px;
+  font-variant-numeric: var(--rdr-font-numeric);
+}
+
+.rdr-canvas__ruler--h .rdr-canvas__tick {
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--rdr-color-border-hairline);
+}
+
+.rdr-canvas__ruler--v .rdr-canvas__tick {
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--rdr-color-border-hairline);
+}
+
+.rdr-canvas__tick-label {
+  position: absolute;
+  white-space: nowrap;
+}
+
+.rdr-canvas__ruler--h .rdr-canvas__tick-label {
+  top: 2px;
+  left: 3px;
+}
+
+.rdr-canvas__ruler--v .rdr-canvas__tick-label {
+  left: 2px;
+  top: 2px;
+  writing-mode: vertical-rl;
+}
+
+/* Page area: the sheet sits inset by --pad; the grid shows in the surrounding ring. */
+.rdr-canvas__pages {
+  position: relative;
+  padding: var(--pad);
+  box-sizing: border-box;
+}
+
+.rdr-canvas__doc {
+  display: block;
+}
+
+/* Selection overlay, laid over the first page sheet (same origin as the sheet:
+   the pages area's --pad inset). Click-through except its own box + handles. */
+.rdr-canvas__overlay {
+  position: absolute;
+  top: var(--pad);
+  left: var(--pad);
+}
+
+/* Empty placeholder, laid over the (blank) page sheet. */
+.rdr-canvas__empty {
+  position: absolute;
+  top: var(--pad);
+  left: var(--pad);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rdr-space-3);
+  color: var(--rdr-color-text-secondary);
+  pointer-events: none;
+}
+
+.rdr-canvas__empty-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--rdr-radius-panel);
+  background: var(--rdr-color-accent-subtle);
+  color: var(--rdr-color-accent);
+  font-size: var(--rdr-font-size-title);
+}
+
+.rdr-canvas__empty-text {
+  margin: 0;
+  font-size: var(--rdr-font-size-body);
+}

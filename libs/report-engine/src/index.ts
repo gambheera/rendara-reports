@@ -36,12 +36,14 @@ export * from './lib/geometry';
 // z-order and page-sheet clipping, over the E3-S1 geometry (E3-S2).
 export * from './lib/layout';
 
-// Data-table expansion & row measurement: a resolved data table -> measured
-// rows (header/detail/column-footer) and honoured column widths, via a
-// deterministic headless text-wrap strategy (E3-S3).
+// Data-table expansion & row measurement: a resolved data table -> measured rows
+// and honoured column widths, via a deterministic headless text-wrap strategy
+// (E3-S3); interleaves group header/footer bands with full-width labels and
+// subtotals for grouped tables (E3-S6).
 export * from './lib/table-layout';
 
 // Pagination algorithm: template + resolved tables -> a deterministic multi-page
 // layout, breaking the body/table across pages with repeated headers,
-// keepTogether, and basic widow/orphan handling (E3-S4).
+// keepTogether, and basic widow/orphan handling (E3-S4); repeats `(continued)`
+// group headers and carries subtotals/grand totals across pages (E3-S6).
 export * from './lib/paginate';

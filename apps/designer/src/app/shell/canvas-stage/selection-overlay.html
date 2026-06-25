@@ -1,0 +1,25 @@
+@if (box(); as boxPx) {
+<div
+  #box
+  class="rdr-selection__box"
+  tabindex="0"
+  role="group"
+  [attr.aria-label]="ariaLabel()"
+  [style]="boxStyle()"
+  (pointerdown)="onBoxPointerDown($event)"
+  (keydown)="onKeyDown($event)"
+>
+  @if (badge(); as badge) {
+  <span class="rdr-selection__badge" aria-hidden="true">
+    x {{ badge.x }} y {{ badge.y }} · {{ badge.w }} × {{ badge.h }} mm
+  </span>
+  } @for (handle of handles; track handle) {
+  <span
+    class="rdr-selection__handle rdr-selection__handle--{{ handle }}"
+    [attr.data-handle]="handle"
+    aria-hidden="true"
+    (pointerdown)="onHandlePointerDown($event, handle)"
+  ></span>
+  }
+</div>
+}

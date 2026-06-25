@@ -6,6 +6,12 @@
   "projectType": "library",
   "tags": ["scope:renderer", "type:feature"],
   "targets": {
+    "generate-render-fixtures": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node -r ./tools/register-swc-paths.cjs tools/generate-render-fixtures.ts"
+      }
+    },
     "test": {
       "outputs": [
         "{projectRoot}/{options.coverage.reportsDirectory}",

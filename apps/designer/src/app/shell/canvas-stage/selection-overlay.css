@@ -1,0 +1,98 @@
+/* The layer is click-through; only the box + handles below opt back in, so a
+   click on an unselected element passes through to the canvas hit-test. */
+:host {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Handle size and the indigo selection accent. */
+  --rdr-handle: 9px;
+  --rdr-selection: var(--rdr-color-accent);
+}
+
+/* The selection rectangle: an indigo outline that drags to move the element. */
+.rdr-selection__box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid var(--rdr-selection);
+  background: color-mix(in srgb, var(--rdr-selection) 6%, transparent);
+  pointer-events: auto;
+  cursor: move;
+  touch-action: none;
+}
+
+.rdr-selection__box:focus-visible {
+  outline: 2px solid var(--rdr-selection);
+  outline-offset: 2px;
+}
+
+/* Floating coordinate/size badge, pinned above the box's top-left (brief §12.2). */
+.rdr-selection__badge {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  padding: 1px 6px;
+  border-radius: var(--rdr-radius-control, 4px);
+  background: var(--rdr-selection);
+  color: #fff;
+  font-size: 10px;
+  line-height: 1.4;
+  white-space: nowrap;
+  font-variant-numeric: var(--rdr-font-numeric);
+}
+
+/* The eight resize grips, centred on each corner/edge of the box. */
+.rdr-selection__handle {
+  position: absolute;
+  width: var(--rdr-handle);
+  height: var(--rdr-handle);
+  margin: calc(var(--rdr-handle) / -2);
+  background: var(--rdr-color-surface, #fff);
+  border: 1px solid var(--rdr-selection);
+  border-radius: 2px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* Corners. */
+.rdr-selection__handle--nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+.rdr-selection__handle--ne {
+  top: 0;
+  left: 100%;
+  cursor: nesw-resize;
+}
+.rdr-selection__handle--se {
+  top: 100%;
+  left: 100%;
+  cursor: nwse-resize;
+}
+.rdr-selection__handle--sw {
+  top: 100%;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+/* Edge midpoints. */
+.rdr-selection__handle--n {
+  top: 0;
+  left: 50%;
+  cursor: ns-resize;
+}
+.rdr-selection__handle--s {
+  top: 100%;
+  left: 50%;
+  cursor: ns-resize;
+}
+.rdr-selection__handle--w {
+  top: 50%;
+  left: 0;
+  cursor: ew-resize;
+}
+.rdr-selection__handle--e {
+  top: 50%;
+  left: 100%;
+  cursor: ew-resize;
+}

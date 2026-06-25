@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/angular';
+import { render } from '@testing-library/angular';
 import { ReportViewer } from './report-viewer';
 
 describe('ReportViewer', () => {
   it('renders the shared renderer it composes', async () => {
-    await render(ReportViewer);
+    const { container } = await render(ReportViewer);
 
-    // The skeleton viewer embeds <rdr-report-renderer>, so its placeholder
-    // content proves the viewer -> renderer composition renders.
-    expect(screen.getByText('ReportRenderer works!')).toBeTruthy();
+    // The skeleton viewer composes <rdr-report-renderer>, which paints a page
+    // sheet — proving the viewer -> renderer composition renders real output.
+    expect(container.querySelector('.rdr-page')).toBeTruthy();
   });
 });

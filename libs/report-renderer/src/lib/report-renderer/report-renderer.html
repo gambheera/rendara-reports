@@ -1,1 +1,99 @@
-<p>ReportRenderer works!</p>
+@let model = vm();
+<div
+  class="rdr-page"
+  [style]="sheetStyle()"
+  [attr.data-page-number]="model.pageNumber"
+  [attr.data-rdr-mode]="model.mode === 'design' ? 'design' : null"
+>
+  <div class="rdr-printable" [style]="printableStyle()"></div>
+  @if (model.watermark; as watermark) {
+  <div class="rdr-watermark" [style]="watermark.layerStyle">
+    @if (watermark.kind === 'image' && watermark.src) {
+    <img class="rdr-watermark-image" [src]="watermark.src" alt="" [style]="watermark.innerStyle" />
+    } @else {
+    <span class="rdr-watermark-text" [style]="watermark.innerStyle">{{ watermark.text }}</span>
+    }
+  </div>
+  } @for (box of model.elements; track box.id) { @let content = box.content;
+  <div
+    class="rdr-element"
+    [style]="elementStyle(box)"
+    [attr.data-element-id]="box.id"
+    [attr.data-element-type]="box.type"
+    [rdrDesignAttrs]="elementAnchor(box)"
+  >
+    @switch (content.kind) { @case ('text') {
+    <div class="rdr-text" [style]="content.textStyle">{{ content.text }}</div>
+    } @case ('shape') {
+    <svg
+      class="rdr-shape"
+      [attr.width]="content.svgWidthPx"
+      [attr.height]="content.svgHeightPx"
+      style="overflow: visible; display: block"
+    >
+      @switch (content.shape) { @case ('line') { @if (content.line; as l) {
+      <line
+        [attr.x1]="l.x1"
+        [attr.y1]="l.y1"
+        [attr.x2]="l.x2"
+        [attr.y2]="l.y2"
+        [attr.stroke]="content.stroke?.color ?? 'none'"
+        [attr.stroke-width]="content.stroke?.widthPx ?? 0"
+        [attr.stroke-dasharray]="content.stroke?.dashArray"
+        [attr.stroke-linecap]="content.stroke?.lineCap"
+      />
+      } } @case ('rect') { @if (content.rect; as r) {
+      <rect
+        [attr.x]="r.x"
+        [attr.y]="r.y"
+        [attr.width]="r.width"
+        [attr.height]="r.height"
+        [attr.fill]="content.fill ?? 'none'"
+        [attr.stroke]="content.stroke?.color ?? 'none'"
+        [attr.stroke-width]="content.stroke?.widthPx ?? 0"
+        [attr.stroke-dasharray]="content.stroke?.dashArray"
+        [attr.stroke-linecap]="content.stroke?.lineCap"
+      />
+      } } @case ('ellipse') { @if (content.ellipse; as e) {
+      <ellipse
+        [attr.cx]="e.cx"
+        [attr.cy]="e.cy"
+        [attr.rx]="e.rx"
+        [attr.ry]="e.ry"
+        [attr.fill]="content.fill ?? 'none'"
+        [attr.stroke]="content.stroke?.color ?? 'none'"
+        [attr.stroke-width]="content.stroke?.widthPx ?? 0"
+        [attr.stroke-dasharray]="content.stroke?.dashArray"
+        [attr.stroke-linecap]="content.stroke?.lineCap"
+      />
+      } } }
+    </svg>
+    } @case ('image') { @if (content.src; as src) {
+    <img class="rdr-image" [src]="src" alt="" [style]="content.imageStyle" />
+    } } }
+  </div>
+  } @for (table of model.tables; track table.elementId) {
+  <div
+    class="rdr-table"
+    [style]="tableContainerStyle(table)"
+    [attr.data-table-id]="table.elementId"
+    [rdrDesignAttrs]="tableAnchor(table)"
+  >
+    @for (row of table.rows; track $index) {
+    <div class="rdr-table-row" [style]="tableRowStyle(row)" [attr.data-row-kind]="row.kind">
+      @for (cell of row.cells; track cell.columnKey) {
+      <div
+        class="rdr-table-cell"
+        [style]="tableCellStyle(cell)"
+        [attr.data-column-key]="cell.columnKey"
+      >
+        {{ cell.text }}
+      </div>
+      } @if (row.label; as label) {
+      <div class="rdr-table-label" [style]="tableLabelStyle(label)">{{ label.text }}</div>
+      }
+    </div>
+    }
+  </div>
+  }
+</div>
