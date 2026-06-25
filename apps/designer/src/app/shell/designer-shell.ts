@@ -1,4 +1,4 @@
-import { Component, ViewEncapsulation, signal, viewChild } from '@angular/core';
+import { Component, ViewEncapsulation, inject, signal, viewChild } from '@angular/core';
 import { TopBar } from './top-bar/top-bar';
 import { PalettePanel } from './palette-panel/palette-panel';
 import { CanvasStage } from './canvas-stage/canvas-stage';
@@ -6,6 +6,42 @@ import { PropertiesPanel } from './properties-panel/properties-panel';
 import { StatusBar } from './status-bar/status-bar';
 import { PanelResizeHandle } from './panel-resize-handle';
 import { PageSetupDialog } from '../page-setup/page-setup-dialog';
+import { DesignerStore } from '../state/designer-store';
+
+/** The arrange (z-order / grouping) commands reachable by keyboard (E5-S7). */
+export type ArrangeCommand = 'group' | 'ungroup' | 'front' | 'forward' | 'backward' | 'back';
+
+/**
+ * Resolves a keydown to an arrange command, or `null` when it is not a shortcut.
+ * Uses the Ctrl/⌘ modifier with the standard editor bindings: `⌘/Ctrl+G` group
+ * (`+Shift` ungroup), `⌘/Ctrl+]` bring forward (`+Shift` to front) and `⌘/Ctrl+[`
+ * send backward (`+Shift` to back). Bracket detection prefers the layout-independent
+ * `code` and falls back to `key` (where Shift turns `]`/`[` into `}`/`{`).
+ */
+export function arrangeShortcut(event: {
+  readonly ctrlKey: boolean;
+  readonly metaKey: boolean;
+  readonly shiftKey: boolean;
+  readonly key: string;
+  readonly code?: string;
+}): ArrangeCommand | null {
+  if (!(event.ctrlKey || event.metaKey)) return null;
+  if (event.key.toLowerCase() === 'g') return event.shiftKey ? 'ungroup' : 'group';
+  if (event.code === 'BracketRight' || event.key === ']' || event.key === '}') {
+    return event.shiftKey ? 'front' : 'forward';
+  }
+  if (event.code === 'BracketLeft' || event.key === '[' || event.key === '{') {
+    return event.shiftKey ? 'back' : 'backward';
+  }
+  return null;
+}
+
+/** True when the event target is a text-entry control, so shortcuts should stand down. */
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+}
 
 /**
  * Designer workspace shell (E5-S1): the responsive four-zone layout — top bar,
@@ -32,12 +68,37 @@ import { PageSetupDialog } from '../page-setup/page-setup-dialog';
   templateUrl: './designer-shell.html',
   styleUrl: './designer-shell.css',
   encapsulation: ViewEncapsulation.Emulated,
-  host: { class: 'rdr-designer-shell' },
+  host: { class: 'rdr-designer-shell', '(keydown)': 'onKeyDown($event)' },
 })
 export class DesignerShell {
+  private readonly store = inject(DesignerStore);
+
   /** Width bounds (px) shared by both side panels. */
   protected readonly MIN_WIDTH = 200;
   protected readonly MAX_WIDTH = 420;
+
+  /**
+   * Workspace keyboard shortcuts for arranging elements (E5-S7): group/ungroup and
+   * the four z-order operations. Ignored while typing in a text control so it never
+   * eats an editing keystroke. The store methods are no-ops without a valid
+   * selection, so an out-of-context shortcut harmlessly does nothing.
+   */
+  protected onKeyDown(event: KeyboardEvent): void {
+    if (isEditableTarget(event.target)) return;
+    const command = arrangeShortcut(event);
+    if (command === null) return;
+    event.preventDefault();
+    switch (command) {
+      case 'group':
+        this.store.groupSelection();
+        break;
+      case 'ungroup':
+        this.store.ungroupSelection();
+        break;
+      default:
+        this.store.reorderSelection(command);
+    }
+  }
 
   private readonly pageSetup = viewChild.required(PageSetupDialog);
   private readonly canvas = viewChild.required(CanvasStage);

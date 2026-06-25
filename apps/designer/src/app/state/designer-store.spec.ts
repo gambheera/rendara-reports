@@ -189,6 +189,121 @@ describe('DesignerStore', () => {
     });
   });
 
+  describe('multi-select, z-order, grouping (E5-S7)', () => {
+    beforeEach(() => store.loadTemplate(seededTemplate()));
+
+    it('starts ungrouped and lists the body stack top-first', () => {
+      // a, b, c all share z 1, so the stack is array order; top-first reverses it.
+      expect(store.groups()).toEqual([]);
+      expect(store.bodyStack().map((el) => el.id)).toEqual(['c', 'b', 'a']);
+    });
+
+    describe('z-order', () => {
+      it('brings the selection to the front and renumbers the stack', () => {
+        store.selectOne('a');
+        store.reorderSelection('front');
+        // a now paints on top of all → top-first list leads with a.
+        expect(store.bodyStack().map((el) => el.id)).toEqual(['a', 'c', 'b']);
+        expect(store.dirty()).toBe(true);
+      });
+
+      it('sends the selection to the back', () => {
+        store.selectOne('c');
+        store.reorderSelection('back');
+        expect(store.bodyStack().map((el) => el.id)).toEqual(['b', 'a', 'c']);
+      });
+
+      it('steps an element forward and backward by one slot', () => {
+        store.selectOne('a');
+        store.reorderSelection('forward'); // a moves above b
+        expect(store.bodyStack().map((el) => el.id)).toEqual(['c', 'a', 'b']);
+        store.reorderSelection('backward'); // back to the bottom
+        expect(store.bodyStack().map((el) => el.id)).toEqual(['c', 'b', 'a']);
+      });
+
+      it('is a no-op (clean) when already at the requested extreme', () => {
+        store.selectOne('a'); // bottom of the stack
+        store.markClean();
+        const before = store.template();
+        store.reorderSelection('back');
+        expect(store.template()).toBe(before);
+        expect(store.dirty()).toBe(false);
+      });
+    });
+
+    describe('grouping', () => {
+      it('groups 2+ selected elements and exposes can-group/can-ungroup', () => {
+        store.select(['a', 'b']);
+        expect(store.canGroup()).toBe(true);
+        store.groupSelection();
+        expect(store.groups()).toEqual([['a', 'b']]);
+        expect(store.canUngroup()).toBe(true);
+      });
+
+      it('grouping does not mark the document dirty (view-state only)', () => {
+        store.select(['a', 'b']);
+        store.groupSelection();
+        expect(store.dirty()).toBe(false);
+      });
+
+      it('selecting one grouped element selects the whole group', () => {
+        store.select(['a', 'b']);
+        store.groupSelection();
+        store.selectOne('a');
+        expect(store.selectedIds()).toEqual(['a', 'b']);
+      });
+
+      it('shift-toggle removes the whole group as a unit', () => {
+        store.select(['a', 'b']);
+        store.groupSelection();
+        store.selectOne('a'); // selects [a, b]
+        store.toggleSelection('a'); // toggles the group off
+        expect(store.selectedIds()).toEqual([]);
+      });
+
+      it('ungroups, after which a member selects alone again', () => {
+        store.select(['a', 'b']);
+        store.groupSelection();
+        store.ungroupSelection();
+        expect(store.groups()).toEqual([]);
+        store.selectOne('a');
+        expect(store.selectedIds()).toEqual(['a']);
+      });
+
+      it('prunes a group when one of its members is removed', () => {
+        store.select(['a', 'b']);
+        store.groupSelection();
+        store.removeElement('a'); // group falls below 2 members → dropped
+        expect(store.groups()).toEqual([]);
+      });
+
+      it('refuses to group a single element', () => {
+        store.selectOne('a');
+        expect(store.canGroup()).toBe(false);
+        store.groupSelection();
+        expect(store.groups()).toEqual([]);
+      });
+    });
+
+    describe('group move', () => {
+      it('moves the whole selection by the same delta, preserving offsets', () => {
+        store.updateElement('a', { frame: { xMm: 10, yMm: 10, wMm: 20, hMm: 20 } });
+        store.updateElement('b', { frame: { xMm: 50, yMm: 30, wMm: 20, hMm: 20 } });
+        store.select(['a', 'b']);
+        store.moveSelection(5, 5);
+
+        expect(store.elementsById().get('a')?.frame).toMatchObject({ xMm: 15, yMm: 15 });
+        expect(store.elementsById().get('b')?.frame).toMatchObject({ xMm: 55, yMm: 35 });
+      });
+
+      it('setFrames commits a batch and is a no-op for unknown ids', () => {
+        const before = store.template();
+        store.setFrames(new Map([['ghost', { xMm: 1, yMm: 1, wMm: 1, hMm: 1 }]]));
+        expect(store.template()).toBe(before);
+      });
+    });
+  });
+
   describe('markClean', () => {
     it('clears the dirty flag after a mutation', () => {
       store.addElement(textEl('a'));

@@ -49,10 +49,7 @@ export function collectElements(template: RendaraTemplate): readonly TemplateEle
 }
 
 /** Finds an element by id across every band, or `undefined` if absent. */
-export function findElement(
-  template: RendaraTemplate,
-  id: string,
-): TemplateElement | undefined {
+export function findElement(template: RendaraTemplate, id: string): TemplateElement | undefined {
   for (const key of BAND_KEYS) {
     const found = template[key].elements.find((el) => el.id === id);
     if (found) return found;
@@ -94,6 +91,35 @@ export function updateElementById(
     el.id === id ? ({ ...el, ...changes, id: el.id, type: el.type } as TemplateElement) : el,
   );
   return { ...template, [key]: { elements } };
+}
+
+/**
+ * Returns a copy of `template` with several elements patched in one pass: each
+ * element whose id is a key of `changesById` is shallow-merged with its changes
+ * (preserving `id` and `type`, like {@link updateElementById}). Used by
+ * multi-element edits — group move and z-order renumbering (E5-S7) — so the whole
+ * batch lands in a single new template reference. Only bands containing a matched
+ * id are rebuilt; if nothing matches, the original template is returned unchanged.
+ */
+export function updateElementsById(
+  template: RendaraTemplate,
+  changesById: ReadonlyMap<string, Partial<TemplateElement>>,
+): RendaraTemplate {
+  if (changesById.size === 0) return template;
+  let changed = false;
+  const next: Partial<Record<BandKey, Band>> = {};
+  for (const key of BAND_KEYS) {
+    const band = template[key];
+    if (!band.elements.some((el) => changesById.has(el.id))) continue;
+    changed = true;
+    next[key] = {
+      elements: band.elements.map((el) => {
+        const changes = changesById.get(el.id);
+        return changes ? ({ ...el, ...changes, id: el.id, type: el.type } as TemplateElement) : el;
+      }),
+    };
+  }
+  return changed ? { ...template, ...next } : template;
 }
 
 /**

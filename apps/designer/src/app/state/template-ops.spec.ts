@@ -9,6 +9,7 @@ import {
   removeElementById,
   setPageOf,
   updateElementById,
+  updateElementsById,
 } from './template-ops';
 
 function textEl(id: string, text = 'hi'): TextElement {
@@ -102,6 +103,42 @@ describe('updateElementById', () => {
   it('returns the same template when the id is unknown', () => {
     const t = seeded();
     expect(updateElementById(t, 'nope', { z: 5 })).toBe(t);
+  });
+});
+
+describe('updateElementsById', () => {
+  it('patches several elements across bands in one new template', () => {
+    const t = seeded();
+    const next = updateElementsById(
+      t,
+      new Map([
+        ['b1', { z: 5 }],
+        ['f1', { z: 9 }],
+      ]),
+    );
+
+    expect(next).not.toBe(t);
+    expect(findElement(next, 'b1')?.z).toBe(5);
+    expect(findElement(next, 'f1')?.z).toBe(9);
+    // A band with no matched id keeps its reference.
+    expect(next.header).toBe(t.header);
+    // Originals untouched.
+    expect(findElement(t, 'b1')?.z).toBe(1);
+  });
+
+  it('preserves id and type per patched element', () => {
+    const t = seeded();
+    const next = updateElementsById(
+      t,
+      new Map([['b1', { id: 'x', type: 'image' } as unknown as Partial<TextElement>]]),
+    );
+    expect(findElement(next, 'b1')?.type).toBe('text');
+  });
+
+  it('returns the same template for an empty map or all-unknown ids', () => {
+    const t = seeded();
+    expect(updateElementsById(t, new Map())).toBe(t);
+    expect(updateElementsById(t, new Map([['nope', { z: 2 }]]))).toBe(t);
   });
 });
 

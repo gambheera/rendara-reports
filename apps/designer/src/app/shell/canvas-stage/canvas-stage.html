@@ -56,6 +56,17 @@
         [style.width.px]="pageBox().widthPx"
         [style.height.px]="pageBox().heightPx"
       />
+
+      @if (marquee(); as rect) {
+      <div
+        class="rdr-canvas__marquee"
+        aria-hidden="true"
+        [style.left.px]="rect.leftPx"
+        [style.top.px]="rect.topPx"
+        [style.width.px]="rect.widthPx"
+        [style.height.px]="rect.heightPx"
+      ></div>
+      }
     </div>
   </div>
 </div>

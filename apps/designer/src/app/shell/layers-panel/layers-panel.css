@@ -1,0 +1,119 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--rdr-space-3);
+}
+
+.rdr-layers__toolbar {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--rdr-space-3);
+}
+
+.rdr-layers__group {
+  display: flex;
+  gap: var(--rdr-space-1);
+}
+
+.rdr-layers__action {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 var(--rdr-space-2);
+  border: 1px solid var(--rdr-color-border-hairline);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-surface);
+  color: var(--rdr-color-text-primary);
+  font-family: var(--rdr-font-ui);
+  font-size: var(--rdr-font-size-label);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rdr-layers__action:hover:not(:disabled) {
+  border-color: var(--rdr-color-accent);
+  color: var(--rdr-color-accent);
+}
+
+.rdr-layers__action:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+.rdr-layers__action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rdr-layers__list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.rdr-layers__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rdr-space-2);
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--rdr-space-2) var(--rdr-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--rdr-radius-control);
+  background: transparent;
+  color: var(--rdr-color-text-primary);
+  font-family: var(--rdr-font-ui);
+  font-size: var(--rdr-font-size-label);
+  text-align: left;
+  cursor: pointer;
+}
+
+.rdr-layers__row:hover {
+  background: var(--rdr-color-surface);
+}
+
+.rdr-layers__row--selected {
+  background: var(--rdr-color-accent-subtle);
+  color: var(--rdr-color-accent);
+}
+
+.rdr-layers__row:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+.rdr-layers__row-group {
+  flex: none;
+  padding: 0 var(--rdr-space-2);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-accent);
+  color: #fff;
+  font-size: var(--rdr-font-size-caption);
+  font-variant-numeric: var(--rdr-font-numeric);
+}
+
+.rdr-layers__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rdr-space-1);
+  text-align: center;
+  color: var(--rdr-color-text-secondary);
+  font-size: var(--rdr-font-size-label);
+}
+
+.rdr-layers__empty-hint {
+  margin: 0;
+  color: var(--rdr-color-text-secondary);
+  font-size: var(--rdr-font-size-caption);
+}
+
+.rdr-layers__empty p {
+  margin: 0;
+}

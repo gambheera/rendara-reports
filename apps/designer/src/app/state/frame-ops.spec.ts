@@ -4,7 +4,11 @@ import { mmToPx } from '@rendara/report-engine';
 import {
   MIN_SIZE_MM,
   RESIZE_HANDLES,
+  boundingFrame,
+  elementsInMarquee,
   moveFrame,
+  moveFramesAsGroup,
+  normalizeRectMm,
   nudgeFrame,
   nudgeStepMm,
   resizeFrame,
@@ -104,6 +108,75 @@ describe('resizeFrame', () => {
 
   it('exposes all eight handles', () => {
     expect([...RESIZE_HANDLES].sort()).toEqual(['e', 'n', 'ne', 'nw', 's', 'se', 'sw', 'w']);
+  });
+});
+
+describe('boundingFrame', () => {
+  it('returns null for an empty selection', () => {
+    expect(boundingFrame([])).toBeNull();
+  });
+
+  it('encloses every frame in the union box', () => {
+    const a: Frame = { xMm: 10, yMm: 10, wMm: 20, hMm: 20 };
+    const b: Frame = { xMm: 50, yMm: 30, wMm: 30, hMm: 10 };
+    // union: x 10..80, y 10..40 → 70 × 30 at (10, 10).
+    expect(boundingFrame([a, b])).toEqual({ xMm: 10, yMm: 10, wMm: 70, hMm: 30 });
+  });
+
+  it('has a null height when any member grows, bounding only its top edge', () => {
+    const fixed: Frame = { xMm: 10, yMm: 10, wMm: 20, hMm: 20 };
+    const growing: Frame = { xMm: 40, yMm: 50, wMm: 60, hMm: null };
+    expect(boundingFrame([fixed, growing])).toEqual({ xMm: 10, yMm: 10, wMm: 90, hMm: null });
+  });
+});
+
+describe('moveFramesAsGroup', () => {
+  const a: Frame = { xMm: 10, yMm: 10, wMm: 20, hMm: 20 };
+  const b: Frame = { xMm: 50, yMm: 30, wMm: 30, hMm: 10 };
+
+  it('translates every frame by the same delta, preserving relative offsets', () => {
+    const [na, nb] = moveFramesAsGroup([a, b], 5, 5, A4);
+    expect(na).toMatchObject({ xMm: 15, yMm: 15 });
+    expect(nb).toMatchObject({ xMm: 55, yMm: 35 });
+  });
+
+  it('clamps the delta by the bounding box so the whole group stays on the sheet', () => {
+    // Bounding box top-left is (10, 10), so it can move at most -10 mm each way.
+    const [na, nb] = moveFramesAsGroup([a, b], -1000, -1000, A4);
+    expect(na).toMatchObject({ xMm: 0, yMm: 0 });
+    expect(nb).toMatchObject({ xMm: 40, yMm: 20 });
+  });
+
+  it('returns an empty array for an empty selection', () => {
+    expect(moveFramesAsGroup([], 5, 5, A4)).toEqual([]);
+  });
+});
+
+describe('normalizeRectMm', () => {
+  it('spans two corners with a positive width/height', () => {
+    expect(normalizeRectMm({ xMm: 80, yMm: 60 }, { xMm: 20, yMm: 10 })).toEqual({
+      xMm: 20,
+      yMm: 10,
+      wMm: 60,
+      hMm: 50,
+    });
+  });
+});
+
+describe('elementsInMarquee', () => {
+  const els = [
+    { id: 'a', frame: { xMm: 10, yMm: 10, wMm: 20, hMm: 20 } as Frame },
+    { id: 'b', frame: { xMm: 100, yMm: 100, wMm: 20, hMm: 20 } as Frame },
+    { id: 'line', frame: { xMm: 40, yMm: 15, wMm: 30, hMm: 0 } as Frame },
+  ];
+
+  it('selects every element the rectangle intersects', () => {
+    const hit = elementsInMarquee(els, { xMm: 0, yMm: 0, wMm: 80, hMm: 40 });
+    expect(hit).toEqual(['a', 'line']);
+  });
+
+  it('excludes elements fully outside the rectangle', () => {
+    expect(elementsInMarquee(els, { xMm: 0, yMm: 0, wMm: 5, hMm: 5 })).toEqual([]);
   });
 });
 

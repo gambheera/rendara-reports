@@ -2,6 +2,7 @@ import { Component, ViewEncapsulation, inject, signal } from '@angular/core';
 import { CdkDrag, CdkDragPlaceholder, CdkDropList } from '@angular/cdk/drag-drop';
 import { ElementCreator } from '../../state/element-creator';
 import { CANVAS_DROP_LIST_ID, type PaletteKind } from '../../state/drag-create';
+import { LayersPanel } from '../layers-panel/layers-panel';
 
 /** Left-panel tabs, canonical per brief §12.3.3. */
 export type PaletteTab = 'insert' | 'layers' | 'data';
@@ -25,11 +26,12 @@ interface PaletteItem {
  * the single-pointer alternative required by WCAG 2.2 SC 2.5.7. A {@link dragging}
  * guard stops the click that may trail a genuine drag from adding a second element.
  *
- * Layers and Data remain placeholders (their stories are E5-S7 / E6-S6).
+ * The Layers tab hosts the {@link LayersPanel} (E5-S7); Data remains a placeholder
+ * (E6-S6).
  */
 @Component({
   selector: 'rdr-palette-panel',
-  imports: [CdkDropList, CdkDrag, CdkDragPlaceholder],
+  imports: [CdkDropList, CdkDrag, CdkDragPlaceholder, LayersPanel],
   templateUrl: './palette-panel.html',
   styleUrl: './palette-panel.css',
   encapsulation: ViewEncapsulation.Emulated,

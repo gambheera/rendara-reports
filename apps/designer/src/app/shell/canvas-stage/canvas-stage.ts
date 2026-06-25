@@ -4,6 +4,7 @@ import {
   ViewEncapsulation,
   computed,
   inject,
+  signal,
   viewChild,
 } from '@angular/core';
 import { CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
@@ -12,6 +13,7 @@ import { mmToPx, pxToMm } from '@rendara/report-engine';
 import { DesignerStore } from '../../state/designer-store';
 import { ElementCreator } from '../../state/element-creator';
 import { CANVAS_DROP_LIST_ID, type PaletteKind } from '../../state/drag-create';
+import { elementsInMarquee, normalizeRectMm } from '../../state/frame-ops';
 import { SelectionOverlay } from './selection-overlay';
 
 /** One ruler graduation: its offset (px, page-relative) and optional mm label. */
@@ -96,6 +98,33 @@ export function hitElementId(target: EventTarget | null): string | null {
   return hit.getAttribute('data-element-id') ?? hit.getAttribute('data-table-id');
 }
 
+/** A scaled-px rectangle for painting the marquee, relative to the pages container. */
+export interface MarqueeBoxPx {
+  readonly leftPx: number;
+  readonly topPx: number;
+  readonly widthPx: number;
+  readonly heightPx: number;
+}
+
+/**
+ * The marquee rectangle (E5-S7) for two viewport points, expressed in px relative
+ * to the `containerRect` (the pages area `getBoundingClientRect`) so it can be
+ * absolutely positioned over the canvas. Normalised to a positive width/height
+ * regardless of drag direction. Kept pure so the rubber-band geometry is testable.
+ */
+export function marqueeBoxPx(
+  start: { readonly x: number; readonly y: number },
+  current: { readonly x: number; readonly y: number },
+  containerRect: { readonly left: number; readonly top: number },
+): MarqueeBoxPx {
+  return {
+    leftPx: Math.min(start.x, current.x) - containerRect.left,
+    topPx: Math.min(start.y, current.y) - containerRect.top,
+    widthPx: Math.abs(start.x - current.x),
+    heightPx: Math.abs(start.y - current.y),
+  };
+}
+
 /** Extracts the viewport client point a CDK drop ended at, mouse or touch. */
 function dropClientPoint(event: CdkDragDrop<unknown, unknown, PaletteKind>): {
   x: number;
@@ -172,6 +201,12 @@ export class CanvasStage {
   /** True while the document has no body elements — drives the empty placeholder. */
   protected readonly isEmpty = computed(() => this.store.bodyElements().length === 0);
 
+  /** The live marquee rectangle (px, pages-relative) while rubber-band selecting, else `null`. */
+  protected readonly marquee = signal<MarqueeBoxPx | null>(null);
+
+  /** Drag distance (px) past which an empty-canvas press becomes a marquee, not a click. */
+  private readonly marqueeThresholdPx = 3;
+
   /**
    * Fits the page width into the visible canvas (one-shot, like a "Fit" button).
    * Reads the live scroll viewport and writes a concrete numeric zoom to the
@@ -204,21 +239,71 @@ export class CanvasStage {
   }
 
   /**
-   * Click-select (E5-S6): a pointerdown on a rendered element selects it; a press
-   * on empty canvas clears the selection. The selection overlay's box/handles stop
-   * their own pointer events, so a drag-move/resize never reaches here — only a
-   * genuine click on the page does. The store sanitises the id, so a stale hit is a
-   * safe no-op.
+   * Click-select + multi-select (E5-S6 / E5-S7): a pointerdown on a rendered
+   * element selects it — or **shift-toggles** it into/out of the selection; a press
+   * on empty canvas starts a **marquee** (rubber-band) drag and, if it never moves,
+   * collapses to a click that clears the selection (unless Shift is held). The
+   * selection overlay's box/handles stop their own pointer events, so a
+   * drag-move/resize never reaches here — only a genuine canvas press does. The
+   * store sanitises ids, so a stale hit is a safe no-op.
    */
   protected onCanvasPointerDown(event: PointerEvent): void {
     if (event.button !== 0) {
       return;
     }
     const id = hitElementId(event.target);
-    if (id === null) {
-      this.store.clearSelection();
+    if (id !== null) {
+      if (event.shiftKey) this.store.toggleSelection(id);
+      else this.store.selectOne(id);
       return;
     }
-    this.store.selectOne(id);
+    this.startMarquee(event);
+  }
+
+  /**
+   * Runs a marquee selection from an empty-canvas press: paints the rubber-band
+   * rectangle and, once the pointer travels past {@link marqueeThresholdPx}, selects
+   * every element the rectangle intersects (live, additive to the prior selection
+   * when Shift is held). A press that never moves is a plain click — it clears the
+   * selection unless Shift is held. The marquee region is mapped to page-absolute mm
+   * against the first sheet, the same space frames are authored in.
+   */
+  private startMarquee(event: PointerEvent): void {
+    const sheet = this.host.nativeElement.querySelector<HTMLElement>('.rdr-page');
+    const pages = event.currentTarget;
+    if (sheet === null || !(pages instanceof HTMLElement)) {
+      if (!event.shiftKey) this.store.clearSelection();
+      return;
+    }
+    const sheetRect = sheet.getBoundingClientRect();
+    const containerRect = pages.getBoundingClientRect();
+    const zoom = this.store.zoom();
+    const start = { x: event.clientX, y: event.clientY };
+    const additive = event.shiftKey;
+    const base = additive ? [...this.store.selectedIds()] : [];
+    let moved = false;
+
+    const onMove = (move: PointerEvent): void => {
+      const current = { x: move.clientX, y: move.clientY };
+      if (Math.abs(current.x - start.x) + Math.abs(current.y - start.y) > this.marqueeThresholdPx) {
+        moved = true;
+      }
+      if (!moved) return;
+      this.marquee.set(marqueeBoxPx(start, current, containerRect));
+      const rect = normalizeRectMm(
+        clientPointToPageMm(start.x, start.y, sheetRect, zoom),
+        clientPointToPageMm(current.x, current.y, sheetRect, zoom),
+      );
+      const hits = elementsInMarquee(this.store.bodyElements(), rect);
+      this.store.select([...base, ...hits]);
+    };
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      this.marquee.set(null);
+      if (!moved && !additive) this.store.clearSelection();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   }
 }
