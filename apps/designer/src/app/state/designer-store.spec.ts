@@ -68,6 +68,94 @@ describe('DesignerStore', () => {
     });
   });
 
+  describe('snapping toggle (E5-S8)', () => {
+    it('defaults on, toggles and sets without marking dirty', () => {
+      expect(store.snapEnabled()).toBe(true);
+
+      store.toggleSnap();
+      expect(store.snapEnabled()).toBe(false);
+
+      store.setSnapEnabled(true);
+      expect(store.snapEnabled()).toBe(true);
+      expect(store.dirty()).toBe(false);
+    });
+  });
+
+  describe('align & distribute (E5-S8)', () => {
+    /** Three body elements at known frames for the align/distribute maths. */
+    function spread(): RendaraTemplate {
+      return {
+        ...createEmptyTemplate(),
+        body: {
+          elements: [
+            {
+              id: 'a',
+              type: 'text',
+              frame: { xMm: 10, yMm: 5, wMm: 20, hMm: 10 },
+              z: 1,
+              text: 'a',
+            },
+            {
+              id: 'b',
+              type: 'text',
+              frame: { xMm: 40, yMm: 30, wMm: 20, hMm: 10 },
+              z: 1,
+              text: 'b',
+            },
+            {
+              id: 'c',
+              type: 'text',
+              frame: { xMm: 90, yMm: 55, wMm: 20, hMm: 10 },
+              z: 1,
+              text: 'c',
+            },
+          ],
+        },
+      };
+    }
+
+    beforeEach(() => store.loadTemplate(spread()));
+
+    it('aligns the selection left and marks dirty', () => {
+      store.select(['a', 'b', 'c']);
+      store.alignSelection('left');
+      expect(store.bodyElements().map((el) => el.frame.xMm)).toEqual([10, 10, 10]);
+      expect(store.dirty()).toBe(true);
+    });
+
+    it('does nothing for a single selection (needs 2+)', () => {
+      store.selectOne('b');
+      store.alignSelection('left');
+      expect(store.elementsById().get('b')?.frame.xMm).toBe(40);
+      expect(store.dirty()).toBe(false);
+    });
+
+    it('distributes horizontal centres evenly', () => {
+      store.select(['a', 'b', 'c']);
+      store.distributeSelection('horizontal');
+      // centres 20, 50, 100 → even centres 20, 60, 100 → middle x = 50.
+      expect(store.elementsById().get('b')?.frame.xMm).toBe(50);
+    });
+
+    it('does nothing to distribute with fewer than three selected', () => {
+      store.select(['a', 'b']);
+      store.distributeSelection('horizontal');
+      expect(store.elementsById().get('b')?.frame.xMm).toBe(40);
+      expect(store.dirty()).toBe(false);
+    });
+
+    it('exposes canAlign (2+) and canDistribute (3+)', () => {
+      store.select(['a']);
+      expect(store.canAlign()).toBe(false);
+      expect(store.canDistribute()).toBe(false);
+      store.select(['a', 'b']);
+      expect(store.canAlign()).toBe(true);
+      expect(store.canDistribute()).toBe(false);
+      store.select(['a', 'b', 'c']);
+      expect(store.canDistribute()).toBe(true);
+    });
+  });
+
   describe('rendered document (E5-S4)', () => {
     it('paginates the empty document to a single page', () => {
       expect(store.paginatedDocument().pageCount).toBe(1);

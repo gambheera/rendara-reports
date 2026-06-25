@@ -7,6 +7,17 @@
     +
   </button>
   <button type="button" class="rdr-status-bar__fit" (click)="fitToView.emit()">Fit</button>
+  <button
+    type="button"
+    class="rdr-status-bar__fit rdr-status-bar__snap"
+    [class.rdr-status-bar__snap--on]="snapEnabled()"
+    [attr.aria-pressed]="snapEnabled()"
+    aria-label="Snap to grid and guides"
+    title="Snap to grid and guides (hold Alt to bypass)"
+    (click)="toggleSnap()"
+  >
+    Snap
+  </button>
 </div>
 
 <div class="rdr-status-bar__group rdr-status-bar__center">
@@ -23,5 +34,5 @@
 
 <div class="rdr-status-bar__group">
   <span>{{ pageCounter() }}</span>
-  <span class="rdr-status-bar__hint">⌘D Duplicate · Shift Snap to grid</span>
+  <span class="rdr-status-bar__hint">⌘D Duplicate · Alt to bypass snap</span>
 </div>
