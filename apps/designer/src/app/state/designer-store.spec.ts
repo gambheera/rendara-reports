@@ -401,6 +401,46 @@ describe('DesignerStore', () => {
     });
   });
 
+  describe('sample data (E6-S6)', () => {
+    const sample = {
+      fileName: 'invoice-sample.json',
+      value: { a: 1 },
+      root: { name: '$root', path: '', kind: 'object' as const },
+      truncated: false,
+    };
+
+    it('starts with no sample data', () => {
+      expect(store.sampleData()).toBeNull();
+      expect(store.hasSampleData()).toBe(false);
+    });
+
+    it('loads sample data without marking the document dirty or undoable', () => {
+      store.setSampleData(sample);
+      expect(store.sampleData()).toEqual(sample);
+      expect(store.hasSampleData()).toBe(true);
+      expect(store.dirty()).toBe(false);
+      expect(store.canUndo()).toBe(false);
+    });
+
+    it('replaces and clears sample data', () => {
+      store.setSampleData(sample);
+      const next = { ...sample, fileName: 'other.json' };
+      store.setSampleData(next);
+      expect(store.sampleData()?.fileName).toBe('other.json');
+      store.clearSampleData();
+      expect(store.sampleData()).toBeNull();
+      expect(store.hasSampleData()).toBe(false);
+    });
+
+    it('keeps sample data across an undo (it is view-state, not in history)', () => {
+      store.addElement(textEl('a'));
+      store.setSampleData(sample);
+      store.undo();
+      expect(store.bodyElements()).toEqual([]);
+      expect(store.sampleData()).toEqual(sample);
+    });
+  });
+
   describe('undo / redo', () => {
     it('starts with nothing to undo or redo', () => {
       expect(store.canUndo()).toBe(false);

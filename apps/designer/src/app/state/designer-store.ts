@@ -22,6 +22,7 @@ import {
   type HistorySnapshot,
 } from './history';
 import { cloneElementsForPaste } from './clipboard-ops';
+import type { SampleData } from './sample-data';
 import {
   addGroup,
   anyGrouped,
@@ -86,6 +87,13 @@ interface DesignerState {
    * injection surface. View-state — never persisted, never marks the document dirty.
    */
   readonly clipboard: readonly TemplateElement[];
+  /**
+   * The imported sample Data JSON, or `null` when none is loaded (E6-S6). This is
+   * a designer aid — it powers the Data tab's field tree (and later drag-to-bind /
+   * table sources) — held in view-state: it is never written into the template, so
+   * importing it does not mark the document dirty and it is not undoable.
+   */
+  readonly sampleData: SampleData | null;
 }
 
 function initialState(): DesignerState {
@@ -99,6 +107,7 @@ function initialState(): DesignerState {
     history: emptyHistory(),
     interaction: null,
     clipboard: [],
+    sampleData: null,
   };
 }
 
@@ -241,6 +250,8 @@ export const DesignerStore = signalStore(
     canRedo: computed(() => store.history().future.length > 0),
     /** True when the clipboard holds elements that paste can place (E5-S9). */
     hasClipboard: computed(() => store.clipboard().length > 0),
+    /** True when sample data is loaded, so the Data tab shows its field tree (E6-S6). */
+    hasSampleData: computed(() => store.sampleData() !== null),
   })),
   withMethods((store) => {
     /**
@@ -549,6 +560,19 @@ export const DesignerStore = signalStore(
       /** Marks the document clean (e.g. after a save/export). */
       markClean(): void {
         patchState(store, { dirty: false });
+      },
+      /**
+       * Loads imported sample data (E6-S6), replacing any previous import. Sample
+       * data is a designer aid (it feeds the Data tab's field tree and later
+       * binding), held in view-state — it never touches the template, the dirty
+       * flag or undo history.
+       */
+      setSampleData(sampleData: SampleData): void {
+        patchState(store, { sampleData });
+      },
+      /** Clears the imported sample data (E6-S6). View state — not dirty/undoable. */
+      clearSampleData(): void {
+        patchState(store, { sampleData: null });
       },
       /**
        * Opens a continuous-gesture transaction (E5-S9): captures the pre-gesture
