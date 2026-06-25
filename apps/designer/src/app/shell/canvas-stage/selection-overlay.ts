@@ -10,20 +10,20 @@ import {
   viewChild,
 } from '@angular/core';
 import { pxToMm } from '@rendara/report-engine';
-import type { Frame, TemplateElement } from '@rendara/report-schema';
+import type { TemplateElement } from '@rendara/report-schema';
 import { DesignerStore } from '../../state/designer-store';
 import type { PageSizeMm } from '../../state/drag-create';
 import {
   RESIZE_HANDLES,
   type ResizeHandle,
-  moveFrame,
-  nudgeFrame,
+  type SelectionBoxPx,
+  moveFramesAsGroup,
   nudgeStepMm,
   resizeFrame,
   selectionBoxPx,
 } from '../../state/frame-ops';
 
-/** The live coordinate/size readout shown in the floating badge. */
+/** The live coordinate/size readout shown in the single-selection badge. */
 interface CoordBadge {
   readonly x: number;
   readonly y: number;
@@ -31,27 +31,37 @@ interface CoordBadge {
   readonly h: number;
 }
 
+/** One selected element's id and the on-screen box (scaled px) the overlay paints. */
+interface ElementBox {
+  readonly id: string;
+  readonly box: SelectionBoxPx;
+}
+
 /**
- * Direct-manipulation overlay for the canvas (E5-S6). It paints the **selection
- * model** over the primary selected element — an indigo rectangle, **8 resize
- * handles** and a floating `x/y · w×h mm` **coordinate badge** (brief §12.2) —
- * and turns pointer/keyboard gestures into immutable frame updates on the store.
+ * Direct-manipulation overlay for the canvas (E5-S6 / E5-S7). It paints the
+ * **selection model** and turns pointer/keyboard gestures into immutable frame
+ * updates on the store.
  *
- * The overlay derives its box purely from the element's mm {@link Frame} scaled
- * by zoom ({@link selectionBoxPx}), so it stays a true mirror of the model: every
- * move/resize commits through `DesignerStore.updateElement`, and the box re-derives
- * from the new frame. A growing/zero-height element (a data table or line) has no
- * authored height, so its box height is measured from the rendered node.
+ * - **Single selection** — an indigo rectangle, **8 resize handles** and a floating
+ *   `x/y · w×h mm` **coordinate badge** (brief §12.2); drag to move, grips to
+ *   resize, arrows to nudge.
+ * - **Multi selection** (E5-S7) — a draggable indigo box around **each** selected
+ *   element (resize is single-selection only) and an `N selected` badge; dragging or
+ *   nudging any box moves the **whole selection as a unit** (a grouped selection
+ *   therefore moves together). Empty space between the boxes stays click-through, so
+ *   marquee/clear still work between elements.
  *
- * All placement/transform math lives in the pure `frame-ops` module; this
- * component only wires the stateful concerns: pointer drag loops (move + resize),
- * keyboard nudging (arrows = 1 mm, Shift = 10 mm, Escape deselects) and moving
- * focus to the box when the selection changes, so the canvas is keyboard-operable
- * (WCAG 2.2 AA). Multi-select is E5-S7; this drives the single primary selection.
+ * Every box derives purely from the element's mm {@link Frame} scaled by zoom
+ * ({@link selectionBoxPx}), so it stays a true mirror of the model; a growing/zero
+ * -height element (data table, line) has no authored height, so its box height is
+ * measured from the rendered node. All placement/transform maths lives in the pure
+ * `frame-ops` module; this component only wires the stateful concerns — pointer drag
+ * loops, keyboard nudging (arrows = 1 mm, Shift = 10 mm, Escape deselects) and moving
+ * focus to the primary box when the selection changes (WCAG 2.2 keyboard path).
  *
- * The layer itself is click-through (`pointer-events: none`); only the box and
- * handles are interactive, so clicking an *unselected* element passes through to
- * the canvas hit-test beneath.
+ * The layer itself is click-through (`pointer-events: none`); only the boxes and
+ * handles are interactive, so clicking *outside* the selection passes through to the
+ * canvas hit-test beneath.
  */
 @Component({
   selector: 'rdr-selection-overlay',
@@ -69,96 +79,144 @@ export class SelectionOverlay {
 
   private readonly boxRef = viewChild<ElementRef<HTMLElement>>('box');
 
-  /** Measured pixel height of the rendered node, for auto-/zero-height elements. */
-  private readonly measuredHeightPx = signal(0);
+  /** Measured pixel heights (scaled) of rendered nodes, by id, for auto-/zero-height elements. */
+  private readonly measuredHeightById = signal<ReadonlyMap<string, number>>(new Map());
 
-  /** The element the overlay is anchored to, or `undefined` when nothing is selected. */
-  protected readonly selected = computed<TemplateElement | undefined>(() =>
-    this.store.primarySelection(),
+  /** The selected elements, in selection order (empty when nothing is selected). */
+  protected readonly selectedElements = computed<readonly TemplateElement[]>(() =>
+    this.store.selectedElements(),
   );
 
-  /** The on-screen box (scaled px, sheet-relative) the overlay paints; `null` when idle. */
-  protected readonly box = computed(() => {
-    const element = this.selected();
-    if (element === undefined) return null;
-    return selectionBoxPx(element.frame, this.store.zoom(), this.measuredHeightPx());
+  /** Number of selected elements — drives the single- vs multi-selection rendering. */
+  protected readonly count = computed(() => this.selectedElements().length);
+
+  /** True for exactly one selected element (the resize-capable case). */
+  protected readonly isSingle = computed(() => this.count() === 1);
+
+  /** The on-screen box (scaled px, sheet-relative) for every selected element. */
+  protected readonly elementBoxes = computed<readonly ElementBox[]>(() => {
+    const zoom = this.store.zoom();
+    const heights = this.measuredHeightById();
+    return this.selectedElements().map((el) => ({
+      id: el.id,
+      box: selectionBoxPx(el.frame, zoom, heights.get(el.id) ?? 0),
+    }));
   });
 
-  /** The live coordinate/size readout (mm) for the badge. */
+  /** The live coordinate/size readout (mm) for the single-selection badge. */
   protected readonly badge = computed<CoordBadge | null>(() => {
-    const element = this.selected();
-    if (element === undefined) return null;
+    if (!this.isSingle()) return null;
+    const element = this.selectedElements()[0];
     const { frame } = element;
+    const heights = this.measuredHeightById();
     const hMm =
       frame.hMm === null || frame.hMm === 0
-        ? Math.round(pxToMm(this.measuredHeightPx() / this.store.zoom()))
+        ? Math.round(pxToMm((heights.get(element.id) ?? 0) / this.store.zoom()))
         : frame.hMm;
     return { x: frame.xMm, y: frame.yMm, w: frame.wMm, h: hMm };
   });
 
-  /** A spoken description of the current selection + position, for assistive tech. */
+  /** A spoken description of the current selection, for assistive tech. */
   protected readonly ariaLabel = computed(() => {
-    const element = this.selected();
+    const elements = this.selectedElements();
+    if (elements.length === 0) return 'No selection';
+    if (elements.length > 1) {
+      return `${elements.length} elements selected. Use arrow keys to move them together.`;
+    }
     const coords = this.badge();
-    if (element === undefined || coords === null) return 'No selection';
+    const [element] = elements;
+    if (coords === null) return 'No selection';
     return `${element.type} element at ${coords.x} by ${coords.y} millimetres, ${coords.w} by ${coords.h} millimetres. Use arrow keys to move.`;
   });
 
   constructor() {
-    // Measure the rendered node's height for auto-/zero-height elements (a data
+    // Measure rendered node heights for auto-/zero-height selected elements (a data
     // table grows; a line has no height), re-running after each render and when the
-    // selection, zoom or document changes.
+    // selection, zoom or document changes. Only writes when a value actually changed,
+    // so the effect settles rather than looping.
     afterRenderEffect(() => {
-      const element = this.selected();
+      const elements = this.selectedElements();
       this.store.zoom();
       this.store.paginatedDocument();
-      if (element === undefined || (element.frame.hMm !== null && element.frame.hMm !== 0)) {
-        return;
+      const next = new Map<string, number>();
+      for (const el of elements) {
+        if (el.frame.hMm !== null && el.frame.hMm !== 0) continue;
+        const node = this.findRenderedNode(el.id);
+        next.set(el.id, node ? node.getBoundingClientRect().height : 0);
       }
-      const node = this.findRenderedNode(element.id);
-      this.measuredHeightPx.set(node ? node.getBoundingClientRect().height : 0);
+      const current = this.measuredHeightById();
+      if (next.size !== current.size || [...next].some(([id, h]) => current.get(id) !== h)) {
+        this.measuredHeightById.set(next);
+      }
     });
 
-    // Move focus to the selection box when a new element becomes selected, so the
-    // arrow-key nudge works immediately after a click or palette add.
-    let lastId: string | undefined;
+    // Move focus to the primary selection box when the selection changes, so the
+    // arrow-key nudge works immediately after a click, marquee or palette add.
+    let lastPrimary: string | undefined;
     effect(() => {
-      const id = this.selected()?.id;
-      if (id !== undefined && id !== lastId) {
+      const primary = this.selectedElements()[0]?.id;
+      if (primary !== undefined && primary !== lastPrimary) {
         this.boxRef()?.nativeElement.focus({ preventScroll: true });
       }
-      lastId = id;
+      lastPrimary = primary;
     });
   }
 
-  /** Starts a drag-move from the box body. */
+  /** Starts a drag-move from any selection box — moves the whole selection as a unit. */
   protected onBoxPointerDown(event: PointerEvent): void {
-    const element = this.selected();
-    if (event.button !== 0 || element === undefined) return;
+    const elements = this.selectedElements();
+    if (event.button !== 0 || elements.length === 0) return;
     event.preventDefault();
     event.stopPropagation();
-    const startFrame = element.frame;
+    const startFrames = elements.map((el) => el.frame);
+    const ids = elements.map((el) => el.id);
     const pageMm = this.pageMm();
-    this.runDrag(event, element.id, (dxMm, dyMm) => moveFrame(startFrame, dxMm, dyMm, pageMm));
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const zoom = this.store.zoom();
+    const onMove = (move: PointerEvent): void => {
+      const dxMm = pxToMm((move.clientX - startX) / zoom);
+      const dyMm = pxToMm((move.clientY - startY) / zoom);
+      const moved = moveFramesAsGroup(startFrames, dxMm, dyMm, pageMm);
+      this.store.setFrames(new Map(ids.map((id, i) => [id, moved[i]])));
+    };
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   }
 
-  /** Starts a resize from one of the eight handles. */
+  /** Starts a resize from one of the eight handles (single selection only). */
   protected onHandlePointerDown(event: PointerEvent, handle: ResizeHandle): void {
-    const element = this.selected();
-    if (event.button !== 0 || element === undefined) return;
+    const element = this.selectedElements()[0];
+    if (event.button !== 0 || !this.isSingle() || element === undefined) return;
     event.preventDefault();
     event.stopPropagation();
     const startFrame = element.frame;
     const pageMm = this.pageMm();
-    this.runDrag(event, element.id, (dxMm, dyMm) =>
-      resizeFrame(startFrame, handle, dxMm, dyMm, pageMm),
-    );
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const zoom = this.store.zoom();
+    const onMove = (move: PointerEvent): void => {
+      const dxMm = pxToMm((move.clientX - startX) / zoom);
+      const dyMm = pxToMm((move.clientY - startY) / zoom);
+      this.store.updateElement(element.id, {
+        frame: resizeFrame(startFrame, handle, dxMm, dyMm, pageMm),
+      });
+    };
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   }
 
-  /** Keyboard nudge / deselect when the box is focused (WCAG 2.2 keyboard path). */
+  /** Keyboard nudge / deselect when a box is focused (WCAG 2.2 keyboard path). */
   protected onKeyDown(event: KeyboardEvent): void {
-    const element = this.selected();
-    if (element === undefined) return;
+    if (this.count() === 0) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       this.store.clearSelection();
@@ -184,48 +242,17 @@ export class SelectionOverlay {
         return;
     }
     event.preventDefault();
-    this.store.updateElement(element.id, {
-      frame: nudgeFrame(element.frame, dxMm, dyMm, this.pageMm()),
-    });
+    this.store.moveSelection(dxMm, dyMm);
   }
 
-  /** Inline position styles for the selection box. */
-  protected boxStyle(): Record<string, string> {
-    const box = this.box();
-    if (box === null) return {};
+  /** Inline position styles for a selection box. */
+  protected boxStyle(box: SelectionBoxPx): Record<string, string> {
     return {
       left: `${box.leftPx}px`,
       top: `${box.topPx}px`,
       width: `${box.widthPx}px`,
       height: `${box.heightPx}px`,
     };
-  }
-
-  /**
-   * Runs a pointer drag: from pointerdown until pointerup, maps the total pointer
-   * delta (screen px ÷ zoom → mm) through `compute` and commits the result live to
-   * the store. Total-delta-from-start avoids accumulation drift; committing live
-   * keeps the rendered element and overlay in lockstep (single source of truth).
-   */
-  private runDrag(
-    event: PointerEvent,
-    id: string,
-    compute: (dxMm: number, dyMm: number) => Frame,
-  ): void {
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const zoom = this.store.zoom();
-    const onMove = (move: PointerEvent): void => {
-      const dxMm = pxToMm((move.clientX - startX) / zoom);
-      const dyMm = pxToMm((move.clientY - startY) / zoom);
-      this.store.updateElement(id, { frame: compute(dxMm, dyMm) });
-    };
-    const onUp = (): void => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
   }
 
   /** The element's rendered hit node (element box or table) within the canvas. */

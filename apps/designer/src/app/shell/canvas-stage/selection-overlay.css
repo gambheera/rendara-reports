@@ -25,6 +25,12 @@
   outline-offset: 2px;
 }
 
+/* Multi-selection: one draggable box per element; the primary carries the badge.
+   No resize handles — resize is single-selection only. */
+.rdr-selection__box--multi {
+  border-style: dashed;
+}
+
 /* Floating coordinate/size badge, pinned above the box's top-left (brief §12.2). */
 .rdr-selection__badge {
   position: absolute;

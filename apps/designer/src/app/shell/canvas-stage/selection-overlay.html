@@ -1,11 +1,11 @@
-@if (box(); as boxPx) {
+@if (isSingle()) {
 <div
   #box
   class="rdr-selection__box"
   tabindex="0"
   role="group"
   [attr.aria-label]="ariaLabel()"
-  [style]="boxStyle()"
+  [style]="boxStyle(elementBoxes()[0].box)"
   (pointerdown)="onBoxPointerDown($event)"
   (keydown)="onKeyDown($event)"
 >
@@ -22,4 +22,21 @@
   ></span>
   }
 </div>
-}
+} @else if (count() > 1) { @for (item of elementBoxes(); track item.id; let first = $first) {
+<div
+  class="rdr-selection__box rdr-selection__box--multi"
+  [class.rdr-selection__box--primary]="first"
+  [attr.tabindex]="first ? 0 : -1"
+  [attr.role]="first ? 'group' : null"
+  [attr.aria-label]="first ? ariaLabel() : null"
+  [style]="boxStyle(item.box)"
+  [attr.data-selection-id]="item.id"
+  (pointerdown)="onBoxPointerDown($event)"
+  (keydown)="onKeyDown($event)"
+  #box
+>
+  @if (first) {
+  <span class="rdr-selection__badge" aria-hidden="true">{{ count() }} selected</span>
+  }
+</div>
+} }

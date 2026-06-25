@@ -1,0 +1,94 @@
+@if (items().length === 0) {
+<div class="rdr-layers__empty">
+  <p>No elements yet</p>
+  <p class="rdr-layers__empty-hint">Add a control to see it listed here.</p>
+</div>
+} @else {
+<div class="rdr-layers__toolbar" role="toolbar" aria-label="Arrange elements">
+  <div class="rdr-layers__group" role="group" aria-label="Order">
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.hasSelection()"
+      (click)="reorder('front')"
+      title="Bring to front"
+      aria-label="Bring to front"
+    >
+      ⤒
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.hasSelection()"
+      (click)="reorder('forward')"
+      title="Bring forward"
+      aria-label="Bring forward"
+    >
+      ↑
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.hasSelection()"
+      (click)="reorder('backward')"
+      title="Send backward"
+      aria-label="Send backward"
+    >
+      ↓
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.hasSelection()"
+      (click)="reorder('back')"
+      title="Send to back"
+      aria-label="Send to back"
+    >
+      ⤓
+    </button>
+  </div>
+  <div class="rdr-layers__group" role="group" aria-label="Group">
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canGroup()"
+      (click)="group()"
+      title="Group selection"
+      aria-label="Group selection"
+    >
+      Group
+    </button>
+    <button
+      type="button"
+      class="rdr-layers__action"
+      [disabled]="!store.canUngroup()"
+      (click)="ungroup()"
+      title="Ungroup selection"
+      aria-label="Ungroup selection"
+    >
+      Ungroup
+    </button>
+  </div>
+</div>
+
+<ul class="rdr-layers__list" aria-label="Layers, top first">
+  @for (item of items(); track item.element.id) {
+  <li>
+    <button
+      type="button"
+      class="rdr-layers__row"
+      [class.rdr-layers__row--selected]="item.selected"
+      [attr.aria-pressed]="item.selected"
+      (click)="onRowClick($event, item.element.id)"
+    >
+      <span class="rdr-layers__row-type">{{ typeLabel[item.element.type] }}</span>
+      @if (item.groupTag) {
+      <span class="rdr-layers__row-group" [attr.aria-label]="'Group ' + item.groupTag"
+        >{{ item.groupTag }}</span
+      >
+      }
+    </button>
+  </li>
+  }
+</ul>
+}

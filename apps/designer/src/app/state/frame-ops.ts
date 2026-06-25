@@ -123,6 +123,100 @@ export function resizeFrame(
   return { ...frame, xMm, yMm, wMm, hMm };
 }
 
+/**
+ * The bounding {@link Frame} that encloses every frame in `frames`, or `null` for
+ * an empty input. A growing element (`hMm: null`) contributes only its top edge to
+ * the bottom bound (it has no authored height); the result's `hMm` is `null` when
+ * any member grows, since the union has no fixed height either. Used to move a
+ * multi-selection as a unit (E5-S7).
+ */
+export function boundingFrame(frames: readonly Frame[]): Frame | null {
+  if (frames.length === 0) return null;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxRight = -Infinity;
+  let maxBottom = -Infinity;
+  let grows = false;
+  for (const f of frames) {
+    minX = Math.min(minX, f.xMm);
+    minY = Math.min(minY, f.yMm);
+    maxRight = Math.max(maxRight, f.xMm + f.wMm);
+    maxBottom = Math.max(maxBottom, f.yMm + (f.hMm ?? 0));
+    if (f.hMm === null) grows = true;
+  }
+  return {
+    xMm: round1(minX),
+    yMm: round1(minY),
+    wMm: round1(maxRight - minX),
+    hMm: grows ? null : round1(maxBottom - minY),
+  };
+}
+
+/**
+ * Translates every frame in `frames` by `(dxMm, dyMm)` as a **single rigid unit**:
+ * the delta is clamped once against the selection's bounding box so the whole group
+ * stays on the sheet, then applied identically to each frame — relative offsets are
+ * preserved exactly (the group "moves as a unit", E5-S7). A growing element's bottom
+ * is not clamped (it has no authored height), matching {@link moveFrame}.
+ */
+export function moveFramesAsGroup(
+  frames: readonly Frame[],
+  dxMm: number,
+  dyMm: number,
+  pageMm: PageSizeMm,
+): Frame[] {
+  const bounds = boundingFrame(frames);
+  if (bounds === null) return [];
+  const maxDx = pageMm.widthMm - (bounds.xMm + bounds.wMm);
+  const dx = round1(clampRange(dxMm, -bounds.xMm, Math.max(0, maxDx)));
+  const maxDy =
+    bounds.hMm === null
+      ? pageMm.heightMm - bounds.yMm
+      : pageMm.heightMm - (bounds.yMm + bounds.hMm);
+  const dy = round1(clampRange(dyMm, -bounds.yMm, Math.max(0, maxDy)));
+  return frames.map((f) => ({ ...f, xMm: round1(f.xMm + dx), yMm: round1(f.yMm + dy) }));
+}
+
+/** A rectangle in page-absolute millimetres (the marquee region). */
+export interface RectMm {
+  readonly xMm: number;
+  readonly yMm: number;
+  readonly wMm: number;
+  readonly hMm: number;
+}
+
+/** A normalised rectangle (positive width/height) spanning two page-mm corners. */
+export function normalizeRectMm(
+  a: { xMm: number; yMm: number },
+  b: { xMm: number; yMm: number },
+): RectMm {
+  const xMm = Math.min(a.xMm, b.xMm);
+  const yMm = Math.min(a.yMm, b.yMm);
+  return { xMm, yMm, wMm: Math.abs(a.xMm - b.xMm), hMm: Math.abs(a.yMm - b.yMm) };
+}
+
+/**
+ * The ids of every element whose frame **intersects** the marquee `rect` (E5-S7
+ * rubber-band select). A growing/zero-height element (`hMm: null`/`0`) is treated
+ * as its top edge for the vertical test, so a marquee over its top selects it.
+ */
+export function elementsInMarquee(
+  elements: readonly { readonly id: string; readonly frame: Frame }[],
+  rect: RectMm,
+): string[] {
+  const rectRight = rect.xMm + rect.wMm;
+  const rectBottom = rect.yMm + rect.hMm;
+  return elements
+    .filter(({ frame }) => {
+      const left = frame.xMm;
+      const right = frame.xMm + frame.wMm;
+      const top = frame.yMm;
+      const bottom = frame.yMm + (frame.hMm ?? 0);
+      return !(right < rect.xMm || left > rectRight || bottom < rect.yMm || top > rectBottom);
+    })
+    .map(({ id }) => id);
+}
+
 /** A scaled-px box on the canvas: the rectangle the selection overlay paints. */
 export interface SelectionBoxPx {
   readonly leftPx: number;

@@ -9,6 +9,7 @@ import {
   clientPointToPageMm,
   fitWidthZoom,
   hitElementId,
+  marqueeBoxPx,
 } from './canvas-stage';
 import { DesignerStore } from '../../state/designer-store';
 
@@ -108,6 +109,13 @@ describe('hitElementId', () => {
   it('returns null off any hit target (empty canvas)', () => {
     expect(hitElementId(document.createElement('div'))).toBeNull();
     expect(hitElementId(null)).toBeNull();
+  });
+});
+
+describe('marqueeBoxPx', () => {
+  it('builds a normalised, container-relative rectangle from two points', () => {
+    const box = marqueeBoxPx({ x: 80, y: 60 }, { x: 20, y: 10 }, { left: 5, top: 5 });
+    expect(box).toEqual({ leftPx: 15, topPx: 5, widthPx: 60, heightPx: 50 });
   });
 });
 
@@ -249,7 +257,7 @@ describe('CanvasStage', () => {
     expect(store.selectedIds()).toEqual(['el_1']);
   });
 
-  it('clears the selection when empty canvas is pressed (E5-S6)', async () => {
+  it('clears the selection when empty canvas is clicked (no marquee drag) (E5-S6)', async () => {
     const view = await render(CanvasStage);
     const store = TestBed.inject(DesignerStore);
     store.addElement(TEXT);
@@ -258,9 +266,53 @@ describe('CanvasStage', () => {
 
     const pages = view.container.querySelector('.rdr-canvas__pages');
     if (pages === null) throw new Error('expected the pages area');
+    // A press that never moves is a click: clearing happens on release.
     pages.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    window.dispatchEvent(new MouseEvent('pointerup', {}));
 
     expect(store.hasSelection()).toBe(false);
+  });
+
+  it('shift-clicks an element to add it to the selection (E5-S7)', async () => {
+    const view = await render(CanvasStage);
+    const store = TestBed.inject(DesignerStore);
+    store.addElement(TEXT);
+    store.addElement({ ...TEXT, id: 'el_2', frame: { xMm: 80, yMm: 80, wMm: 40, hMm: 8 } });
+    store.selectOne('el_1');
+    view.detectChanges();
+
+    const second = view.container.querySelector('[data-element-id="el_2"]');
+    if (second === null) throw new Error('expected a rendered element box');
+    second.dispatchEvent(
+      new MouseEvent('pointerdown', { bubbles: true, button: 0, shiftKey: true }),
+    );
+
+    expect(store.selectedIds()).toEqual(['el_1', 'el_2']);
+  });
+
+  it('marquee-selects every element the rubber-band intersects (E5-S7)', async () => {
+    const view = await render(CanvasStage);
+    const store = TestBed.inject(DesignerStore);
+    store.addElement({ ...TEXT, id: 'el_a', frame: { xMm: 10, yMm: 10, wMm: 20, hMm: 20 } });
+    store.addElement({ ...TEXT, id: 'el_b', frame: { xMm: 120, yMm: 120, wMm: 20, hMm: 20 } });
+    view.detectChanges();
+
+    const sheet = view.container.querySelector<HTMLElement>('.rdr-page');
+    const pages = view.container.querySelector<HTMLElement>('.rdr-canvas__pages');
+    if (sheet === null || pages === null) throw new Error('expected the sheet and pages area');
+    stubRect(sheet, 0, 0);
+    stubRect(pages, 0, 0);
+
+    // Drag a marquee from the page origin over a 50 × 50 mm region (covers el_a only).
+    pages.dispatchEvent(
+      new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 0, clientY: 0 }),
+    );
+    window.dispatchEvent(
+      new MouseEvent('pointermove', { clientX: mmToPx(50), clientY: mmToPx(50) }),
+    );
+    window.dispatchEvent(new MouseEvent('pointerup', {}));
+
+    expect(store.selectedIds()).toEqual(['el_a']);
   });
 
   it('does nothing when there is no rendered sheet to map against', async () => {

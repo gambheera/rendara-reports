@@ -116,6 +116,17 @@
   left: var(--pad);
 }
 
+/* Marquee (rubber-band) rectangle, drawn over the canvas while multi-selecting.
+   Positioned in px relative to the pages area; never intercepts pointer events. */
+.rdr-canvas__marquee {
+  position: absolute;
+  z-index: 4;
+  box-sizing: border-box;
+  border: 1px solid var(--rdr-color-accent);
+  background: color-mix(in srgb, var(--rdr-color-accent) 10%, transparent);
+  pointer-events: none;
+}
+
 /* Empty placeholder, laid over the (blank) page sheet. */
 .rdr-canvas__empty {
   position: absolute;

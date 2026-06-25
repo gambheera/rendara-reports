@@ -108,6 +108,38 @@ describe('SelectionOverlay', () => {
     expect(store.bodyElements()[0].frame).toEqual(TEXT.frame);
   });
 
+  it('paints a box per element and an "N selected" badge for a multi-selection', async () => {
+    const view = await render(SelectionOverlay);
+    const store = TestBed.inject(DesignerStore);
+    store.addElement(TEXT);
+    store.addElement({ ...TEXT, id: 'el_2', frame: { xMm: 10, yMm: 10, wMm: 20, hMm: 20 } });
+    store.select(['el_1', 'el_2']);
+    view.detectChanges();
+
+    expect(view.container.querySelectorAll('.rdr-selection__box--multi')).toHaveLength(2);
+    // No resize handles in multi-selection mode.
+    expect(view.container.querySelectorAll('.rdr-selection__handle')).toHaveLength(0);
+    expect(view.container.querySelector('.rdr-selection__badge')?.textContent?.trim()).toBe(
+      '2 selected',
+    );
+  });
+
+  it('drag-moves the whole multi-selection as a unit', async () => {
+    const view = await render(SelectionOverlay);
+    const store = TestBed.inject(DesignerStore);
+    store.addElement(TEXT); // (50, 60)
+    store.addElement({ ...TEXT, id: 'el_2', frame: { xMm: 10, yMm: 10, wMm: 20, hMm: 20 } });
+    store.select(['el_1', 'el_2']);
+    view.detectChanges();
+
+    const box = view.container.querySelector('.rdr-selection__box--multi');
+    if (box === null) throw new Error('expected a multi-selection box');
+    drag(box, mmToPx(10), 0); // 10 mm right
+
+    expect(store.elementsById().get('el_1')?.frame).toMatchObject({ xMm: 60, yMm: 60 });
+    expect(store.elementsById().get('el_2')?.frame).toMatchObject({ xMm: 20, yMm: 10 });
+  });
+
   it('clears the selection on Escape', async () => {
     const { view, store } = await renderSelected();
     const box = view.container.querySelector('.rdr-selection__box');
