@@ -169,6 +169,88 @@
     }
   </section>
   }
+
+  <!-- Shape: stroke + fill, for a line/rect/ellipse element only. -->
+  @if (shapeElement()) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-shape-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('shape')"
+      (click)="toggleSection('shape')"
+    >
+      <span id="rdr-prop-shape-h" class="rdr-properties__section-title">Shape</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('shape') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('shape') && stroke(); as st) {
+    <div class="rdr-properties__section-body">
+      <div class="rdr-properties__pair">
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Stroke style</span>
+          <select class="rdr-properties__select" (change)="onStrokeStyle($any(valueFrom($event)))">
+            @for (s of strokeStyles; track s) {
+            <option [value]="s" [selected]="s === st.style">{{ s }}</option>
+            }
+          </select>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Stroke width</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              min="0"
+              [value]="st.widthMm"
+              [disabled]="!st.enabled"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onStrokeWidth(numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+      </div>
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Stroke colour</span>
+        <input
+          class="rdr-properties__color"
+          type="color"
+          [value]="st.color"
+          [disabled]="!st.enabled"
+          (input)="onStrokeColor(valueFrom($event))"
+        />
+      </label>
+
+      @if (fillable()) {
+      <div class="rdr-properties__field">
+        <label class="rdr-properties__check">
+          <input
+            type="checkbox"
+            [checked]="hasFill()"
+            (change)="onFillToggle(($any($event.target)).checked)"
+          />
+          <span class="rdr-properties__label">Fill</span>
+        </label>
+        @if (fill(); as fillColor) {
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Fill colour</span>
+          <input
+            class="rdr-properties__color"
+            type="color"
+            [value]="fillColor"
+            (input)="onFillColor(valueFrom($event))"
+          />
+        </label>
+        }
+      </div>
+      }
+    </div>
+    }
+  </section>
+  }
 </div>
 } @else if (selectionCount() > 1) {
 <div class="rdr-properties__empty">

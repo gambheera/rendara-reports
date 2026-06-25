@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import type { Frame, TemplateElement } from '@rendara/report-schema';
+import type { ElementStyle, Frame, TemplateElement } from '@rendara/report-schema';
 import {
+  DEFAULT_FILL_COLOR,
+  effectiveFill,
   effectiveFont,
+  effectiveStroke,
   isBoldWeight,
   patchFrameField,
+  patchStrokeWidth,
   roundMm,
+  setShapeFill,
+  setShapeStroke,
   setTextFont,
 } from './element-props';
 
@@ -97,6 +103,97 @@ describe('effectiveFont', () => {
   it('reads element overrides over the default', () => {
     const el = textElement({ style: { font: { family: 'Georgia', sizePt: 24, weight: 'bold' } } });
     expect(effectiveFont(el, DEFAULT_FONT)).toEqual({ family: 'Georgia', sizePt: 24, bold: true });
+  });
+});
+
+describe('setShapeStroke', () => {
+  it('creates a stroke when the style has none', () => {
+    expect(setShapeStroke(undefined, { color: '#FF0000' })).toEqual({
+      stroke: { color: '#FF0000' },
+    });
+  });
+
+  it('merges into an existing stroke without dropping sibling fields', () => {
+    const style: ElementStyle = { fill: '#EEE', stroke: { widthMm: 0.5, style: 'solid' } };
+    expect(setShapeStroke(style, { color: '#123456' })).toEqual({
+      fill: '#EEE',
+      stroke: { widthMm: 0.5, style: 'solid', color: '#123456' },
+    });
+  });
+
+  it('does not mutate the input style', () => {
+    const style: ElementStyle = { stroke: { widthMm: 1 } };
+    setShapeStroke(style, { widthMm: 2 });
+    expect(style).toEqual({ stroke: { widthMm: 1 } });
+  });
+});
+
+describe('setShapeFill', () => {
+  it('sets the fill colour, preserving other style fields', () => {
+    const style: ElementStyle = { stroke: { color: '#000' } };
+    expect(setShapeFill(style, '#ABCDEF')).toEqual({
+      stroke: { color: '#000' },
+      fill: '#ABCDEF',
+    });
+  });
+
+  it('omits the fill key entirely when cleared (no `fill: undefined`)', () => {
+    const style: ElementStyle = { fill: '#ABCDEF', stroke: { color: '#000' } };
+    const cleared = setShapeFill(style, undefined);
+    expect(cleared).toEqual({ stroke: { color: '#000' } });
+    expect('fill' in cleared).toBe(false);
+  });
+
+  it('is a safe no-op shape when clearing an already-fill-less style', () => {
+    expect(setShapeFill(undefined, undefined)).toEqual({});
+  });
+
+  it('does not mutate the input style', () => {
+    const style: ElementStyle = { fill: '#FFF' };
+    setShapeFill(style, '#000');
+    expect(style).toEqual({ fill: '#FFF' });
+  });
+});
+
+describe('patchStrokeWidth', () => {
+  it('rounds a non-negative width to 0.1 mm', () => {
+    expect(patchStrokeWidth(0.74)).toBe(0.7);
+    expect(patchStrokeWidth(0)).toBe(0);
+  });
+
+  it('rejects a negative or non-finite width', () => {
+    expect(patchStrokeWidth(-0.5)).toBeNull();
+    expect(patchStrokeWidth(Number.NaN)).toBeNull();
+  });
+});
+
+describe('effectiveStroke', () => {
+  it('falls back to the renderer defaults when the shape has no stroke', () => {
+    expect(effectiveStroke(undefined)).toEqual({
+      color: '#000000',
+      widthMm: 0.2,
+      style: 'solid',
+      enabled: true,
+    });
+  });
+
+  it('reads stroke overrides, reporting a `none` style as disabled', () => {
+    expect(
+      effectiveStroke({ stroke: { color: '#1F2937', widthMm: 0.5, style: 'dashed' } }),
+    ).toEqual({ color: '#1F2937', widthMm: 0.5, style: 'dashed', enabled: true });
+    expect(effectiveStroke({ stroke: { style: 'none' } }).enabled).toBe(false);
+  });
+});
+
+describe('effectiveFill', () => {
+  it('returns the fill colour, or null when there is none', () => {
+    expect(effectiveFill({ fill: '#FF00FF' })).toBe('#FF00FF');
+    expect(effectiveFill({ stroke: { color: '#000' } })).toBeNull();
+    expect(effectiveFill(undefined)).toBeNull();
+  });
+
+  it('exposes a sensible default fill colour for first enable', () => {
+    expect(DEFAULT_FILL_COLOR).toBe('#FFFFFF');
   });
 });
 

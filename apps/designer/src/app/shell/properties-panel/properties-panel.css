@@ -145,6 +145,7 @@
 .rdr-properties__input:focus-visible,
 .rdr-properties__select:focus-visible,
 .rdr-properties__textarea:focus-visible,
+.rdr-properties__color:focus-visible,
 .rdr-properties__segment:focus-visible {
   outline: none;
   border-color: var(--rdr-color-accent);
@@ -167,6 +168,30 @@
   color: var(--rdr-color-text-secondary);
   font-size: var(--rdr-font-size-caption);
   pointer-events: none;
+}
+
+.rdr-properties__color {
+  width: 100%;
+  height: var(--rdr-size-control);
+  padding: 2px;
+  border: 1px solid var(--rdr-color-border-input);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-surface);
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.rdr-properties__color:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.rdr-properties__check {
+  display: flex;
+  align-items: center;
+  gap: var(--rdr-space-2);
+  cursor: pointer;
+  accent-color: var(--rdr-color-accent);
 }
 
 .rdr-properties__segmented {

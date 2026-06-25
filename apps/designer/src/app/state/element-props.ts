@@ -3,6 +3,8 @@ import type {
   FontSpec,
   FontWeight,
   Frame,
+  LineStyle,
+  StrokeStyle,
   TemplateElement,
   TextFont,
 } from '@rendara/report-schema';
@@ -104,3 +106,91 @@ export function isBoldWeight(weight: FontWeight | undefined): boolean {
   }
   return weight === 'bold' || (typeof weight === 'number' && weight >= 600);
 }
+
+/**
+ * Immutably merges `patch` into `style.stroke`, returning a new {@link ElementStyle}.
+ * Like {@link setTextFont}: `updateElement` shallow-merges `style`, so editing one
+ * stroke field (e.g. the colour) must carry the rest of the style (and the rest of
+ * the stroke) forward — this is the single place that deep-merge happens, so a
+ * colour edit never drops an existing width, and vice versa.
+ */
+export function setShapeStroke(
+  style: ElementStyle | undefined,
+  patch: Partial<StrokeStyle>,
+): ElementStyle {
+  return { ...style, stroke: { ...style?.stroke, ...patch } };
+}
+
+/**
+ * Sets (or clears) a shape's interior {@link ElementStyle.fill}. Passing a colour
+ * sets it; passing `undefined` **omits** the key entirely (rather than leaving a
+ * `fill: undefined`), so a cleared fill round-trips through the schema as an absent
+ * field — exactly the "no fill" state the renderer reads (`style?.fill ?? null`).
+ */
+export function setShapeFill(
+  style: ElementStyle | undefined,
+  fill: string | undefined,
+): ElementStyle {
+  // A locally-mutable view so the `fill` key can be set or removed without a
+  // throwaway destructure or a `delete` on the readonly {@link ElementStyle.fill}.
+  const next: { fill?: string } & Omit<ElementStyle, 'fill'> = { ...style };
+  if (fill === undefined) {
+    delete next.fill;
+  } else {
+    next.fill = fill;
+  }
+  return next;
+}
+
+/**
+ * Validates a stroke-width edit (mm): rejects a non-finite value (a blank/`NaN`
+ * input) and a negative one — mirroring `validateStroke` (`widthMm >= 0`) — so an
+ * out-of-range keystroke is a no-op. Returns the value rounded to 0.1 mm, or `null`.
+ */
+export function patchStrokeWidth(value: number): number | null {
+  if (!Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return roundMm(value);
+}
+
+/** The resolved stroke shown in the Shape section's inputs. */
+export interface EffectiveStroke {
+  /** Stroke colour, the element's override or the renderer default (`#000000`). */
+  readonly color: string;
+  /** Stroke width in millimetres, the override or the renderer default (0.2 mm). */
+  readonly widthMm: number;
+  /** Line style, the override or the default (`solid`). */
+  readonly style: LineStyle;
+  /** Whether the shape paints a visible outline (false when the style is `none`). */
+  readonly enabled: boolean;
+}
+
+/**
+ * The stroke the renderer will actually paint for a shape: each field is the
+ * element-level override ({@link StrokeStyle}) when present, else the renderer's
+ * default — matching `resolveStroke` (page-view-model), so the panel shows what the
+ * canvas shows. A `'none'` style reports `enabled: false` (no outline painted).
+ */
+export function effectiveStroke(style: ElementStyle | undefined): EffectiveStroke {
+  const stroke = style?.stroke;
+  const lineStyle = stroke?.style ?? DEFAULT_STROKE_STYLE;
+  return {
+    color: stroke?.color ?? DEFAULT_STROKE_COLOR,
+    widthMm: stroke?.widthMm ?? DEFAULT_STROKE_WIDTH_MM,
+    style: lineStyle,
+    enabled: lineStyle !== 'none',
+  };
+}
+
+/** The shape's interior fill colour, or `null` for no fill (matches the renderer). */
+export function effectiveFill(style: ElementStyle | undefined): string | null {
+  return style?.fill ?? null;
+}
+
+/** Renderer-mirrored stroke defaults (page-view-model `resolveStroke`), for the panel inputs. */
+const DEFAULT_STROKE_COLOR = '#000000';
+const DEFAULT_STROKE_WIDTH_MM = 0.2;
+const DEFAULT_STROKE_STYLE: LineStyle = 'solid';
+/** The fill colour offered when a shape's fill is first enabled (white interior). */
+export const DEFAULT_FILL_COLOR = '#FFFFFF';
