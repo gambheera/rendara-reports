@@ -1,7 +1,185 @@
 <div class="rdr-properties__header">
   <h2 class="rdr-properties__title">Properties</h2>
 </div>
+
+@if (element(); as el) {
+<div class="rdr-properties__sections">
+  <!-- Layout: frame geometry, for any single element. -->
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-layout-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('layout')"
+      (click)="toggleSection('layout')"
+    >
+      <span id="rdr-prop-layout-h" class="rdr-properties__section-title">Layout</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('layout') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('layout') && frame(); as f) {
+    <div class="rdr-properties__section-body">
+      <div class="rdr-properties__grid">
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">X</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              [value]="f.xMm"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onFrame('xMm', numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Y</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              [value]="f.yMm"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onFrame('yMm', numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Width</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              min="0"
+              [value]="f.wMm"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onFrame('wMm', numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Height</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              min="0"
+              [value]="f.hMm ?? ''"
+              [disabled]="f.hMm === null"
+              [attr.placeholder]="f.hMm === null ? 'Auto' : null"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onFrame('hMm', numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+      </div>
+    </div>
+    }
+  </section>
+
+  <!-- Text: literal content + font style, for a text element only. -->
+  @if (textElement(); as txt) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-text-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('text')"
+      (click)="toggleSection('text')"
+    >
+      <span id="rdr-prop-text-h" class="rdr-properties__section-title">Text</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('text') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('text') && font(); as fnt) {
+    <div class="rdr-properties__section-body">
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Content</span>
+        <textarea
+          class="rdr-properties__textarea"
+          rows="2"
+          [value]="txt.text ?? ''"
+          (focus)="beginEdit()"
+          (blur)="endEdit()"
+          (input)="onText(valueFrom($event))"
+        ></textarea>
+      </label>
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Font family</span>
+        <select class="rdr-properties__select" (change)="onFamily(valueFrom($event))">
+          @for (fam of familyOptions(); track fam) {
+          <option [value]="fam" [selected]="fam === fnt.family">{{ fam }}</option>
+          }
+        </select>
+      </label>
+      <div class="rdr-properties__pair">
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Size</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="1"
+              min="1"
+              [value]="fnt.sizePt"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onSize(numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">pt</span>
+          </span>
+        </label>
+        <div class="rdr-properties__field">
+          <span class="rdr-properties__label">Weight</span>
+          <div class="rdr-properties__segmented" role="group" aria-label="Font weight">
+            <button
+              type="button"
+              class="rdr-properties__segment"
+              [class.rdr-properties__segment--active]="!fnt.bold"
+              [attr.aria-pressed]="!fnt.bold"
+              (click)="onWeight('normal')"
+            >
+              Reg
+            </button>
+            <button
+              type="button"
+              class="rdr-properties__segment"
+              [class.rdr-properties__segment--active]="fnt.bold"
+              [attr.aria-pressed]="fnt.bold"
+              (click)="onWeight('bold')"
+            >
+              Bold
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    }
+  </section>
+  }
+</div>
+} @else if (selectionCount() > 1) {
+<div class="rdr-properties__empty">
+  <span class="rdr-properties__empty-glyph" aria-hidden="true">▦</span>
+  <p class="rdr-properties__empty-text">
+    {{ selectionCount() }} elements selected — select a single element to edit its properties.
+  </p>
+</div>
+} @else {
 <div class="rdr-properties__empty">
   <span class="rdr-properties__empty-glyph" aria-hidden="true">⚙</span>
   <p class="rdr-properties__empty-text">Select an element on the canvas to edit its properties</p>
 </div>
+}
