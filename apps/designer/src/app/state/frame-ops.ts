@@ -217,6 +217,35 @@ export function elementsInMarquee(
     .map(({ id }) => id);
 }
 
+/**
+ * The id of the **topmost** element whose frame contains `point` (page-absolute
+ * mm), or `null` when the point is over empty canvas — the drag-to-bind hit test
+ * (E6-S7). "Topmost" is the highest `z` among the elements under the point, so a
+ * field dropped where elements overlap binds the one painted on top. A zero-/auto-
+ * height element (`hMm: null`/`0`) has a degenerate vertical band and is not hit;
+ * the bindable elements (text/image) always carry a real height.
+ */
+export function topElementAtPointMm(
+  elements: readonly { readonly id: string; readonly frame: Frame; readonly z: number }[],
+  point: { readonly xMm: number; readonly yMm: number },
+): string | null {
+  let bestId: string | null = null;
+  let bestZ = -Infinity;
+  for (const { id, frame, z } of elements) {
+    const left = frame.xMm;
+    const right = frame.xMm + frame.wMm;
+    const top = frame.yMm;
+    const bottom = frame.yMm + (frame.hMm ?? 0);
+    const contains =
+      point.xMm >= left && point.xMm <= right && point.yMm >= top && point.yMm <= bottom;
+    if (contains && z >= bestZ) {
+      bestZ = z;
+      bestId = id;
+    }
+  }
+  return bestId;
+}
+
 /** A scaled-px box on the canvas: the rectangle the selection overlay paints. */
 export interface SelectionBoxPx {
   readonly leftPx: number;

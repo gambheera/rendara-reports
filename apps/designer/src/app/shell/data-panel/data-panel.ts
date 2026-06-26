@@ -1,6 +1,8 @@
 import { Component, ViewEncapsulation, computed, inject, signal, viewChild } from '@angular/core';
 import type { ElementRef } from '@angular/core';
+import { CdkDropList } from '@angular/cdk/drag-drop';
 import { DesignerStore } from '../../state/designer-store';
+import { CANVAS_DROP_LIST_ID } from '../../state/drag-create';
 import { filterFieldTree, parseSampleData } from '../../state/sample-data';
 import { FieldTreeNode } from './field-tree-node';
 
@@ -31,7 +33,7 @@ function readFileText(file: File): Promise<string> {
  */
 @Component({
   selector: 'rdr-data-panel',
-  imports: [FieldTreeNode],
+  imports: [FieldTreeNode, CdkDropList],
   templateUrl: './data-panel.html',
   styleUrl: './data-panel.css',
   encapsulation: ViewEncapsulation.Emulated,
@@ -39,6 +41,9 @@ function readFileText(file: File): Promise<string> {
 })
 export class DataPanel {
   protected readonly store = inject(DesignerStore);
+
+  /** Id of the canvas drop list field rows connect to for drag-to-bind (E6-S7). */
+  protected readonly canvasDropListId = CANVAS_DROP_LIST_ID;
 
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 

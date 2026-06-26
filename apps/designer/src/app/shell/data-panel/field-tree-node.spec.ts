@@ -37,6 +37,22 @@ describe('FieldTreeNode', () => {
     expect(view.container.getAttribute('aria-level')).toBe('3');
   });
 
+  it('exposes a bindable field row as a drag handle (drag-to-bind, E6-S7)', async () => {
+    const view = await render(FieldTreeNode, { inputs: { node: scalar('amount', 'number') } });
+    const grip = screen.getByLabelText(/Drag amount to bind an element/i);
+    expect(grip).toBeTruthy();
+    // The row itself is a CDK drag source.
+    expect(view.container.querySelector('.cdk-drag')).not.toBeNull();
+  });
+
+  it('does not make the array-element placeholder ([]) draggable', async () => {
+    const view = await render(FieldTreeNode, {
+      inputs: { node: { name: '[]', path: 'lineItems', kind: 'object', children: [] } },
+    });
+    expect(view.container.querySelector('.rdr-field__grip--disabled')).not.toBeNull();
+    expect(screen.queryByLabelText(/to bind an element/i)).toBeNull();
+  });
+
   it('expands and collapses a container via its twisty button', async () => {
     const node: FieldNode = {
       name: 'customer',

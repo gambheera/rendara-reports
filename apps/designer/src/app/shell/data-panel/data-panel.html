@@ -35,7 +35,14 @@
 } @if (noMatches()) {
 <p class="rdr-data__empty-hint">No fields match &ldquo;{{ query() }}&rdquo;.</p>
 } @else if (filteredRoot(); as root) {
-<div class="rdr-data__tree" role="tree" aria-label="Sample data fields">
+<div
+  class="rdr-data__tree"
+  role="tree"
+  aria-label="Sample data fields"
+  cdkDropList
+  cdkDropListSortingDisabled
+  [cdkDropListConnectedTo]="[canvasDropListId]"
+>
   @for (child of root.children; track child.name) {
   <rdr-field-tree-node [node]="child" [level]="1" />
   } @empty {

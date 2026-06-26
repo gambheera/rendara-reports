@@ -309,6 +309,122 @@
   </section>
   }
 
+  <!-- Data Binding: expression + format + fallback + visibility, for a text/image element. -->
+  @if (bindable()) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-binding-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('binding')"
+      (click)="toggleSection('binding')"
+    >
+      <span id="rdr-prop-binding-h" class="rdr-properties__section-title">Data Binding</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('binding') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('binding')) {
+    <div class="rdr-properties__section-body">
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Expression</span>
+        <span class="rdr-properties__fx">
+          <span class="rdr-properties__fx-icon" aria-hidden="true">fx</span>
+          <input
+            class="rdr-properties__input rdr-properties__fx-input"
+            type="text"
+            list="rdr-binding-fields"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="e.g. invoice.customer.name"
+            [class.rdr-properties__fx-input--valid]="bindingValid()"
+            [attr.aria-invalid]="bindingError() ? 'true' : null"
+            [attr.aria-describedby]="bindingError() ? 'rdr-prop-binding-err' : null"
+            [value]="bindingExpr()"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onBindingExpr(valueFrom($event))"
+          />
+          @if (bindingValid()) {
+          <span class="rdr-properties__fx-valid" title="Valid expression" aria-hidden="true"
+            >✓</span
+          >
+          }
+        </span>
+      </label>
+
+      <datalist id="rdr-binding-fields">
+        @for (path of fieldPaths(); track path) {
+        <option [value]="path"></option>
+        }
+      </datalist>
+
+      @if (bindingError(); as err) {
+      <p id="rdr-prop-binding-err" class="rdr-properties__error" role="alert">{{ err }}</p>
+      } @if (bindingPreview() !== null) {
+      <div class="rdr-properties__preview">
+        <span class="rdr-properties__preview-label">Preview</span>
+        <span class="rdr-properties__preview-value">{{ bindingPreview() || '—' }}</span>
+      </div>
+      } @else if (binding() && !hasSampleData()) {
+      <p class="rdr-properties__hint">Import sample data to preview the resolved value.</p>
+      }
+
+      <div class="rdr-properties__pair">
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Format</span>
+          <select
+            class="rdr-properties__select"
+            [disabled]="!binding()"
+            (change)="onBindingFormat(valueFrom($event))"
+          >
+            @for (opt of formatOptions; track opt.label) {
+            <option [value]="opt.token ?? ''" [selected]="(opt.token ?? '') === bindingFormat()">
+              {{ opt.label }}
+            </option>
+            }
+          </select>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Fallback</span>
+          <input
+            class="rdr-properties__input"
+            type="text"
+            placeholder="—"
+            [disabled]="!binding()"
+            [value]="bindingFallback()"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onBindingFallback(valueFrom($event))"
+          />
+        </label>
+      </div>
+
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Visible when</span>
+        <input
+          class="rdr-properties__input"
+          type="text"
+          list="rdr-binding-fields"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="always"
+          [value]="visibleWhen()"
+          (focus)="beginEdit()"
+          (blur)="endEdit()"
+          (input)="onVisibleWhen(valueFrom($event))"
+        />
+      </label>
+
+      @if (binding()) {
+      <button type="button" class="rdr-properties__add-btn" (click)="clearBinding()">
+        Clear binding
+      </button>
+      }
+    </div>
+    }
+  </section>
+  }
+
   <!-- Table: column structure, selected-column editor, options + grouping (data-table only). -->
   @if (tableElement(); as tbl) {
   <section class="rdr-properties__section" aria-labelledby="rdr-prop-table-h">

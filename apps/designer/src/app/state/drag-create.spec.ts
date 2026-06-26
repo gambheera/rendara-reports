@@ -6,6 +6,7 @@ import {
   createDefaultElement,
   frameForDefault,
   frameForDrop,
+  isFieldDragData,
   type PaletteKind,
 } from './drag-create';
 
@@ -134,5 +135,19 @@ describe('frameForDefault', () => {
     const first = frameForDefault({ wMm: 40, hMm: 10 }, A4_PORTRAIT, 0);
     const wrapped = frameForDefault({ wMm: 40, hMm: 10 }, A4_PORTRAIT, 6);
     expect(wrapped).toEqual(first);
+  });
+});
+
+describe('isFieldDragData', () => {
+  it('accepts a field-drag payload with a string bindPath', () => {
+    expect(isFieldDragData({ bindPath: 'invoice.total' })).toBe(true);
+  });
+
+  it('rejects a palette-kind string and other non-field payloads', () => {
+    expect(isFieldDragData('text')).toBe(false);
+    expect(isFieldDragData(null)).toBe(false);
+    expect(isFieldDragData(undefined)).toBe(false);
+    expect(isFieldDragData({})).toBe(false);
+    expect(isFieldDragData({ bindPath: 42 })).toBe(false);
   });
 });

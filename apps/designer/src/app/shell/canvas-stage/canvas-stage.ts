@@ -7,14 +7,24 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { CdkDropList, type CdkDragDrop } from '@angular/cdk/drag-drop';
+import { CdkDropList, type CdkDragDrop, type CdkDragEnter } from '@angular/cdk/drag-drop';
 import { ReportDocument } from '@rendara/report-renderer';
 import { mmToPx, pxToMm } from '@rendara/report-engine';
 import { DesignerStore } from '../../state/designer-store';
+import { BindingPreviewService } from '../../state/binding-preview';
 import { ElementCreator } from '../../state/element-creator';
-import { CANVAS_DROP_LIST_ID, type PaletteKind } from '../../state/drag-create';
-import { elementsInMarquee, normalizeRectMm } from '../../state/frame-ops';
+import {
+  CANVAS_DROP_LIST_ID,
+  isFieldDragData,
+  type FieldDragData,
+  type PaletteKind,
+} from '../../state/drag-create';
+import { bindElementToPath } from '../../state/binding-ops';
+import { elementsInMarquee, normalizeRectMm, topElementAtPointMm } from '../../state/frame-ops';
 import { SelectionOverlay } from './selection-overlay';
+
+/** A canvas drop's drag payload: a palette tile to create, or a field to bind. */
+type CanvasDropData = PaletteKind | FieldDragData;
 
 /** One ruler graduation: its offset (px, page-relative) and optional mm label. */
 export interface RulerTick {
@@ -126,7 +136,7 @@ export function marqueeBoxPx(
 }
 
 /** Extracts the viewport client point a CDK drop ended at, mouse or touch. */
-function dropClientPoint(event: CdkDragDrop<unknown, unknown, PaletteKind>): {
+function dropClientPoint(event: CdkDragDrop<unknown, unknown, CanvasDropData>): {
   x: number;
   y: number;
 } {
@@ -162,11 +172,15 @@ function dropClientPoint(event: CdkDragDrop<unknown, unknown, PaletteKind>): {
 })
 export class CanvasStage {
   protected readonly store = inject(DesignerStore);
+  protected readonly preview = inject(BindingPreviewService);
   private readonly creator = inject(ElementCreator);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   /** Id of this canvas drop list, the target the palette tiles connect to (E5-S5). */
   protected readonly canvasDropListId = CANVAS_DROP_LIST_ID;
+
+  /** True while a field is dragged over the canvas, to paint the drop-target hint (E6-S7). */
+  protected readonly bindTarget = signal(false);
 
   /** Inner ring (px) between the rulers and the page sheet. Mirrors the CSS `--pad`. */
   protected readonly pad = 24;
@@ -219,13 +233,15 @@ export class CanvasStage {
   }
 
   /**
-   * Creates an element where a palette tile was dropped (E5-S5). The drop point is
-   * mapped against the **first rendered sheet** (page-absolute mm is page-1-relative,
-   * matching how frames are authored) at the current zoom, then handed to the
-   * {@link ElementCreator}, which centres the default footprint there and clamps it
-   * onto the page. Drops that did not come from the palette are ignored.
+   * Handles a drop on the canvas (E5-S5 palette create / E6-S7 drag-to-bind). The
+   * drop point is mapped against the **first rendered sheet** (page-absolute mm is
+   * page-1-relative, matching how frames are authored) at the current zoom. A
+   * **palette tile** is handed to the {@link ElementCreator}, which centres the
+   * default footprint there; a **field** drag binds the element under the drop
+   * point. Drops within the same list (no transfer) are ignored.
    */
-  protected onDrop(event: CdkDragDrop<unknown, unknown, PaletteKind>): void {
+  protected onDrop(event: CdkDragDrop<unknown, unknown, CanvasDropData>): void {
+    this.bindTarget.set(false);
     if (event.previousContainer === event.container) {
       return;
     }
@@ -235,7 +251,50 @@ export class CanvasStage {
     }
     const { x, y } = dropClientPoint(event);
     const atMm = clientPointToPageMm(x, y, sheet.getBoundingClientRect(), this.store.zoom());
-    this.creator.addAtPoint(event.item.data, atMm);
+    const data = event.item.data;
+    if (isFieldDragData(data)) {
+      this.bindFieldAt(data.bindPath, atMm);
+      return;
+    }
+    this.creator.addAtPoint(data, atMm);
+  }
+
+  /**
+   * Binds the element under `atMm` to the dropped field `path` (E6-S7 drag-to-bind):
+   * the topmost text/image element at the point gets its `binding.expr` set to the
+   * field path (preserving any existing format/fallback), selected, in one undo
+   * step. A drop over empty canvas, a non-bindable element (shape/data table), or a
+   * stale id is a safe no-op.
+   */
+  private bindFieldAt(path: string, atMm: { readonly xMm: number; readonly yMm: number }): void {
+    const id = topElementAtPointMm(this.store.bodyElements(), atMm);
+    if (id === null) {
+      return;
+    }
+    const element = this.store.elementsById().get(id);
+    if (element === undefined) {
+      return;
+    }
+    const patch = bindElementToPath(element, path);
+    if (patch === null) {
+      return;
+    }
+    this.store.beginInteraction();
+    this.store.updateElement(id, patch);
+    this.store.endInteraction();
+    this.store.selectOne(id);
+  }
+
+  /** Lights the drop-target hint when a **field** drag enters the canvas (E6-S7). */
+  protected onListEntered(event: CdkDragEnter): void {
+    if (isFieldDragData(event.item.data)) {
+      this.bindTarget.set(true);
+    }
+  }
+
+  /** Clears the drop-target hint when the drag leaves the canvas. */
+  protected onListExited(): void {
+    this.bindTarget.set(false);
   }
 
   /**

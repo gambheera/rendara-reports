@@ -261,6 +261,62 @@
   font-size: var(--rdr-font-size-label);
 }
 
+/* Data Binding editor (E6-S7). */
+.rdr-properties__fx {
+  display: flex;
+  align-items: center;
+  gap: var(--rdr-space-2);
+}
+
+.rdr-properties__fx-icon {
+  font-family: var(--rdr-font-mono, monospace);
+  font-style: italic;
+  color: var(--rdr-color-text-secondary);
+}
+
+.rdr-properties__fx-input,
+.rdr-properties__preview-value {
+  min-width: 0;
+  font-family: var(--rdr-font-mono, monospace);
+}
+
+.rdr-properties__fx-input {
+  flex: 1;
+}
+
+.rdr-properties__fx-input--valid {
+  border-color: var(--rdr-color-success, #16a34a);
+}
+
+.rdr-properties__fx-valid {
+  color: var(--rdr-color-success, #16a34a);
+}
+
+.rdr-properties__preview {
+  display: flex;
+  gap: var(--rdr-space-2);
+  padding: var(--rdr-space-2);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-recessed);
+  overflow: hidden;
+}
+
+.rdr-properties__preview-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rdr-properties__preview-label,
+.rdr-properties__hint {
+  font-size: var(--rdr-font-size-label);
+  color: var(--rdr-color-text-secondary);
+}
+
+.rdr-properties__hint {
+  margin: 0;
+}
+
 /* Data-table structure editor (E6-S4). */
 .rdr-properties__col-list {
   display: flex;
