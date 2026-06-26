@@ -1,10 +1,9 @@
-<!-- E7-S2 render pipeline + E7-S3 page navigation + E7-S5 feedback states. The
-     pipeline's view status drives a single switch: while it runs the viewer
-     shows a loading placeholder; a null/blank template or one with no data
-     settles to the empty state; a surfaced failure settles to the error state;
-     a successful pass paints the chrome (thumbnail rail, page-navigation bar,
-     scrolling page area, bottom page-status). The full configurable toolbar
-     lands in Epic 8. -->
+<!-- E7-S2 render pipeline + E7-S3 page navigation + E7-S5 feedback states +
+     E8-S1 configurable toolbar. The pipeline's view status drives a single
+     switch: while it runs the viewer shows a loading placeholder; a null/blank
+     template or one with no data settles to the empty state; a surfaced failure
+     settles to the error state; a successful pass paints the chrome (thumbnail
+     rail, configurable toolbar, scrolling page area, bottom page-status). -->
 @switch (viewStatus()) { @case ('rendered') { @if (renderModel(); as model) {
 <div class="rdr-viewer-shell">
   <!-- Left thumbnail rail: one mini single-page render per page; the current
@@ -39,77 +38,179 @@
   </nav>
 
   <div class="rdr-viewer-main">
-    <!-- Toolbar: page navigation (prev · goto / total · next) and the zoom group
-         (− · % · + stepper and the fit-mode dropdown). -->
-    <div class="rdr-viewer-nav" role="toolbar" aria-label="Page navigation and zoom">
-      <div class="rdr-viewer-nav-group">
-        <button
-          type="button"
-          class="rdr-viewer-nav-btn"
-          aria-label="Previous page"
-          [disabled]="!canPrev()"
-          (click)="goToPage(currentPage() - 1)"
-        >
-          ‹
-        </button>
-        <span class="rdr-viewer-nav-pages">
-          <label class="rdr-viewer-sr-only" for="rdr-viewer-goto">Page</label>
-          <input
-            id="rdr-viewer-goto"
-            class="rdr-viewer-nav-input"
-            type="number"
-            inputmode="numeric"
-            min="1"
-            [max]="totalPages()"
-            [value]="currentPage()"
-            (change)="onGotoInput($event)"
-          />
-          <span class="rdr-viewer-nav-total">/ {{ totalPages() }}</span>
-        </span>
-        <button
-          type="button"
-          class="rdr-viewer-nav-btn"
-          aria-label="Next page"
-          [disabled]="!canNext()"
-          (click)="goToPage(currentPage() + 1)"
-        >
-          ›
-        </button>
+    <!-- Configurable toolbar (E8-S1): three zones — document title (left), the
+         page-navigation and zoom groups (centre), and the Print / Export /
+         Watermark action buttons plus a host custom-action slot (right). Each
+         control is shown/hidden by a `config.toolbar` flag; a hidden control is
+         absent from the DOM, and `visible: false` drops the whole bar. The
+         action buttons are accessible placeholders here — their behaviour lands
+         in E8-S2 (print), E8-S3 (export) and E8-S4 (watermark). -->
+    @if (toolbar().visible) {
+    <div class="rdr-viewer-nav" role="toolbar" aria-label="Viewer toolbar">
+      <!-- Left zone: document title. -->
+      <div class="rdr-viewer-nav-zone rdr-viewer-nav-zone--start">
+        @if (toolbar().title && documentTitle()) {
+        <span class="rdr-viewer-title" [title]="documentTitle()">{{ documentTitle() }}</span>
+        }
       </div>
 
-      <span class="rdr-viewer-nav-divider" aria-hidden="true"></span>
+      <!-- Centre zone: page-navigation and zoom groups. -->
+      <div class="rdr-viewer-nav-zone rdr-viewer-nav-zone--center">
+        @if (toolbar().navigation) {
+        <div class="rdr-viewer-nav-group">
+          <button
+            type="button"
+            class="rdr-viewer-nav-btn"
+            aria-label="Previous page"
+            [disabled]="!canPrev()"
+            (click)="goToPage(currentPage() - 1)"
+          >
+            ‹
+          </button>
+          <span class="rdr-viewer-nav-pages">
+            <label class="rdr-viewer-sr-only" for="rdr-viewer-goto">Page</label>
+            <input
+              id="rdr-viewer-goto"
+              class="rdr-viewer-nav-input"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              [max]="totalPages()"
+              [value]="currentPage()"
+              (change)="onGotoInput($event)"
+            />
+            <span class="rdr-viewer-nav-total">/ {{ totalPages() }}</span>
+          </span>
+          <button
+            type="button"
+            class="rdr-viewer-nav-btn"
+            aria-label="Next page"
+            [disabled]="!canNext()"
+            (click)="goToPage(currentPage() + 1)"
+          >
+            ›
+          </button>
+        </div>
+        } @if (toolbar().navigation && toolbar().zoom) {
+        <span class="rdr-viewer-nav-divider" aria-hidden="true"></span>
+        }
 
-      <!-- Zoom group: − · resolved % · + stepper, then the fit-mode dropdown. -->
-      <div class="rdr-viewer-nav-group">
+        <!-- Zoom group: − · resolved % · + stepper, then the fit-mode dropdown. -->
+        @if (toolbar().zoom) {
+        <div class="rdr-viewer-nav-group">
+          <button
+            type="button"
+            class="rdr-viewer-nav-btn"
+            aria-label="Zoom out"
+            [disabled]="!canZoomOut()"
+            (click)="zoomOutClick()"
+          >
+            −
+          </button>
+          <span class="rdr-viewer-zoom-readout" aria-live="polite">{{ zoomPercentLabel() }}</span>
+          <button
+            type="button"
+            class="rdr-viewer-nav-btn"
+            aria-label="Zoom in"
+            [disabled]="!canZoomIn()"
+            (click)="zoomInClick()"
+          >
+            +
+          </button>
+          <label class="rdr-viewer-sr-only" for="rdr-viewer-zoom">Zoom level</label>
+          <select
+            id="rdr-viewer-zoom"
+            class="rdr-viewer-zoom-select"
+            (change)="onZoomSelect($event)"
+          >
+            @for (opt of zoomOptionList(); track opt.value) {
+            <option [value]="opt.value" [selected]="opt.value === zoomSelectValue()">
+              {{ opt.label }}
+            </option>
+            }
+          </select>
+        </div>
+        }
+      </div>
+
+      <!-- Right zone: Print / Export / Watermark actions and the host slot. -->
+      <div class="rdr-viewer-nav-zone rdr-viewer-nav-zone--end">
+        @if (toolbar().print) {
         <button
           type="button"
           class="rdr-viewer-nav-btn"
-          aria-label="Zoom out"
-          [disabled]="!canZoomOut()"
-          (click)="zoomOutClick()"
+          aria-label="Print"
+          title="Print"
+          (click)="onPrint()"
         >
-          −
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 9V3h12v6" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2" />
+            <path d="M6 14h12v7H6z" />
+          </svg>
         </button>
-        <span class="rdr-viewer-zoom-readout" aria-live="polite">{{ zoomPercentLabel() }}</span>
+        } @if (toolbar().export) {
         <button
           type="button"
           class="rdr-viewer-nav-btn"
-          aria-label="Zoom in"
-          [disabled]="!canZoomIn()"
-          (click)="zoomInClick()"
+          aria-label="Export PDF"
+          title="Export PDF"
+          (click)="onExport()"
         >
-          +
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 3v12" />
+            <path d="m8 11 4 4 4-4" />
+            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+          </svg>
         </button>
-        <label class="rdr-viewer-sr-only" for="rdr-viewer-zoom">Zoom level</label>
-        <select id="rdr-viewer-zoom" class="rdr-viewer-zoom-select" (change)="onZoomSelect($event)">
-          @for (opt of zoomOptionList(); track opt.value) {
-          <option [value]="opt.value" [selected]="opt.value === zoomSelectValue()">
-            {{ opt.label }}
-          </option>
-          }
-        </select>
+        } @if (toolbar().watermark) {
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          aria-label="Watermark"
+          title="Watermark"
+          (click)="onWatermark()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 2.5 6 9a6 6 0 1 0 12 0z" />
+          </svg>
+        </button>
+        }
+        <!-- Host custom-action slot: project buttons with [rdr-toolbar-actions]. -->
+        <ng-content select="[rdr-toolbar-actions]" />
       </div>
     </div>
+    }
 
     <!-- Scrolling page area: the scroll spy keeps the indicator in sync in
          continuous mode; in single mode only the current page is painted. -->
