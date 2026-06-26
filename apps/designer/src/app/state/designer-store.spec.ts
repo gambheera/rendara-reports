@@ -81,6 +81,22 @@ describe('DesignerStore', () => {
     });
   });
 
+  describe('preview mode (E6-S9)', () => {
+    it('defaults off, enters and exits without marking dirty', () => {
+      expect(store.previewMode()).toBe(false);
+
+      store.enterPreview();
+      expect(store.previewMode()).toBe(true);
+
+      store.enterPreview();
+      expect(store.previewMode()).toBe(true);
+
+      store.exitPreview();
+      expect(store.previewMode()).toBe(false);
+      expect(store.dirty()).toBe(false);
+    });
+  });
+
   describe('align & distribute (E5-S8)', () => {
     /** Three body elements at known frames for the align/distribute maths. */
     function spread(): RendaraTemplate {

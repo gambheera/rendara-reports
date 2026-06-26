@@ -1,0 +1,65 @@
+<header class="rdr-preview__bar" role="banner">
+  <div class="rdr-preview__lead">
+    <button type="button" class="rdr-preview__back" (click)="exit()">
+      <span class="rdr-preview__back-icon" aria-hidden="true">‹</span>
+      Back to editor
+    </button>
+    <span class="rdr-preview__divider" aria-hidden="true"></span>
+    <span class="rdr-preview__doc-name">{{ documentName }}</span>
+    <span class="rdr-preview__badge">Preview</span>
+  </div>
+
+  <div class="rdr-preview__center">
+    <button
+      type="button"
+      class="rdr-preview__nav"
+      (click)="prevPage()"
+      [disabled]="!canPrev()"
+      aria-label="Previous page"
+    >
+      ‹
+    </button>
+    <span class="rdr-preview__page" aria-label="Page navigation">{{ pageLabel() }}</span>
+    <button
+      type="button"
+      class="rdr-preview__nav"
+      (click)="nextPage()"
+      [disabled]="!canNext()"
+      aria-label="Next page"
+    >
+      ›
+    </button>
+
+    <span class="rdr-preview__divider" aria-hidden="true"></span>
+
+    <button
+      type="button"
+      class="rdr-preview__nav"
+      (click)="zoomOut()"
+      aria-label="Zoom out"
+    >
+      −
+    </button>
+    <span class="rdr-preview__zoom">{{ zoomPercent() }}%</span>
+    <button type="button" class="rdr-preview__nav" (click)="zoomIn()" aria-label="Zoom in">
+      +
+    </button>
+  </div>
+
+  <div class="rdr-preview__actions">
+    <span class="rdr-preview__source">{{ sourceHint() }}</span>
+  </div>
+</header>
+
+<div class="rdr-preview__stage">
+  <rdr-report-document
+    class="rdr-preview__doc"
+    [document]="store.paginatedDocument()"
+    [template]="store.template()"
+    [resolvedValues]="preview.resolvedValues()"
+    [zoom]="zoom()"
+    [currentPage]="page()"
+    mode="view"
+    layout="single"
+  />
+</div>

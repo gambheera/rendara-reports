@@ -103,6 +103,14 @@ interface DesignerState {
    * absent from this map falls back to the header-only structural preview.
    */
   readonly resolvedTables: ReadonlyMap<string, ResolvedDataTable>;
+  /**
+   * Live preview mode (E6-S9): when `true` the designer swaps its editing chrome
+   * for a viewer-style render of the same document + sample data. Pure view-state,
+   * like {@link zoom} — it never touches the template, the dirty flag or undo
+   * history. The preview reuses the shared renderer/engine via
+   * {@link DesignerStore.paginatedDocument}, so there is no separate render path.
+   */
+  readonly previewMode: boolean;
 }
 
 function initialState(): DesignerState {
@@ -118,6 +126,7 @@ function initialState(): DesignerState {
     clipboard: [],
     sampleData: null,
     resolvedTables: new Map(),
+    previewMode: false,
   };
 }
 
@@ -375,6 +384,18 @@ export const DesignerStore = signalStore(
       /** Flips the snapping toggle (E5-S8). View state — not dirty. */
       toggleSnap(): void {
         patchState(store, (state) => ({ snapEnabled: !state.snapEnabled }));
+      },
+      /**
+       * Enters live preview mode (E6-S9): the designer swaps its editing chrome for
+       * a viewer-style render of the current document + sample data. View state —
+       * does not mark dirty or touch undo history. Idempotent.
+       */
+      enterPreview(): void {
+        patchState(store, { previewMode: true });
+      },
+      /** Leaves preview mode, returning to the editor (E6-S9). View state — not dirty. */
+      exitPreview(): void {
+        patchState(store, { previewMode: false });
       },
       /**
        * Replaces the selection with the given ids — **group-expanded** (selecting a
