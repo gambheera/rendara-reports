@@ -172,6 +172,54 @@ describe('DesignerStore', () => {
     });
   });
 
+  describe('resolved data tables (E6-S8)', () => {
+    function tableEl() {
+      return {
+        id: 'tbl',
+        type: 'dataTable' as const,
+        frame: { xMm: 15, yMm: 30, wMm: 120, hMm: null },
+        z: 1,
+        source: { arrayExpr: 'rows' },
+        columns: [{ key: 'c1', header: 'C1', cell: { expr: '$.c1' }, widthMm: 60 }],
+        repeatHeaderOnEachPage: true,
+        keepTogether: false,
+      };
+    }
+
+    it('renders a header-only table preview when none is resolved (E6-S4 fallback)', () => {
+      store.addElement(tableEl());
+      const tables = store.paginatedDocument().pages[0].tables;
+      expect(tables).toHaveLength(1);
+      // Header row only — no detail rows without resolved data.
+      expect(tables[0].rows.every((r) => r.kind === 'header')).toBe(true);
+    });
+
+    it('overlays resolved rows + totals onto the rendered document', () => {
+      store.addElement(tableEl());
+      store.markClean(); // isolate: resolved tables are view-state, not a doc edit.
+      store.setResolvedTables(
+        new Map([
+          [
+            'tbl',
+            {
+              rows: [
+                { index: 0, data: { c1: 'a' }, cells: [{ columnKey: 'c1', value: { raw: 'a', formatted: 'a' } }] },
+                { index: 1, data: { c1: 'b' }, cells: [{ columnKey: 'c1', value: { raw: 'b', formatted: 'b' } }] },
+              ],
+              columnFooters: [],
+              errors: [],
+              diagnostics: [],
+            },
+          ],
+        ]),
+      );
+
+      const rows = store.paginatedDocument().pages[0].tables[0].rows;
+      expect(rows.filter((r) => r.kind === 'detail')).toHaveLength(2);
+      expect(store.dirty()).toBe(false); // resolved tables are view-state.
+    });
+  });
+
   describe('selection invariants', () => {
     beforeEach(() => store.loadTemplate(seededTemplate()));
 

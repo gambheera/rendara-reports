@@ -12,6 +12,7 @@ import { ReportDocument } from '@rendara/report-renderer';
 import { mmToPx, pxToMm } from '@rendara/report-engine';
 import { DesignerStore } from '../../state/designer-store';
 import { BindingPreviewService } from '../../state/binding-preview';
+import { TablePreviewService } from '../../state/table-preview';
 import { ElementCreator } from '../../state/element-creator';
 import {
   CANVAS_DROP_LIST_ID,
@@ -160,7 +161,9 @@ function dropClientPoint(event: CdkDragDrop<unknown, unknown, CanvasDropData>): 
  * scaled by the store's zoom, framed by **mm rulers** (graduations aligned to the
  * rendered sheet via the engine geometry) and a **dotted grid** backdrop. The
  * empty-state ("Drag a control here to begin") shows until the first element is
- * added (E5-S5). Data binding / table resolution is E6.
+ * added (E5-S5). Bound text/image values preview via {@link BindingPreviewService}
+ * (E6-S7) and data tables via {@link TablePreviewService} (E6-S8) — both resolve
+ * the imported sample data through the engine and feed the same rendered document.
  */
 @Component({
   selector: 'rdr-canvas-stage',
@@ -220,6 +223,14 @@ export class CanvasStage {
 
   /** Drag distance (px) past which an empty-canvas press becomes a marquee, not a click. */
   private readonly marqueeThresholdPx = 3;
+
+  constructor() {
+    // Construct the table-preview service for its side effect: it resolves data
+    // tables against the imported sample data into the store's pagination, so a
+    // bound table previews its rows + totals on the canvas (E6-S8). The canvas
+    // reads the result via the store's `paginatedDocument`, so it holds no handle.
+    inject(TablePreviewService);
+  }
 
   /**
    * Fits the page width into the visible canvas (one-shot, like a "Fit" button).

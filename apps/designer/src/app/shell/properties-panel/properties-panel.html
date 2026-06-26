@@ -441,6 +441,43 @@
     </button>
     @if (isOpen('table')) {
     <div class="rdr-properties__section-body">
+      <!-- Data Source: the bound array expression + resolved row count (E6-S8). -->
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Data source</span>
+        <span class="rdr-properties__fx">
+          <span class="rdr-properties__fx-icon" aria-hidden="true">fx</span>
+          <input
+            class="rdr-properties__input rdr-properties__fx-input"
+            type="text"
+            list="rdr-table-array-fields"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="e.g. invoice.lineItems"
+            [attr.aria-invalid]="sourceError() ? 'true' : null"
+            [attr.aria-describedby]="sourceError() ? 'rdr-prop-source-err' : null"
+            [value]="tableSource()"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onTableSource(valueFrom($event))"
+          />
+        </span>
+      </label>
+      <datalist id="rdr-table-array-fields">
+        @for (path of arrayPaths(); track path) {
+        <option [value]="path"></option>
+        }
+      </datalist>
+      <datalist id="rdr-table-row-fields">
+        @for (path of rowFieldPaths(); track path) {
+        <option [value]="path"></option>
+        }
+      </datalist>
+      @if (sourceError(); as err) {
+      <p id="rdr-prop-source-err" class="rdr-properties__error" role="alert">{{ err }}</p>
+      } @else if (tableRowCount() !== null) {
+      <p class="rdr-properties__hint">{{ tableRowCount() }} rows in sample data</p>
+      }
+
       <!-- Columns: reorderable list with per-column remove + Add column. -->
       <div class="rdr-properties__field">
         <span class="rdr-properties__label">Columns</span>
@@ -539,6 +576,99 @@
             </div>
           </div>
         </div>
+
+        <!-- Cell value: the per-row expression (row scope $) + format (E6-S8). -->
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Cell value expression</span>
+          <span class="rdr-properties__fx">
+            <span class="rdr-properties__fx-icon" aria-hidden="true">fx</span>
+            <input
+              class="rdr-properties__input rdr-properties__fx-input"
+              type="text"
+              list="rdr-table-row-fields"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="e.g. $.amount"
+              [attr.aria-invalid]="cellError() ? 'true' : null"
+              [attr.aria-describedby]="cellError() ? 'rdr-prop-cell-err' : null"
+              [value]="cellExpr()"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onCellExpr(col.key, valueFrom($event))"
+            />
+          </span>
+        </label>
+        @if (cellError(); as err) {
+        <p id="rdr-prop-cell-err" class="rdr-properties__error" role="alert">{{ err }}</p>
+        }
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Cell format</span>
+          <select class="rdr-properties__select" (change)="onCellFormat(col.key, valueFrom($event))">
+            @for (opt of formatOptions; track opt.label) {
+            <option [value]="opt.token ?? ''" [selected]="(opt.token ?? '') === cellFormat()">
+              {{ opt.label }}
+            </option>
+            }
+          </select>
+        </label>
+
+        <!-- Footer aggregate: a grand total under this column (E6-S8). -->
+        <div class="rdr-properties__field">
+          <label class="rdr-properties__check">
+            <input
+              type="checkbox"
+              [checked]="footerFn() !== null"
+              [disabled]="!columnAggregatable()"
+              (change)="onToggleColumnFooter(col.key, checkedFrom($event))"
+            />
+            <span class="rdr-properties__label">Show footer aggregate</span>
+          </label>
+          @if (footerFn(); as fn) {
+          <label class="rdr-properties__field">
+            <span class="rdr-properties__label">Aggregate function</span>
+            <select
+              class="rdr-properties__select"
+              aria-label="Footer aggregate function"
+              (change)="onColumnFooterFn(col.key, $any(valueFrom($event)))"
+            >
+              @for (agg of aggregateFunctions; track agg.fn) {
+              <option [value]="agg.fn" [selected]="agg.fn === fn">{{ agg.label }}</option>
+              }
+            </select>
+          </label>
+          } @else if (!columnAggregatable()) {
+          <p class="rdr-properties__hint">Bind the cell to a single field to total it.</p>
+          }
+        </div>
+
+        <!-- Group subtotal: a per-group total under this column (E6-S8), when grouped. -->
+        @if (hasGroups()) {
+        <div class="rdr-properties__field">
+          <label class="rdr-properties__check">
+            <input
+              type="checkbox"
+              [checked]="groupAggFn() !== null"
+              [disabled]="!columnAggregatable()"
+              (change)="onToggleGroupAggregate(col.key, checkedFrom($event))"
+            />
+            <span class="rdr-properties__label">Show group subtotal</span>
+          </label>
+          @if (groupAggFn(); as fn) {
+          <label class="rdr-properties__field">
+            <span class="rdr-properties__label">Subtotal function</span>
+            <select
+              class="rdr-properties__select"
+              aria-label="Group subtotal function"
+              (change)="onGroupAggregateFn(col.key, $any(valueFrom($event)))"
+            >
+              @for (agg of aggregateFunctions; track agg.fn) {
+              <option [value]="agg.fn" [selected]="agg.fn === fn">{{ agg.label }}</option>
+              }
+            </select>
+          </label>
+          }
+        </div>
+        }
       </div>
       }
 
