@@ -521,6 +521,91 @@ describe('PropertiesPanel', () => {
     expect(tableOf(store)?.groups).toBeUndefined();
   });
 
+  // --- Table data binding (E6-S8) ------------------------------------------
+
+  it('edits the table data source', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Data source/i), {
+      target: { value: 'invoice.lineItems' },
+    });
+    expect(tableOf(store)?.source.arrayExpr).toBe('invoice.lineItems');
+  });
+
+  it('binds the selected column cell expression and format', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl'));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Cell value expression/i), {
+      target: { value: '$.amount' },
+    });
+    fireEvent.change(screen.getByLabelText(/Cell format/i), { target: { value: 'currency:USD' } });
+
+    expect(tableOf(store)?.columns[0].cell).toEqual({ expr: '$.amount', format: 'currency:USD' });
+  });
+
+  it('toggles a column footer grand total and switches its function', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl', { source: { arrayExpr: 'invoice.lineItems' } }));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.click(screen.getByLabelText(/Show footer aggregate/i));
+    expect(tableOf(store)?.columns[0].footer?.expr).toBe('$sum(invoice.lineItems.col1)');
+
+    fireEvent.change(screen.getByLabelText(/Footer aggregate function/i), {
+      target: { value: 'count' },
+    });
+    expect(tableOf(store)?.columns[0].footer?.expr).toBe('$count(invoice.lineItems)');
+
+    fireEvent.click(screen.getByLabelText(/Show footer aggregate/i));
+    expect(tableOf(store)?.columns[0].footer).toBeUndefined();
+  });
+
+  it('adds a per-group subtotal for the selected column when grouped', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(tableEl('tbl', { groups: [{ groupBy: '$.category' }] }));
+      s.selectOne('tbl');
+    });
+
+    fireEvent.click(screen.getByLabelText(/Show group subtotal/i));
+    expect(tableOf(store)?.groups?.[0].footer?.aggregates).toEqual([
+      { columnKey: 'col1', binding: { expr: '$sum($.col1)' } },
+    ]);
+  });
+
+  it('shows the resolved row count from sample data', async () => {
+    await renderPanel((s) => {
+      s.addElement(tableEl('tbl', { source: { arrayExpr: 'invoice.lineItems' } }));
+      s.selectOne('tbl');
+      const parsed = parseSampleData('{"invoice":{"lineItems":[{"col1":1},{"col1":2}]}}');
+      if (parsed.ok) s.setSampleData(parsed.data);
+      s.setResolvedTables(
+        new Map([
+          [
+            'tbl',
+            {
+              rows: [
+                { index: 0, data: {}, cells: [] },
+                { index: 1, data: {}, cells: [] },
+              ],
+              columnFooters: [],
+              errors: [],
+              diagnostics: [],
+            },
+          ],
+        ]),
+      );
+    });
+
+    expect(screen.getByText(/2 rows in sample data/i)).toBeTruthy();
+  });
+
   it('collapses a section, hiding its body', async () => {
     await renderPanel((store) => {
       store.addElement(textEl('t'));

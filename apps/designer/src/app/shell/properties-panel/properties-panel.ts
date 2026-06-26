@@ -50,6 +50,22 @@ import {
   setTableColumnWidth,
   setTableGroupBy,
 } from '../../state/table-ops';
+import {
+  AGGREGATE_FUNCTIONS,
+  canAggregate,
+  clearColumnFooter,
+  clearColumnGroupAggregate,
+  collectArrayPaths,
+  collectRowFieldPaths,
+  columnFooterFn,
+  columnGroupAggFn,
+  setColumnCellExpr,
+  setColumnCellFormat,
+  setColumnFooter,
+  setColumnGroupAggregate,
+  setTableSource,
+  type AggregateFn,
+} from '../../state/table-binding-ops';
 
 /** A curated set of font families offered in the Text section's family picker. */
 const FONT_FAMILIES = [
@@ -94,10 +110,12 @@ type Section = 'layout' | 'text' | 'shape' | 'image' | 'table' | 'binding';
  * coalesces into a single undo step (E5-S9) rather than one per keystroke.
  *
  * The per-field guards and the override→default font resolution live in the pure
- * `element-props`/`table-ops` helpers; this component only binds them to the DOM.
- * The full dynamic per-type panel framework, style editors (colour/border/fill/
- * padding) and multi-select editing are E6-S5; data binding — the table's array
- * source, column cell expressions and footer aggregates — is E6-S6/S7/S8.
+ * `element-props`/`table-ops`/`table-binding-ops` helpers; this component only binds
+ * them to the DOM. The full dynamic per-type panel framework, style editors (colour/
+ * border/fill/padding) and multi-select editing are E6-S5. Table **data binding**
+ * (E6-S8) — the bound array source, per-column cell expressions + format, and
+ * column-footer / per-group aggregates — lives in the Table section alongside the
+ * E6-S4 structure editors and previews live against the imported sample data.
  */
 @Component({
   selector: 'rdr-properties-panel',
@@ -116,6 +134,7 @@ export class PropertiesPanel {
   protected readonly imageFits = IMAGE_FITS;
   protected readonly columnAligns = COLUMN_ALIGNS;
   protected readonly formatOptions = FORMAT_OPTIONS;
+  protected readonly aggregateFunctions = AGGREGATE_FUNCTIONS;
 
   /** The single selected element being edited, or `undefined` for none / multi. */
   protected readonly element = computed(() =>
@@ -225,6 +244,72 @@ export class PropertiesPanel {
     const key = this.selectedColumnKey();
     return el.columns.find((column) => column.key === key) ?? el.columns[0];
   });
+
+  // --- Table data binding (E6-S8) ------------------------------------------
+
+  /** The selected table's bound array expression (the Data Source `FX` value). */
+  protected readonly tableSource = computed(() => this.tableElement()?.source.arrayExpr ?? '');
+
+  /** Inline compile error for the array-source expression, or `null` when blank / valid. */
+  protected readonly sourceError = computed(() => expressionError(this.tableSource()));
+
+  /**
+   * The resolved detail-row count of the selected table against sample data, or
+   * `null` when no sample data is loaded — the bound-array chip's row count. Read
+   * from the same resolved preview the canvas paints from, so they never diverge.
+   */
+  protected readonly tableRowCount = computed<number | null>(() => {
+    const el = this.tableElement();
+    if (!el || !this.hasSampleData()) {
+      return null;
+    }
+    return this.store.resolvedTables().get(el.id)?.rows.length ?? 0;
+  });
+
+  /** Array paths from the imported sample data, for the Data Source autocomplete. */
+  protected readonly arrayPaths = computed<readonly string[]>(() => {
+    const data = this.store.sampleData();
+    return data ? collectArrayPaths(data.root) : [];
+  });
+
+  /** Row-relative field paths (`$.field`) under the bound array, for a cell's autocomplete. */
+  protected readonly rowFieldPaths = computed<readonly string[]>(() => {
+    const data = this.store.sampleData();
+    const el = this.tableElement();
+    return data && el ? collectRowFieldPaths(data.root, el.source.arrayExpr) : [];
+  });
+
+  /** The selected column's cell expression (the row-scoped `$` `FX` value). */
+  protected readonly cellExpr = computed(() => this.selectedColumn()?.cell.expr ?? '');
+
+  /** The selected column's cell format token, or `''` for "None". */
+  protected readonly cellFormat = computed(() => this.selectedColumn()?.cell.format ?? '');
+
+  /** Inline compile error for the selected cell expression, or `null` when blank / valid. */
+  protected readonly cellError = computed(() => expressionError(this.cellExpr()));
+
+  /** True when the selected column's cell is a simple field that can be aggregated. */
+  protected readonly columnAggregatable = computed(() => {
+    const column = this.selectedColumn();
+    return column ? canAggregate(column) : false;
+  });
+
+  /** The selected column's footer (grand total) aggregate function, or `null` when none. */
+  protected readonly footerFn = computed<AggregateFn | null>(() => {
+    const el = this.tableElement();
+    const column = this.selectedColumn();
+    return el && column ? columnFooterFn(el, column.key) : null;
+  });
+
+  /** The selected column's per-group subtotal function, or `null` when none. */
+  protected readonly groupAggFn = computed<AggregateFn | null>(() => {
+    const el = this.tableElement();
+    const column = this.selectedColumn();
+    return el && column ? columnGroupAggFn(el, column.key) : null;
+  });
+
+  /** True when the selected table declares at least one group (gates the subtotal control). */
+  protected readonly hasGroups = computed(() => this.groups().length > 0);
 
   /** The image element's current static source (URL or data URI), or '' when none/bound. */
   protected readonly imageSrc = computed<string>(() => this.imageElement()?.src ?? '');
@@ -627,6 +712,96 @@ export class PropertiesPanel {
     const groups = setTableGroupBy(el, index, groupBy);
     if (groups !== null) {
       this.store.updateElement(el.id, { groups });
+    }
+  }
+
+  // --- Table data binding (E6-S8) ------------------------------------------
+
+  /** Sets the table's bound array source. Coalesced via focus/blur into one undo step. */
+  protected onTableSource(arrayExpr: string): void {
+    const el = this.tableElement();
+    if (el) {
+      this.store.updateElement(el.id, setTableSource(arrayExpr));
+    }
+  }
+
+  /** Sets the selected column's per-row cell expression. Coalesced via focus/blur. */
+  protected onCellExpr(key: string, expr: string): void {
+    const el = this.tableElement();
+    if (el) {
+      this.store.updateElement(el.id, { columns: setColumnCellExpr(el, key, expr) });
+    }
+  }
+
+  /** Sets the selected column's cell format token (`''` = None) — a discrete undo step. */
+  protected onCellFormat(key: string, value: string): void {
+    const el = this.tableElement();
+    if (el) {
+      this.commitTable(el.id, {
+        columns: setColumnCellFormat(el, key, value === '' ? null : value),
+      });
+    }
+  }
+
+  /**
+   * Toggles the selected column's footer (grand total) on or off — one undo step.
+   * Enabling defaults to the column's current function, or Sum; disabling drops the
+   * footer. Inert when the cell isn't a simple field ({@link columnAggregatable}).
+   */
+  protected onToggleColumnFooter(key: string, enabled: boolean): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    if (!enabled) {
+      this.commitTable(el.id, { columns: clearColumnFooter(el, key) });
+      return;
+    }
+    const columns = setColumnFooter(el, key, columnFooterFn(el, key) ?? 'sum');
+    if (columns !== null) {
+      this.commitTable(el.id, { columns });
+    }
+  }
+
+  /** Sets the selected column's footer aggregate function — one undo step. */
+  protected onColumnFooterFn(key: string, fn: AggregateFn): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    const columns = setColumnFooter(el, key, fn);
+    if (columns !== null) {
+      this.commitTable(el.id, { columns });
+    }
+  }
+
+  /**
+   * Toggles the selected column's per-group subtotal on or off across every group —
+   * one undo step. Enabling defaults to the current function, or Sum. Inert when the
+   * table has no groups or the cell isn't a simple field.
+   */
+  protected onToggleGroupAggregate(key: string, enabled: boolean): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    const groups = enabled
+      ? setColumnGroupAggregate(el, key, columnGroupAggFn(el, key) ?? 'sum')
+      : clearColumnGroupAggregate(el, key);
+    if (groups !== null) {
+      this.commitTable(el.id, { groups });
+    }
+  }
+
+  /** Sets the selected column's per-group subtotal function across every group — one undo step. */
+  protected onGroupAggregateFn(key: string, fn: AggregateFn): void {
+    const el = this.tableElement();
+    if (!el) {
+      return;
+    }
+    const groups = setColumnGroupAggregate(el, key, fn);
+    if (groups !== null) {
+      this.commitTable(el.id, { groups });
     }
   }
 

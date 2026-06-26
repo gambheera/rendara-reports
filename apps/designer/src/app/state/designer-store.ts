@@ -94,6 +94,15 @@ interface DesignerState {
    * importing it does not mark the document dirty and it is not undoable.
    */
   readonly sampleData: SampleData | null;
+  /**
+   * Resolved data-table rows + aggregates by element id (E6-S8), produced async
+   * from the imported sample data by {@link TablePreviewService}. A view-state
+   * preview cache — it feeds {@link paginatedDocument} so the canvas shows real
+   * rows + totals, but never touches the template, the dirty flag or undo history.
+   * Empty until sample data is imported and the first resolution lands; a table
+   * absent from this map falls back to the header-only structural preview.
+   */
+  readonly resolvedTables: ReadonlyMap<string, ResolvedDataTable>;
 }
 
 function initialState(): DesignerState {
@@ -108,6 +117,7 @@ function initialState(): DesignerState {
     interaction: null,
     clipboard: [],
     sampleData: null,
+    resolvedTables: new Map(),
   };
 }
 
@@ -119,10 +129,14 @@ function clampZoom(zoom: number): number {
  * A header-only **structural preview** of every data-table element (E6-S4): the
  * paginator *skips* any table absent from its resolved map, so without an entry a
  * data table would render nothing and its columns could not be seen or edited on
- * the canvas. Until data binding lands (E6-S6/S8 supply real resolved rows), each
- * table is resolved as an empty body — `layoutTable` still emits the column
- * **header row**, so adding / removing / reordering / resizing columns is live and
- * WYSIWYG. Detail-row and aggregate previews arrive with binding.
+ * the canvas. Each table is resolved as an empty body — `layoutTable` still emits
+ * the column **header row**, so adding / removing / reordering / resizing columns
+ * is live and WYSIWYG even before sample data is loaded.
+ *
+ * This is the fallback layer: {@link paginatedDocument} overlays the real
+ * {@link DesignerState.resolvedTables} (E6-S8) on top, so a table bound against
+ * imported sample data shows its detail rows + totals while an unbound (or
+ * not-yet-resolved) table keeps the header-only preview.
  */
 function placeholderResolvedTables(
   template: RendaraTemplate,
@@ -233,13 +247,22 @@ export const DesignerStore = signalStore(
     /**
      * The current document paginated by the shared engine — the single derived
      * model the canvas renders (in design mode) and the status bar counts pages
-     * from, so both views stay consistent. Recomputed only when the template
-     * changes. Data tables get a header-only structural preview (E6-S4) until data
-     * binding supplies real rows (E6-S6/S8).
+     * from, so both views stay consistent. Recomputed when the template or the
+     * resolved-table preview changes. Each data table uses its resolved rows +
+     * totals ({@link DesignerState.resolvedTables}, E6-S8) when available, falling
+     * back to the header-only structural preview (E6-S4) otherwise.
      */
-    paginatedDocument: computed<PaginatedDocument>(() =>
-      paginate(store.template(), placeholderResolvedTables(store.template())),
-    ),
+    paginatedDocument: computed<PaginatedDocument>(() => {
+      const template = store.template();
+      // Overlay the async-resolved tables over the header-only fallback so every
+      // table has an entry (the paginator skips tables it can't find), unbound
+      // tables keep their header preview, and bound ones show rows + totals.
+      const resolved = new Map([
+        ...placeholderResolvedTables(template),
+        ...store.resolvedTables(),
+      ]);
+      return paginate(template, resolved);
+    }),
   })),
   withComputed((store) => ({
     /** Page count of the rendered document (≥ 1). */
@@ -573,6 +596,15 @@ export const DesignerStore = signalStore(
       /** Clears the imported sample data (E6-S6). View state — not dirty/undoable. */
       clearSampleData(): void {
         patchState(store, { sampleData: null });
+      },
+      /**
+       * Sets the resolved data-table preview cache (E6-S8) — the rows + aggregates
+       * {@link TablePreviewService} resolves async from sample data, consumed by
+       * {@link paginatedDocument}. View state: it never touches the template, the
+       * dirty flag or undo history.
+       */
+      setResolvedTables(resolvedTables: ReadonlyMap<string, ResolvedDataTable>): void {
+        patchState(store, { resolvedTables });
       },
       /**
        * Opens a continuous-gesture transaction (E5-S9): captures the pre-gesture
