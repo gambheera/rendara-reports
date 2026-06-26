@@ -53,6 +53,29 @@
   color: var(--rdr-color-text-placeholder);
   cursor: grab;
   user-select: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.rdr-field__grip:active {
+  cursor: grabbing;
+}
+
+.rdr-field__grip:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+/* The array-element placeholder / root rows can't be bound, so their grip is inert. */
+.rdr-field__grip--disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* Empty drag placeholder: dragging a field leaves no gap in the tree. */
+.rdr-field__drag-placeholder {
+  display: none;
 }
 
 .rdr-field__name {

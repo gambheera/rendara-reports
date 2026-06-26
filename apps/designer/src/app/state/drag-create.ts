@@ -27,6 +27,26 @@ export type PaletteKind = 'text' | 'image' | 'line' | 'rect' | 'ellipse' | 'data
  */
 export const CANVAS_DROP_LIST_ID = 'rdr-canvas-drop-list';
 
+/**
+ * The payload a **Data-tab field row** carries while being dragged onto the canvas
+ * to bind an element (E6-S7 drag-to-bind). It shares the canvas drop list with the
+ * palette tiles, so the canvas tells the two apart by shape: a palette tile's data
+ * is a {@link PaletteKind} string, a field drag's is this object.
+ */
+export interface FieldDragData {
+  /** The dragged field's JSONata path from the data root (e.g. `invoice.total`). */
+  readonly bindPath: string;
+}
+
+/** True when a canvas drop carried a {@link FieldDragData} (a field, not a palette tile). */
+export function isFieldDragData(data: unknown): data is FieldDragData {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as FieldDragData).bindPath === 'string'
+  );
+}
+
 /** A default element footprint in mm; `hMm: null` is a growing (auto-height) element. */
 export interface ElementSize {
   readonly wMm: number;

@@ -4,6 +4,7 @@ import type {
   ColumnAlign,
   DataTableColumn,
   DataTableElement,
+  ElementBinding,
   FontWeight,
   Frame,
   ImageElement,
@@ -15,6 +16,15 @@ import type {
 import { IMAGE_FITS } from '@rendara/report-schema';
 import { sanitizeImageUrl } from '@rendara/report-renderer';
 import { DesignerStore } from '../../state/designer-store';
+import { BindingPreviewService } from '../../state/binding-preview';
+import {
+  FORMAT_OPTIONS,
+  buildBinding,
+  collectFieldPaths,
+  expressionError,
+  isBindable,
+  type BindableElement,
+} from '../../state/binding-ops';
 import {
   DEFAULT_FILL_COLOR,
   effectiveFill,
@@ -57,8 +67,8 @@ const STROKE_STYLES: readonly LineStyle[] = ['solid', 'dashed', 'dotted', 'doubl
 /** The column alignments offered in the Table section's Align segmented control. */
 const COLUMN_ALIGNS: readonly ColumnAlign[] = ['left', 'center', 'right'];
 
-/** The collapsible Properties sections (one per element kind, plus generic Layout). */
-type Section = 'layout' | 'text' | 'shape' | 'image' | 'table';
+/** The collapsible Properties sections (one per element kind, plus generic Layout / Data Binding). */
+type Section = 'layout' | 'text' | 'shape' | 'image' | 'table' | 'binding';
 
 /**
  * Right-hand Properties panel (E5-S1 shell → wired in E6-S1). It is the
@@ -99,11 +109,13 @@ type Section = 'layout' | 'text' | 'shape' | 'image' | 'table';
 })
 export class PropertiesPanel {
   private readonly store = inject(DesignerStore);
+  private readonly previewSvc = inject(BindingPreviewService);
 
   protected readonly fontFamilies = FONT_FAMILIES;
   protected readonly strokeStyles = STROKE_STYLES;
   protected readonly imageFits = IMAGE_FITS;
   protected readonly columnAligns = COLUMN_ALIGNS;
+  protected readonly formatOptions = FORMAT_OPTIONS;
 
   /** The single selected element being edited, or `undefined` for none / multi. */
   protected readonly element = computed(() =>
@@ -133,6 +145,60 @@ export class PropertiesPanel {
   protected readonly tableElement = computed<DataTableElement | undefined>(() => {
     const el = this.element();
     return el?.type === 'dataTable' ? el : undefined;
+  });
+
+  // --- Data binding (E6-S7) -------------------------------------------------
+
+  /** The selected element when it is bindable (text or image) — gates the Data Binding section. */
+  protected readonly bindable = computed<BindableElement | undefined>(() => {
+    const el = this.element();
+    return el && isBindable(el) ? el : undefined;
+  });
+
+  /** The bindable element's current binding, or `undefined` when it is static. */
+  protected readonly binding = computed<ElementBinding | undefined>(() => this.bindable()?.binding);
+
+  /** The binding's expression text (empty when static), shown in the `FX` input. */
+  protected readonly bindingExpr = computed(() => this.binding()?.expr ?? '');
+
+  /** The binding's format token, or `''` for "None" (the Format picker's value). */
+  protected readonly bindingFormat = computed<string>(() => this.binding()?.format ?? '');
+
+  /** The binding's fallback literal, or `''` when none. */
+  protected readonly bindingFallback = computed(() => this.binding()?.fallback ?? '');
+
+  /** The element's `visibleWhen` condition, or `''` when always visible. */
+  protected readonly visibleWhen = computed(() => this.bindable()?.visibleWhen ?? '');
+
+  /** The bindable JSONata paths from the imported sample data, for `FX` autocomplete. */
+  protected readonly fieldPaths = computed<readonly string[]>(() => {
+    const data = this.store.sampleData();
+    return data ? collectFieldPaths(data.root) : [];
+  });
+
+  /** Inline compile error for the current expression, or `null` when blank / valid. */
+  protected readonly bindingError = computed(() => expressionError(this.bindingExpr()));
+
+  /** True when the expression is non-empty and compiles cleanly — the green "valid" state. */
+  protected readonly bindingValid = computed(
+    () => this.bindingExpr().trim() !== '' && this.bindingError() === null,
+  );
+
+  /** True when sample data is loaded, so a resolved-value preview is available. */
+  protected readonly hasSampleData = this.store.hasSampleData;
+
+  /**
+   * The resolved display value of the selected element's binding against the
+   * imported sample data, or `null` when the element is static or no sample data is
+   * loaded. Sourced from the shared {@link BindingPreviewService} — the same map the
+   * canvas paints from, so the panel preview and the canvas never diverge.
+   */
+  protected readonly bindingPreview = computed<string | null>(() => {
+    const el = this.bindable();
+    if (!el || el.binding === undefined) {
+      return null;
+    }
+    return this.previewSvc.resolvedValues().get(el.id) ?? '';
   });
 
   /** The columns of the selected table (empty when no table is selected). */
@@ -218,6 +284,7 @@ export class PropertiesPanel {
     shape: false,
     image: false,
     table: false,
+    binding: false,
   });
 
   constructor() {
@@ -561,6 +628,68 @@ export class PropertiesPanel {
     if (groups !== null) {
       this.store.updateElement(el.id, { groups });
     }
+  }
+
+  // --- Data binding (E6-S7) -------------------------------------------------
+
+  /**
+   * Rebuilds the selected element's binding from the three editor inputs and applies
+   * it (E6-S7). An empty expression **clears** the binding (`buildBinding` → `null`),
+   * reverting the element to its static value. Edits go straight through
+   * `updateElement`, so the canvas and the resolved-value preview update live.
+   */
+  private commitBinding(expr: string, format: string | null, fallback: string | null): void {
+    const el = this.bindable();
+    if (!el) {
+      return;
+    }
+    const binding = buildBinding(expr, format, fallback);
+    this.store.updateElement(el.id, { binding: binding ?? undefined });
+  }
+
+  /** Sets the binding expression (`FX` field). Coalesced via focus/blur into one undo step. */
+  protected onBindingExpr(expr: string): void {
+    this.commitBinding(expr, this.binding()?.format ?? null, this.binding()?.fallback ?? null);
+  }
+
+  /** Sets the binding's format token (Format picker; `''` = None) — a discrete undo step. */
+  protected onBindingFormat(value: string): void {
+    this.store.beginInteraction();
+    this.commitBinding(
+      this.bindingExpr(),
+      value === '' ? null : value,
+      this.binding()?.fallback ?? null,
+    );
+    this.store.endInteraction();
+  }
+
+  /** Sets the binding's fallback literal. Coalesced via focus/blur into one undo step. */
+  protected onBindingFallback(fallback: string): void {
+    this.commitBinding(this.bindingExpr(), this.binding()?.format ?? null, fallback);
+  }
+
+  /**
+   * Sets the element's `visibleWhen` condition (E6-S7): a blank value means "always
+   * visible" (`null`), a non-empty value is the JSONata boolean expression. Coalesced
+   * via focus/blur. Applies to the bindable element being edited.
+   */
+  protected onVisibleWhen(expr: string): void {
+    const el = this.bindable();
+    if (!el) {
+      return;
+    }
+    this.store.updateElement(el.id, { visibleWhen: expr.trim() === '' ? null : expr });
+  }
+
+  /** Clears the binding, reverting the element to its static value — one undo step. */
+  protected clearBinding(): void {
+    const el = this.bindable();
+    if (!el) {
+      return;
+    }
+    this.store.beginInteraction();
+    this.store.updateElement(el.id, { binding: undefined });
+    this.store.endInteraction();
   }
 
   /** Reads a checkbox/toggle's checked state. */

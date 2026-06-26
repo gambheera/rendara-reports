@@ -44,6 +44,16 @@ describe('DataPanel', () => {
     expect(screen.getByText('name')).toBeTruthy();
   });
 
+  it('exposes the field tree as a drop list connected to the canvas (drag-to-bind, E6-S7)', async () => {
+    const view = await render(DataPanel);
+    seed({ invoice: { total: 1 } });
+    view.detectChanges();
+
+    const tree = screen.getByRole('tree');
+    // CDK marks the list element; the canvas drop list is the connected target.
+    expect(tree.classList.contains('cdk-drop-list')).toBe(true);
+  });
+
   it('shows a clear inline error when the imported file is invalid JSON', async () => {
     const view = await render(DataPanel);
 

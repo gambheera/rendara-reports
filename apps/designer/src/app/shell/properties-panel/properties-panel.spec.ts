@@ -4,6 +4,7 @@ import { render, screen, fireEvent } from '@testing-library/angular';
 import type { TemplateElement } from '@rendara/report-schema';
 import { PropertiesPanel } from './properties-panel';
 import { DesignerStore } from '../../state/designer-store';
+import { parseSampleData } from '../../state/sample-data';
 
 type Store = InstanceType<typeof DesignerStore>;
 
@@ -529,5 +530,118 @@ describe('PropertiesPanel', () => {
     expect(screen.getByLabelText(/^X/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Layout/ }));
     expect(screen.queryByLabelText(/^X/)).toBeNull();
+  });
+
+  // --- Data Binding section (E6-S7) ----------------------------------------
+
+  /** Reads the selected element's binding from the store. */
+  function bindingOf(store: Store) {
+    const el = store.primarySelection();
+    return el?.type === 'text' || el?.type === 'image' ? el.binding : undefined;
+  }
+
+  it('shows the Data Binding section for a text element', async () => {
+    await renderPanel((s) => {
+      s.addElement(textEl('t'));
+      s.selectOne('t');
+    });
+    expect(screen.getByRole('button', { name: /Data Binding/ })).toBeTruthy();
+    expect(screen.getByLabelText(/Expression/i)).toBeTruthy();
+  });
+
+  it('shows no Data Binding section for a non-bindable (shape) element', async () => {
+    await renderPanel((s) => {
+      s.addElement(rectEl('r'));
+      s.selectOne('r');
+    });
+    expect(screen.queryByRole('button', { name: /Data Binding/ })).toBeNull();
+  });
+
+  it('binds a text element by typing an expression', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(textEl('t'));
+      s.selectOne('t');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Expression/i), {
+      target: { value: 'invoice.customer.name' },
+    });
+
+    expect(bindingOf(store)).toEqual({ expr: 'invoice.customer.name' });
+  });
+
+  it('clears the binding when the expression is emptied', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(textEl('t', { binding: { expr: 'invoice.total' } }));
+      s.selectOne('t');
+    });
+    expect(bindingOf(store)).toEqual({ expr: 'invoice.total' });
+
+    fireEvent.input(screen.getByLabelText(/Expression/i), { target: { value: '' } });
+    expect(bindingOf(store)).toBeUndefined();
+  });
+
+  it('sets the format token and fallback on the binding', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(textEl('t', { binding: { expr: 'invoice.total' } }));
+      s.selectOne('t');
+    });
+
+    fireEvent.change(screen.getByLabelText(/Format/i), { target: { value: 'currency:USD' } });
+    expect(bindingOf(store)).toMatchObject({ expr: 'invoice.total', format: 'currency:USD' });
+
+    fireEvent.input(screen.getByLabelText(/Fallback/i), { target: { value: 'n/a' } });
+    expect(bindingOf(store)).toMatchObject({ fallback: 'n/a' });
+  });
+
+  it('sets and clears the visibleWhen condition (blank means always)', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(textEl('t'));
+      s.selectOne('t');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Visible when/i), { target: { value: 'invoice.paid' } });
+    expect(store.primarySelection()?.visibleWhen).toBe('invoice.paid');
+
+    fireEvent.input(screen.getByLabelText(/Visible when/i), { target: { value: '   ' } });
+    expect(store.primarySelection()?.visibleWhen).toBeNull();
+  });
+
+  it('shows an inline error for an invalid expression', async () => {
+    await renderPanel((s) => {
+      s.addElement(textEl('t'));
+      s.selectOne('t');
+    });
+
+    fireEvent.input(screen.getByLabelText(/Expression/i), { target: { value: 'invoice.(' } });
+    expect(screen.getByRole('alert')).toBeTruthy();
+  });
+
+  it('offers imported field paths as autocomplete options', async () => {
+    const parsed = parseSampleData(
+      JSON.stringify({ invoice: { total: 1, customer: { name: 'Acme' } } }),
+      'sample.json',
+    );
+    const { view } = await renderPanel((s) => {
+      s.addElement(textEl('t'));
+      s.selectOne('t');
+      if (parsed.ok) s.setSampleData(parsed.data);
+    });
+
+    const options = Array.from(
+      view.container.querySelectorAll<HTMLOptionElement>('#rdr-binding-fields option'),
+    ).map((o) => o.value);
+    expect(options).toContain('invoice.total');
+    expect(options).toContain('invoice.customer.name');
+  });
+
+  it('clears the binding via the Clear binding button', async () => {
+    const { store } = await renderPanel((s) => {
+      s.addElement(textEl('t', { binding: { expr: 'invoice.total' } }));
+      s.selectOne('t');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Clear binding/ }));
+    expect(bindingOf(store)).toBeUndefined();
   });
 });

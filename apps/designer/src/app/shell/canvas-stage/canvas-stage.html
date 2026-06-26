@@ -24,10 +24,13 @@
 
     <div
       class="rdr-canvas__pages"
+      [class.rdr-canvas__pages--bind-target]="bindTarget()"
       cdkDropList
       [id]="canvasDropListId"
       cdkDropListSortingDisabled
       (cdkDropListDropped)="onDrop($event)"
+      (cdkDropListEntered)="onListEntered($event)"
+      (cdkDropListExited)="onListExited()"
       (pointerdown)="onCanvasPointerDown($event)"
     >
       <rdr-report-document
@@ -35,6 +38,7 @@
         [style.width.px]="pageBox().widthPx"
         [document]="store.paginatedDocument()"
         [template]="store.template()"
+        [resolvedValues]="preview.resolvedValues()"
         [zoom]="store.zoom()"
         mode="design"
         layout="continuous"

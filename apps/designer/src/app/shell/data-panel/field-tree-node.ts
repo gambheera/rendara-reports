@@ -1,5 +1,7 @@
 import { Component, ViewEncapsulation, computed, input, signal } from '@angular/core';
+import { CdkDrag, CdkDragHandle, CdkDragPlaceholder } from '@angular/cdk/drag-drop';
 import type { FieldNode, ScalarType } from '@rendara/report-engine';
+import type { FieldDragData } from '../../state/drag-create';
 
 /** Human label for each scalar type, shown as the node's type chip. */
 const SCALAR_LABEL: Record<ScalarType, string> = {
@@ -19,10 +21,16 @@ const SCALAR_LABEL: Record<ScalarType, string> = {
  *
  * Containers start expanded so an imported document (and any filter match) is
  * visible at a glance. The component self-references for recursion.
+ *
+ * Each bindable row is a CDK **drag source** (E6-S7): dragging the grip onto a
+ * canvas element binds it to this field's path. Drag-to-bind is a pointer gesture;
+ * the keyboard-accessible alternative (per WCAG 2.5.7) is typing/picking the field
+ * in the Properties panel's Data Binding editor. The array-element placeholder
+ * (`[]`) and the synthetic root are not draggable — they have no distinct path.
  */
 @Component({
   selector: 'rdr-field-tree-node',
-  imports: [FieldTreeNode],
+  imports: [FieldTreeNode, CdkDrag, CdkDragHandle, CdkDragPlaceholder],
   templateUrl: './field-tree-node.html',
   styleUrl: './field-tree-node.css',
   encapsulation: ViewEncapsulation.Emulated,
@@ -58,6 +66,18 @@ export class FieldTreeNode {
     if (node.kind === 'scalar') return SCALAR_LABEL[node.scalarType ?? 'string'];
     return null;
   });
+
+  /**
+   * Whether this row can be dragged onto the canvas to bind an element: it needs a
+   * real data path and must not be the array-element placeholder (`[]`), whose path
+   * merely repeats the array's own.
+   */
+  protected readonly draggable = computed(
+    () => this.node().path !== '' && this.node().name !== '[]',
+  );
+
+  /** The drag payload — the node's JSONata path, tagged so the canvas spots a field drag. */
+  protected readonly dragData = computed<FieldDragData>(() => ({ bindPath: this.node().path }));
 
   protected toggle(): void {
     this.expanded.update((open) => !open);
