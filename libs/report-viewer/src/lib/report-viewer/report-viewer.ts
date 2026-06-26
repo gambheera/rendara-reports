@@ -3,14 +3,22 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { type RendaraTemplate } from '@rendara/report-schema';
-import { ReportDocument } from '@rendara/report-renderer';
+import { ReportDocument, type ViewportSize } from '@rendara/report-renderer';
 
 import { runPipeline, type PipelineResult } from './report-pipeline';
+import {
+  clampPage,
+  keyToNavIntent,
+  resolveNavIntent,
+  type PageNavIntent,
+} from './viewer-navigation';
 import {
   DEFAULT_VIEWER_CONFIG,
   type PageChangeEvent,
@@ -24,6 +32,9 @@ import {
 
 /** The successful arm of {@link PipelineResult}: the model the renderer paints. */
 type RenderModel = Extract<PipelineResult, { status: 'rendered' }>;
+
+/** Natural content width (px) of a page thumbnail in the navigation rail. */
+const THUMBNAIL_WIDTH_PX = 104;
 
 /**
  * The embeddable report viewer (`@rendara/report-viewer`).
@@ -54,9 +65,21 @@ type RenderModel = Extract<PipelineResult, { status: 'rendered' }>;
  * guards `ResizeObserver` (used for the fit zoom modes). Standalone and
  * tree-shakeable per brief §8.
  *
- * Page navigation (E7-S3), interactive zoom (E7-S4) and the loading/empty/error
- * *UI* (E7-S5) build on this pipeline; the toolbar lands in Epic 8. Until E7-S5,
- * an empty or errored pipeline simply paints nothing.
+ * **E7-S3 adds page navigation** on top of this pipeline: a 1-based
+ * {@link currentPage} the user drives with the next/prev/goto controls, a
+ * keyboard map (arrows / `PageUp`·`PageDown` / `Home`·`End`), and a left
+ * **thumbnail rail**. In `'single'` {@link pageMode} the {@link ReportDocument}
+ * paints only the current page; in `'continuous'` mode it paints the stack and
+ * navigation scrolls the target sheet into view while scrolling the document
+ * keeps the page indicator in sync (a live-DOM scroll spy). Every page change is
+ * surfaced through the brief-§8 {@link pageChange} output. The navigation
+ * arithmetic is the pure {@link clampPage}/{@link resolveNavIntent} helpers, so
+ * the bounds logic is tested without the DOM.
+ *
+ * Interactive zoom (E7-S4) and the loading/empty/error *UI* (E7-S5) build on this
+ * pipeline; the configurable toolbar (print / export / watermark, per-button
+ * visibility) lands in Epic 8. Until E7-S5, an empty or errored pipeline paints
+ * nothing.
  */
 @Component({
   selector: 'rdr-report-viewer',
@@ -64,7 +87,11 @@ type RenderModel = Extract<PipelineResult, { status: 'rendered' }>;
   templateUrl: './report-viewer.html',
   styleUrl: './report-viewer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'rdr-report-viewer', '[style]': 'themeStyle()' },
+  host: {
+    class: 'rdr-report-viewer',
+    '[style]': 'themeStyle()',
+    '(keydown)': 'onKeydown($event)',
+  },
 })
 export class ReportViewer {
   /**
@@ -118,8 +145,43 @@ export class ReportViewer {
   /** The rendered model painted by the shared renderer, or `null` (empty/error/pending). */
   protected readonly renderModel = signal<RenderModel | null>(null);
 
+  /** 1-based page currently in view; `0` when nothing is rendered. Drives the controls. */
+  protected readonly currentPage = signal(0);
+
+  /** Total pages produced by pagination; `0` when nothing is rendered. */
+  protected readonly totalPages = computed<number>(
+    () => this.renderModel()?.document.pageCount ?? 0,
+  );
+
+  /** Whether prev/next are available, for disabling the controls at the document bounds. */
+  protected readonly canPrev = computed<boolean>(() => this.currentPage() > 1);
+  protected readonly canNext = computed<boolean>(
+    () => this.currentPage() > 0 && this.currentPage() < this.totalPages(),
+  );
+
+  /** Every page number, `[1..total]`, to drive the thumbnail rail's `@for`. */
+  protected readonly pageNumbers = computed<readonly number[]>(() =>
+    Array.from({ length: this.totalPages() }, (_, i) => i + 1),
+  );
+
+  /**
+   * Fixed viewport that fits each thumbnail's `fit-width` zoom to the rail width.
+   * `fit-width` resolves on width alone, so the height is just a large positive
+   * value that lets any sheet (portrait or landscape) fit by width.
+   */
+  protected readonly thumbnailSize = computed<ViewportSize>(() => ({
+    widthPx: THUMBNAIL_WIDTH_PX,
+    heightPx: THUMBNAIL_WIDTH_PX * 100,
+  }));
+
+  /** The scrolling page area; present only once a document is rendered. */
+  private readonly scrollArea = viewChild<ElementRef<HTMLElement>>('scrollArea');
+
   /** Increments per pipeline pass; a completion for an older token is discarded. */
   private token = 0;
+
+  /** The last `{current}/{total}` emitted, so `(pageChange)` fires only on a real change. */
+  private lastEmittedKey = '';
 
   constructor() {
     effect(() => {
@@ -139,21 +201,120 @@ export class ReportViewer {
         this.applyResult(result);
       });
     });
+
+    // Surface every page change (initial render and navigation) through the
+    // brief-§8 `(pageChange)` output, de-duplicated so the same page+total never
+    // emits twice.
+    effect(() => {
+      const current = this.currentPage();
+      const total = this.totalPages();
+      if (total <= 0 || current <= 0) {
+        return;
+      }
+      const key = `${current}/${total}`;
+      if (key !== this.lastEmittedKey) {
+        this.lastEmittedKey = key;
+        this.pageChange.emit({ current, total });
+      }
+    });
   }
 
-  /** Routes a pipeline result to the render model and the public outputs. */
+  /** Navigates to a (clamped) 1-based page, scrolling it into view in continuous mode. */
+  protected goToPage(page: number): void {
+    const target = clampPage(page, this.totalPages());
+    if (target === 0) {
+      return;
+    }
+    this.currentPage.set(target);
+    this.scrollToCurrent();
+  }
+
+  /** Reads the goto input and navigates to the typed page (clamped). */
+  protected onGotoInput(event: Event): void {
+    this.goToPage(Number((event.target as HTMLInputElement).value));
+  }
+
+  /**
+   * Keyboard navigation (host listener): arrows / `PageUp`·`PageDown` page,
+   * `Home`·`End` jump to the ends. Keystrokes inside the goto input are left
+   * alone so the user can type a page number.
+   */
+  protected onKeydown(event: KeyboardEvent): void {
+    const intent: PageNavIntent | null = keyToNavIntent(event.key);
+    if (intent === null) {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.isContentEditable)) {
+      return;
+    }
+    event.preventDefault();
+    this.goToPage(resolveNavIntent(intent, this.currentPage(), this.totalPages()));
+  }
+
+  /**
+   * Live-DOM scroll spy for continuous mode: as the page area scrolls, the page
+   * whose centre is nearest the viewport centre becomes {@link currentPage}.
+   * Querying the slots on each scroll avoids any observer lifecycle and keeps the
+   * indicator correct as the document changes.
+   */
+  protected onScroll(): void {
+    if (this.pageMode() !== 'continuous') {
+      return;
+    }
+    const container = this.scrollArea()?.nativeElement;
+    if (!container) {
+      return;
+    }
+    const slots = container.querySelectorAll<HTMLElement>('[data-page-number]');
+    const mid = container.scrollTop + container.clientHeight / 2;
+    let nearest = this.currentPage();
+    let nearestDist = Number.POSITIVE_INFINITY;
+    slots.forEach((slot) => {
+      const centre = slot.offsetTop + slot.offsetHeight / 2;
+      const dist = Math.abs(centre - mid);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = Number(slot.dataset['pageNumber']) || nearest;
+      }
+    });
+    if (nearest !== this.currentPage()) {
+      this.currentPage.set(nearest);
+    }
+  }
+
+  /** Scrolls the current page's sheet to the top of the page area (continuous mode only). */
+  private scrollToCurrent(): void {
+    if (this.pageMode() !== 'continuous') {
+      return;
+    }
+    const container = this.scrollArea()?.nativeElement;
+    if (!container || typeof container.scrollTo !== 'function') {
+      return;
+    }
+    const slot = container.querySelector<HTMLElement>(`[data-page-number="${this.currentPage()}"]`);
+    if (slot) {
+      container.scrollTo({ top: slot.offsetTop, behavior: 'auto' });
+    }
+  }
+
+  /** Routes a pipeline result to the render model, page state and the public outputs. */
   private applyResult(result: PipelineResult): void {
     switch (result.status) {
       case 'rendered':
         this.renderModel.set(result);
+        // Clamp the current page into the new document (starts at page 1).
+        this.currentPage.set(clampPage(this.currentPage() || 1, result.document.pageCount));
         this.rendered.emit({ pageCount: result.document.pageCount });
         break;
       case 'error':
         this.renderModel.set(null);
+        this.currentPage.set(0);
         this.error.emit(result.error);
         break;
       case 'empty':
         this.renderModel.set(null);
+        this.currentPage.set(0);
         break;
     }
   }

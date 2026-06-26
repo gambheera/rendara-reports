@@ -6,6 +6,19 @@ import { ReportViewer } from './report-viewer';
 /** The canonical invoice golden, used to drive a live render in the stories. */
 const invoice = GOLDEN_FIXTURES[0];
 
+/** The invoice golden with many line items so it paginates — drives the nav controls. */
+const paginatedData = {
+  invoice: {
+    ...(invoice.data as { invoice: Record<string, unknown> }).invoice,
+    lineItems: Array.from({ length: 120 }, (_, i) => ({
+      description: `Line item ${i + 1}`,
+      quantity: 1,
+      unitPrice: 100,
+      amount: 100,
+    })),
+  },
+};
+
 /**
  * `report-viewer` carries its **public component API** (E7-S1) — the brief-§8
  * inputs (`template`, `data`, `config`, `theme`) and outputs (`rendered`,
@@ -57,6 +70,18 @@ export const Themed: Story = {
     data: invoice.data,
     theme: { '--rdr-accent': '#4f46e5' },
     config: { initialZoom: 'fit-width', pageMode: 'continuous' },
+  },
+};
+
+/**
+ * A multi-page report in single-page mode (E7-S3): the thumbnail rail, the
+ * `‹ 1 / N ›` controls and the `Page x of y` status drive page navigation.
+ */
+export const Paginated: Story = {
+  args: {
+    template: invoice.template,
+    data: paginatedData,
+    config: { initialZoom: 'fit-width', pageMode: 'single' },
   },
 };
 

@@ -1,13 +1,102 @@
-<!-- E7-S2 render pipeline: validate -> bind -> paginate -> render through the
-     shared engine + renderer. A successful pipeline paints the paginated
-     document; an empty or errored pipeline paints nothing (the loading/empty/
-     error UI lands in E7-S5). -->
+<!-- E7-S2 render pipeline + E7-S3 page navigation. A successful pipeline paints
+     the chrome: a thumbnail rail, the page-navigation bar, the scrolling page
+     area (single page or the continuous stack), and a bottom page-status. An
+     empty or errored pipeline paints nothing (the loading/empty/error UI lands
+     in E7-S5; the full configurable toolbar lands in Epic 8). -->
 @if (renderModel(); as model) {
-<rdr-report-document
-  [document]="model.document"
-  [template]="model.template"
-  [resolvedValues]="model.resolvedValues"
-  [zoom]="initialZoom()"
-  [layout]="pageMode()"
-/>
+<div class="rdr-viewer-shell">
+  <!-- Left thumbnail rail: one mini single-page render per page; the current
+       page is outlined in the accent and reflected to assistive tech. -->
+  <nav class="rdr-viewer-rail" aria-label="Pages">
+    <ol class="rdr-viewer-rail-list">
+      @for (n of pageNumbers(); track n) {
+      <li>
+        <button
+          type="button"
+          class="rdr-viewer-thumb"
+          [class.rdr-viewer-thumb--active]="n === currentPage()"
+          [attr.aria-current]="n === currentPage() ? 'page' : null"
+          [attr.aria-label]="'Go to page ' + n"
+          (click)="goToPage(n)"
+        >
+          <rdr-report-document
+            class="rdr-viewer-thumb-doc"
+            [document]="model.document"
+            [template]="model.template"
+            [resolvedValues]="model.resolvedValues"
+            [layout]="'single'"
+            [currentPage]="n"
+            [zoom]="'fit-width'"
+            [availableSize]="thumbnailSize()"
+          />
+          <span class="rdr-viewer-thumb-label">{{ n }}</span>
+        </button>
+      </li>
+      }
+    </ol>
+  </nav>
+
+  <div class="rdr-viewer-main">
+    <!-- Page-navigation bar: prev · goto / total · next. -->
+    <div class="rdr-viewer-nav" role="toolbar" aria-label="Page navigation">
+      <button
+        type="button"
+        class="rdr-viewer-nav-btn"
+        aria-label="Previous page"
+        [disabled]="!canPrev()"
+        (click)="goToPage(currentPage() - 1)"
+      >
+        ‹
+      </button>
+      <span class="rdr-viewer-nav-pages">
+        <label class="rdr-viewer-sr-only" for="rdr-viewer-goto">Page</label>
+        <input
+          id="rdr-viewer-goto"
+          class="rdr-viewer-nav-input"
+          type="number"
+          inputmode="numeric"
+          min="1"
+          [max]="totalPages()"
+          [value]="currentPage()"
+          (change)="onGotoInput($event)"
+        />
+        <span class="rdr-viewer-nav-total">/ {{ totalPages() }}</span>
+      </span>
+      <button
+        type="button"
+        class="rdr-viewer-nav-btn"
+        aria-label="Next page"
+        [disabled]="!canNext()"
+        (click)="goToPage(currentPage() + 1)"
+      >
+        ›
+      </button>
+    </div>
+
+    <!-- Scrolling page area: the scroll spy keeps the indicator in sync in
+         continuous mode; in single mode only the current page is painted. -->
+    <div
+      #scrollArea
+      class="rdr-viewer-scroll"
+      tabindex="0"
+      role="region"
+      aria-label="Report pages"
+      (scroll)="onScroll()"
+    >
+      <rdr-report-document
+        [document]="model.document"
+        [template]="model.template"
+        [resolvedValues]="model.resolvedValues"
+        [zoom]="initialZoom()"
+        [layout]="pageMode()"
+        [currentPage]="currentPage()"
+      />
+    </div>
+
+    <!-- Bottom status: the canonical `Page x of y`. -->
+    <div class="rdr-viewer-status">
+      <span>Page {{ currentPage() }} of {{ totalPages() }}</span>
+    </div>
+  </div>
+</div>
 }
