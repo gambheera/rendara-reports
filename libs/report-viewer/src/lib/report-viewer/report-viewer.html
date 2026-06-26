@@ -37,40 +37,76 @@
   </nav>
 
   <div class="rdr-viewer-main">
-    <!-- Page-navigation bar: prev · goto / total · next. -->
-    <div class="rdr-viewer-nav" role="toolbar" aria-label="Page navigation">
-      <button
-        type="button"
-        class="rdr-viewer-nav-btn"
-        aria-label="Previous page"
-        [disabled]="!canPrev()"
-        (click)="goToPage(currentPage() - 1)"
-      >
-        ‹
-      </button>
-      <span class="rdr-viewer-nav-pages">
-        <label class="rdr-viewer-sr-only" for="rdr-viewer-goto">Page</label>
-        <input
-          id="rdr-viewer-goto"
-          class="rdr-viewer-nav-input"
-          type="number"
-          inputmode="numeric"
-          min="1"
-          [max]="totalPages()"
-          [value]="currentPage()"
-          (change)="onGotoInput($event)"
-        />
-        <span class="rdr-viewer-nav-total">/ {{ totalPages() }}</span>
-      </span>
-      <button
-        type="button"
-        class="rdr-viewer-nav-btn"
-        aria-label="Next page"
-        [disabled]="!canNext()"
-        (click)="goToPage(currentPage() + 1)"
-      >
-        ›
-      </button>
+    <!-- Toolbar: page navigation (prev · goto / total · next) and the zoom group
+         (− · % · + stepper and the fit-mode dropdown). -->
+    <div class="rdr-viewer-nav" role="toolbar" aria-label="Page navigation and zoom">
+      <div class="rdr-viewer-nav-group">
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          aria-label="Previous page"
+          [disabled]="!canPrev()"
+          (click)="goToPage(currentPage() - 1)"
+        >
+          ‹
+        </button>
+        <span class="rdr-viewer-nav-pages">
+          <label class="rdr-viewer-sr-only" for="rdr-viewer-goto">Page</label>
+          <input
+            id="rdr-viewer-goto"
+            class="rdr-viewer-nav-input"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            [max]="totalPages()"
+            [value]="currentPage()"
+            (change)="onGotoInput($event)"
+          />
+          <span class="rdr-viewer-nav-total">/ {{ totalPages() }}</span>
+        </span>
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          aria-label="Next page"
+          [disabled]="!canNext()"
+          (click)="goToPage(currentPage() + 1)"
+        >
+          ›
+        </button>
+      </div>
+
+      <span class="rdr-viewer-nav-divider" aria-hidden="true"></span>
+
+      <!-- Zoom group: − · resolved % · + stepper, then the fit-mode dropdown. -->
+      <div class="rdr-viewer-nav-group">
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          aria-label="Zoom out"
+          [disabled]="!canZoomOut()"
+          (click)="zoomOutClick()"
+        >
+          −
+        </button>
+        <span class="rdr-viewer-zoom-readout" aria-live="polite">{{ zoomPercentLabel() }}</span>
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          aria-label="Zoom in"
+          [disabled]="!canZoomIn()"
+          (click)="zoomInClick()"
+        >
+          +
+        </button>
+        <label class="rdr-viewer-sr-only" for="rdr-viewer-zoom">Zoom level</label>
+        <select id="rdr-viewer-zoom" class="rdr-viewer-zoom-select" (change)="onZoomSelect($event)">
+          @for (opt of zoomOptionList(); track opt.value) {
+          <option [value]="opt.value" [selected]="opt.value === zoomSelectValue()">
+            {{ opt.label }}
+          </option>
+          }
+        </select>
+      </div>
     </div>
 
     <!-- Scrolling page area: the scroll spy keeps the indicator in sync in
@@ -87,9 +123,10 @@
         [document]="model.document"
         [template]="model.template"
         [resolvedValues]="model.resolvedValues"
-        [zoom]="initialZoom()"
+        [zoom]="zoomSpec()"
         [layout]="pageMode()"
         [currentPage]="currentPage()"
+        (zoomChange)="onZoomChange($event)"
       />
     </div>
 

@@ -253,3 +253,98 @@ describe('ReportViewer (E7-S3 navigation)', () => {
     expect(secondThumb.classList.contains('rdr-viewer-thumb--active')).toBe(true);
   });
 });
+
+describe('ReportViewer (E7-S4 zoom)', () => {
+  /** Renders the golden invoice in the given initial zoom and settles the pipeline. */
+  async function renderViewer(initialZoom: 'fit-width' | 'fit-page' | number = 'fit-width') {
+    const harness = await render(ReportViewer, {
+      inputs: { template: golden.template, data: golden.data, config: { initialZoom } },
+    });
+    await flush();
+    harness.fixture.detectChanges();
+    return harness;
+  }
+
+  /** Queries a required element, failing the test (not a non-null assertion) if absent. */
+  function query<T extends Element>(container: HTMLElement, selector: string): T {
+    const found = container.querySelector<T>(selector);
+    if (found === null) {
+      throw new Error(`expected element matching "${selector}"`);
+    }
+    return found;
+  }
+
+  /** The zoom percent readout text. */
+  function readout(container: HTMLElement): string {
+    return container.querySelector('.rdr-viewer-zoom-readout')?.textContent?.trim() ?? '';
+  }
+
+  it('renders the zoom stepper, readout and fit-mode dropdown', async () => {
+    const { container } = await renderViewer();
+
+    expect(container.querySelector('[aria-label="Zoom in"]')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Zoom out"]')).toBeTruthy();
+    expect(container.querySelector('#rdr-viewer-zoom')).toBeTruthy();
+    // With no measured container (jsdom), a fit mode resolves to natural 100%.
+    expect(readout(container)).toBe('100%');
+  });
+
+  it('zoom in / out step the readout through the level ladder', async () => {
+    const { container, fixture } = await renderViewer();
+    const zoomIn = query<HTMLButtonElement>(container, '[aria-label="Zoom in"]');
+    const zoomOut = query<HTMLButtonElement>(container, '[aria-label="Zoom out"]');
+
+    fireEvent.click(zoomIn);
+    fixture.detectChanges();
+    expect(readout(container)).toBe('125%');
+
+    fireEvent.click(zoomIn);
+    fixture.detectChanges();
+    expect(readout(container)).toBe('150%');
+
+    fireEvent.click(zoomOut);
+    fixture.detectChanges();
+    expect(readout(container)).toBe('125%');
+  });
+
+  it('disables zoom in at the maximum zoom', async () => {
+    const { container } = await renderViewer(5);
+    expect(query<HTMLButtonElement>(container, '[aria-label="Zoom in"]').disabled).toBe(true);
+    expect(query<HTMLButtonElement>(container, '[aria-label="Zoom out"]').disabled).toBe(false);
+  });
+
+  it('disables zoom out at the minimum zoom', async () => {
+    const { container } = await renderViewer(0.1);
+    expect(query<HTMLButtonElement>(container, '[aria-label="Zoom out"]').disabled).toBe(true);
+    expect(query<HTMLButtonElement>(container, '[aria-label="Zoom in"]').disabled).toBe(false);
+  });
+
+  it('selecting an explicit percent from the dropdown sets that zoom', async () => {
+    const { container, fixture } = await renderViewer();
+    const select = query<HTMLSelectElement>(container, '#rdr-viewer-zoom');
+
+    select.value = '0.5';
+    fireEvent.change(select);
+    fixture.detectChanges();
+
+    expect(readout(container)).toBe('50%');
+  });
+
+  it('the dropdown reflects and switches the fit mode', async () => {
+    const { container, fixture } = await renderViewer('fit-width');
+    const select = query<HTMLSelectElement>(container, '#rdr-viewer-zoom');
+    expect(select.value).toBe('fit-width');
+
+    select.value = 'fit-page';
+    fireEvent.change(select);
+    fixture.detectChanges();
+
+    expect(select.value).toBe('fit-page');
+  });
+
+  it('seeds the zoom from config.initialZoom and reflects it in the dropdown', async () => {
+    const { container } = await renderViewer(0.75);
+    expect(readout(container)).toBe('75%');
+    expect(query<HTMLSelectElement>(container, '#rdr-viewer-zoom').value).toBe('0.75');
+  });
+});

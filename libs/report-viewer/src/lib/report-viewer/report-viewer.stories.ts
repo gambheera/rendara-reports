@@ -85,6 +85,20 @@ export const Paginated: Story = {
   },
 };
 
+/**
+ * Interactive zoom (E7-S4): the toolbar's `−` / `%` / `+` stepper and the
+ * `Fit width ▾` dropdown drive the zoom. This story starts at an explicit 75% so
+ * the readout and dropdown show a concrete level; switch to `Fit width` / `Fit
+ * page` to see the report re-fit to the container.
+ */
+export const Zoom: Story = {
+  args: {
+    template: invoice.template,
+    data: invoice.data,
+    config: { initialZoom: 0.75, pageMode: 'continuous' },
+  },
+};
+
 export const Empty: Story = {
   args: { template: null },
 };

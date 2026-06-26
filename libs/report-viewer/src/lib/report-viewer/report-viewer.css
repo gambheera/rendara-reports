@@ -116,6 +116,18 @@
   border-bottom: 1px solid var(--rdr-viewer-hairline);
 }
 
+.rdr-viewer-nav-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rdr-viewer-nav-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--rdr-viewer-hairline);
+}
+
 .rdr-viewer-nav-btn {
   display: inline-flex;
   align-items: center;
@@ -172,6 +184,30 @@
 
 .rdr-viewer-nav-total {
   color: var(--rdr-viewer-text-secondary);
+}
+
+/* Zoom group -------------------------------------------------------------- */
+.rdr-viewer-zoom-readout {
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--rdr-viewer-text-secondary);
+}
+
+.rdr-viewer-zoom-select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--rdr-viewer-input-border);
+  border-radius: 6px;
+  background: var(--rdr-viewer-surface);
+  color: var(--rdr-viewer-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.rdr-viewer-zoom-select:focus-visible {
+  outline: 2px solid var(--rdr-viewer-accent);
+  outline-offset: 1px;
 }
 
 /* Scrolling page area ----------------------------------------------------- */
