@@ -465,6 +465,16 @@ describe('DesignerStore', () => {
     });
   });
 
+  describe('markDirty (E6-S11)', () => {
+    it('sets the dirty flag without touching the document', () => {
+      const before = store.template();
+      expect(store.dirty()).toBe(false);
+      store.markDirty();
+      expect(store.dirty()).toBe(true);
+      expect(store.template()).toBe(before);
+    });
+  });
+
   describe('sample data (E6-S6)', () => {
     const sample = {
       fileName: 'invoice-sample.json',

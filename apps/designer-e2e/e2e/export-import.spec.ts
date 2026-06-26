@@ -18,6 +18,10 @@ test.describe('Export / import template', () => {
   }
 
   test('exports validated JSON, re-imports it, and round-trips equivalently', async ({ page }) => {
+    // Importing over a document with unsaved edits asks the E6-S11 discard guard
+    // for confirmation; accept it so the round-trip proceeds.
+    page.on('dialog', (dialog) => dialog.accept());
+
     await page.goto('/');
 
     // Author something so the export is non-trivial.
