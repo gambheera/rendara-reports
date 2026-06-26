@@ -1,4 +1,5 @@
-<!-- E0-S2 skeleton: composes the shared renderer over an empty default page to
-     exercise the legal viewer -> {renderer, engine, schema} dependencies. Real
-     toolbar + paged output land in Epic 7+. -->
+<!-- E7-S1 establishes the public API surface; the body is a neutral empty page
+     painted by the shared renderer (proves the viewer -> renderer composition).
+     The real validate -> bind -> paginate -> render pipeline lands in E7-S2 and
+     the loading/empty/error states in E7-S5. -->
 <rdr-report-renderer [page]="page" [geometry]="geometry" />
