@@ -20,6 +20,17 @@ import {
   type PageNavIntent,
 } from './viewer-navigation';
 import {
+  canZoomIn,
+  canZoomOut,
+  formatZoomPercent,
+  zoomIn,
+  zoomOptions,
+  zoomOut,
+  zoomSpecToValue,
+  zoomValueToSpec,
+  type ZoomOption,
+} from './viewer-zoom';
+import {
   DEFAULT_VIEWER_CONFIG,
   type PageChangeEvent,
   type RenderedEvent,
@@ -76,10 +87,20 @@ const THUMBNAIL_WIDTH_PX = 104;
  * arithmetic is the pure {@link clampPage}/{@link resolveNavIntent} helpers, so
  * the bounds logic is tested without the DOM.
  *
- * Interactive zoom (E7-S4) and the loading/empty/error *UI* (E7-S5) build on this
- * pipeline; the configurable toolbar (print / export / watermark, per-button
- * visibility) lands in Epic 8. Until E7-S5, an empty or errored pipeline paints
- * nothing.
+ * **E7-S4 adds interactive zoom** on top of this pipeline. The user drives a
+ * {@link zoomSpec} — an explicit factor or a `fit-width`/`fit-page` mode — through
+ * a `−`/`%`/`+` stepper and a fit-mode dropdown; the spec is forwarded to the main
+ * {@link ReportDocument}, which already owns the fit-math and re-resolves the fit
+ * modes on container resize via its own `ResizeObserver`. The viewer reflects the
+ * document's resolved factor (its {@link ReportDocument.zoomChange} output) in the
+ * percent readout and uses it as the base the stepper steps from, so zooming out
+ * of a fit mode is predictable. The zoom arithmetic is the pure {@link zoomIn} /
+ * {@link zoomOut} / {@link zoomOptions} helpers, tested without the DOM. The
+ * thumbnail rail stays pinned to `fit-width` regardless of the main zoom.
+ *
+ * The loading/empty/error *UI* (E7-S5) builds on this pipeline; the configurable
+ * toolbar (print / export / watermark, per-button visibility) lands in Epic 8.
+ * Until E7-S5, an empty or errored pipeline paints nothing.
  */
 @Component({
   selector: 'rdr-report-viewer',
@@ -132,10 +153,42 @@ export class ReportViewer {
   /** The `--rdr-*` overrides as a host style map; `{}` when no theme is set. */
   protected readonly themeStyle = computed<Record<string, string>>(() => this.theme() ?? {});
 
-  /** Initial zoom forwarded to the renderer (interactive zoom is E7-S4). */
+  /** The host-configured initial zoom; seeds {@link zoomSpec} and re-syncs it on change. */
   protected readonly initialZoom = computed<ViewerZoom>(
     () => this.resolvedConfig().initialZoom ?? 'fit-width',
   );
+
+  /**
+   * The active zoom the user drives (E7-S4): an explicit factor or a fit mode,
+   * forwarded to the main {@link ReportDocument}. Seeded from {@link initialZoom}
+   * and re-synced whenever the host changes `config.initialZoom`, but otherwise
+   * owned by the controls so user zoom persists across re-renders.
+   */
+  protected readonly zoomSpec = signal<ViewerZoom>('fit-width');
+
+  /**
+   * The factor the renderer resolved the {@link zoomSpec} to (a fit mode resolves
+   * against the live container). Drives the percent readout and is the base the
+   * stepper steps from. Updated from the document's `(zoomChange)`.
+   */
+  protected readonly resolvedZoomFactor = signal(1);
+
+  /** The resolved zoom as a whole-percent readout, e.g. `"100%"`. */
+  protected readonly zoomPercentLabel = computed<string>(() =>
+    formatZoomPercent(this.resolvedZoomFactor()),
+  );
+
+  /** The fit-mode dropdown's current `<select>` value (mirrors {@link zoomSpec}). */
+  protected readonly zoomSelectValue = computed<string>(() => zoomSpecToValue(this.zoomSpec()));
+
+  /** The dropdown options: fit modes + the level ladder, always including the active spec. */
+  protected readonly zoomOptionList = computed<readonly ZoomOption[]>(() =>
+    zoomOptions(this.zoomSpec()),
+  );
+
+  /** Whether the `+` / `−` stepper buttons can act, for disabling at the zoom bounds. */
+  protected readonly canZoomIn = computed<boolean>(() => canZoomIn(this.resolvedZoomFactor()));
+  protected readonly canZoomOut = computed<boolean>(() => canZoomOut(this.resolvedZoomFactor()));
 
   /** Single-page vs. continuous layout forwarded to the renderer. */
   protected readonly pageMode = computed<ViewerPageMode>(
@@ -183,6 +236,9 @@ export class ReportViewer {
   /** The last `{current}/{total}` emitted, so `(pageChange)` fires only on a real change. */
   private lastEmittedKey = '';
 
+  /** The last host-configured initial zoom, so {@link zoomSpec} re-syncs only on a real change. */
+  private lastInitialZoom: ViewerZoom | undefined;
+
   constructor() {
     effect(() => {
       const template = this.template();
@@ -200,6 +256,17 @@ export class ReportViewer {
         }
         this.applyResult(result);
       });
+    });
+
+    // Seed the active zoom from the host's `config.initialZoom`, and re-sync only
+    // when the host changes it — so the user's own zoom persists across re-renders
+    // but a deliberate config change still takes effect.
+    effect(() => {
+      const initial = this.initialZoom();
+      if (initial !== this.lastInitialZoom) {
+        this.lastInitialZoom = initial;
+        this.zoomSpec.set(initial);
+      }
     });
 
     // Surface every page change (initial render and navigation) through the
@@ -232,6 +299,26 @@ export class ReportViewer {
   /** Reads the goto input and navigates to the typed page (clamped). */
   protected onGotoInput(event: Event): void {
     this.goToPage(Number((event.target as HTMLInputElement).value));
+  }
+
+  /** Steps the zoom up one ladder level from the current resolved factor (E7-S4). */
+  protected zoomInClick(): void {
+    this.zoomSpec.set(zoomIn(this.resolvedZoomFactor()));
+  }
+
+  /** Steps the zoom down one ladder level from the current resolved factor (E7-S4). */
+  protected zoomOutClick(): void {
+    this.zoomSpec.set(zoomOut(this.resolvedZoomFactor()));
+  }
+
+  /** Applies the fit-mode/level selected in the zoom dropdown. */
+  protected onZoomSelect(event: Event): void {
+    this.zoomSpec.set(zoomValueToSpec((event.target as HTMLSelectElement).value));
+  }
+
+  /** Tracks the factor the renderer resolved the {@link zoomSpec} to (drives the readout). */
+  protected onZoomChange(factor: number): void {
+    this.resolvedZoomFactor.set(factor);
   }
 
   /**
