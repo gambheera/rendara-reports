@@ -1,5 +1,8 @@
-<!-- E0-S2 skeleton shell. Real template/data wiring lands in Epic 9. -->
-<main>
+<!-- E7-S3 demo: a multi-page sample report wired into the embedded viewer so the
+     page-navigation e2e has pages to move between. Real wiring lands in Epic 9. -->
+<main class="rdr-demo">
   <h1>Rendara Reports — Viewer demo host</h1>
-  <rdr-report-viewer />
+  <div class="rdr-demo-viewer">
+    <rdr-report-viewer [template]="template" [data]="data" [config]="config" />
+  </div>
 </main>
