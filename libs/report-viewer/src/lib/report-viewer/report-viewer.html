@@ -1,5 +1,13 @@
-<!-- E7-S1 establishes the public API surface; the body is a neutral empty page
-     painted by the shared renderer (proves the viewer -> renderer composition).
-     The real validate -> bind -> paginate -> render pipeline lands in E7-S2 and
-     the loading/empty/error states in E7-S5. -->
-<rdr-report-renderer [page]="page" [geometry]="geometry" />
+<!-- E7-S2 render pipeline: validate -> bind -> paginate -> render through the
+     shared engine + renderer. A successful pipeline paints the paginated
+     document; an empty or errored pipeline paints nothing (the loading/empty/
+     error UI lands in E7-S5). -->
+@if (renderModel(); as model) {
+<rdr-report-document
+  [document]="model.document"
+  [template]="model.template"
+  [resolvedValues]="model.resolvedValues"
+  [zoom]="initialZoom()"
+  [layout]="pageMode()"
+/>
+}

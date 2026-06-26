@@ -1,13 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/angular';
+import { GOLDEN_FIXTURES } from '@rendara/report-schema';
 
 import { ReportViewer } from './report-viewer';
 
+/** The canonical invoice golden, used to drive a live render in the stories. */
+const invoice = GOLDEN_FIXTURES[0];
+
 /**
- * `report-viewer` now carries its **public component API** (E7-S1): the brief-§8
+ * `report-viewer` carries its **public component API** (E7-S1) — the brief-§8
  * inputs (`template`, `data`, `config`, `theme`) and outputs (`rendered`,
- * `pageChange`, `error`). The body still paints a neutral placeholder page — the
- * validate -> bind -> paginate -> render pipeline lands in E7-S2 — so these
- * stories document the API contract via autodocs rather than a live report.
+ * `pageChange`, `error`) — and the **render pipeline** (E7-S2): it validates,
+ * binds and paginates the template+data through the shared engine and paints the
+ * result with the shared renderer. These stories feed it the canonical invoice
+ * golden so the body shows a live, paginated report.
  */
 const meta: Meta<ReportViewer> = {
   title: 'report-viewer/ReportViewer',
@@ -38,11 +43,23 @@ export default meta;
 
 type Story = StoryObj<ReportViewer>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  args: {
+    template: invoice.template,
+    data: invoice.data,
+    config: { initialZoom: 'fit-width', pageMode: 'continuous' },
+  },
+};
 
 export const Themed: Story = {
   args: {
+    template: invoice.template,
+    data: invoice.data,
     theme: { '--rdr-accent': '#4f46e5' },
     config: { initialZoom: 'fit-width', pageMode: 'continuous' },
   },
+};
+
+export const Empty: Story = {
+  args: { template: null },
 };
