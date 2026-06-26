@@ -99,6 +99,31 @@ export const Zoom: Story = {
   },
 };
 
+/**
+ * Empty state (E7-S5): no template supplied — the viewer shows the calm
+ * "No data to display" placeholder instead of a blank area.
+ */
 export const Empty: Story = {
   args: { template: null },
+};
+
+/**
+ * Empty state (E7-S5) from missing *data*: a valid template with `null` data
+ * settles to the same "No data to display" placeholder — the host simply hasn't
+ * provided a data JSON yet (no error is emitted).
+ */
+export const NoData: Story = {
+  args: { template: invoice.template, data: null },
+};
+
+/**
+ * Error state (E7-S5): a schema-invalid template is *surfaced*, never thrown —
+ * the viewer shows the danger icon, the reason, and a **View details**
+ * disclosure for the structured validator problems, and emits `(error)`.
+ */
+export const Error: Story = {
+  args: {
+    template: { schemaVersion: '1.0.0' } as unknown as (typeof invoice)['template'],
+    data: invoice.data,
+  },
 };

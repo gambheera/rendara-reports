@@ -37,7 +37,10 @@ import type { ViewerError } from './viewer-api';
  * The function is **total**: it never throws. Each stage failure is mapped to a
  * surfaced {@link ViewerError} (kind `validation` / `binding` / `render`) so the
  * component can emit `(error)` instead of crashing (the friendly error *UI*
- * lands in E7-S5). A `null`/blank template yields the `empty` status.
+ * lands in E7-S5). A `null`/blank template — or a valid template with no `data`
+ * to bind (`null`/`undefined`) — yields the `empty` status, which E7-S5 paints as
+ * the "No data to display" placeholder. (An empty object `{}` counts as data and
+ * renders, so a fully-static template still shows.)
  *
  * Because resolution and pagination are deterministic and locale-pinned to the
  * template's own `metadata.locale`, the document this produces for a given
@@ -189,6 +192,13 @@ export async function runPipeline(
   }
   if ('kind' in normalised) {
     return { status: 'error', error: normalised };
+  }
+
+  // A valid template with no data to bind is the "No data to display" empty
+  // state (E7-S5), not an error: the host simply hasn't supplied data yet. An
+  // empty object `{}` is data — a static template still renders.
+  if (data === null || data === undefined) {
+    return { status: 'empty' };
   }
 
   const resolveOptions: ResolveOptions = {

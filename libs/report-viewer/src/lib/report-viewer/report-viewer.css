@@ -19,6 +19,8 @@
   --rdr-viewer-text-secondary: #6b7280;
   --rdr-viewer-accent: #4f46e5;
   --rdr-viewer-accent-subtle: #eef2ff;
+  --rdr-viewer-danger: #dc2626;
+  --rdr-viewer-danger-subtle: #fef2f2;
 
   display: block;
   height: 100%;
@@ -236,6 +238,192 @@
   color: var(--rdr-viewer-text-secondary);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+/* Feedback states (E7-S5) ------------------------------------------------- */
+/* A centered placeholder that fills the viewer area for the loading, empty and
+   error states, keeping the report the hero and never showing a blank crash. */
+.rdr-viewer-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  padding: 32px;
+  text-align: center;
+  background: var(--rdr-viewer-backdrop);
+}
+
+.rdr-viewer-state-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rdr-viewer-text);
+}
+
+.rdr-viewer-state-detail {
+  margin: 0;
+  font-size: 13px;
+  color: var(--rdr-viewer-text-secondary);
+}
+
+/* Icon framing shared by the empty and error states. */
+.rdr-viewer-state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  border: 1px solid var(--rdr-viewer-hairline);
+  border-radius: 10px;
+  background: var(--rdr-viewer-surface);
+  color: var(--rdr-viewer-text-secondary);
+}
+
+.rdr-viewer-state-icon--danger {
+  border-color: var(--rdr-viewer-danger);
+  background: var(--rdr-viewer-danger-subtle);
+  color: var(--rdr-viewer-danger);
+}
+
+/* View-details disclosure. */
+.rdr-viewer-state-btn {
+  margin-top: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--rdr-viewer-input-border);
+  border-radius: 6px;
+  background: var(--rdr-viewer-surface);
+  color: var(--rdr-viewer-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.rdr-viewer-state-btn:hover {
+  background: var(--rdr-viewer-panel);
+}
+
+.rdr-viewer-state-btn:focus-visible {
+  outline: 2px solid var(--rdr-viewer-accent);
+  outline-offset: 1px;
+}
+
+.rdr-viewer-state-details {
+  max-width: 420px;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--rdr-viewer-hairline);
+  border-radius: 6px;
+  background: var(--rdr-viewer-surface);
+  color: var(--rdr-viewer-text-secondary);
+  font-size: 12px;
+  text-align: left;
+}
+
+.rdr-viewer-state-details-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rdr-viewer-state-details code {
+  margin-right: 4px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: var(--rdr-viewer-text);
+}
+
+/* Loading spinner: a CSS-only ring (no JS, SSR-safe). */
+.rdr-viewer-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--rdr-viewer-hairline);
+  border-top-color: var(--rdr-viewer-accent);
+  border-radius: 50%;
+  animation: rdr-viewer-spin 0.8s linear infinite;
+}
+
+@keyframes rdr-viewer-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Skeleton page: a faux paper sheet with shimmering placeholder lines. */
+.rdr-viewer-skeleton {
+  width: min(320px, 80%);
+  margin-top: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--rdr-viewer-hairline);
+  border-radius: 4px;
+  background: var(--rdr-viewer-surface);
+}
+
+.rdr-viewer-skeleton-line {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--rdr-viewer-panel) 25%,
+    var(--rdr-viewer-hairline) 37%,
+    var(--rdr-viewer-panel) 63%
+  );
+  background-size: 400% 100%;
+  animation: rdr-viewer-shimmer 1.4s ease infinite;
+}
+
+.rdr-viewer-skeleton-line--title {
+  width: 45%;
+  height: 14px;
+}
+
+.rdr-viewer-skeleton-line--short {
+  width: 60%;
+}
+
+.rdr-viewer-skeleton-blocks {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.rdr-viewer-skeleton-block {
+  flex: 1 1 0;
+  height: 56px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--rdr-viewer-panel) 25%,
+    var(--rdr-viewer-hairline) 37%,
+    var(--rdr-viewer-panel) 63%
+  );
+  background-size: 400% 100%;
+  animation: rdr-viewer-shimmer 1.4s ease infinite;
+}
+
+@keyframes rdr-viewer-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* Honour reduced-motion: drop the spin/shimmer animations. */
+@media (prefers-reduced-motion: reduce) {
+  .rdr-viewer-spinner,
+  .rdr-viewer-skeleton-line,
+  .rdr-viewer-skeleton-block {
+    animation: none;
+  }
 }
 
 /* Visually-hidden label, kept accessible to screen readers. */

@@ -71,6 +71,22 @@ describe('runPipeline — empty inputs (E7-S2)', () => {
   it('reports empty for a blank/whitespace string template', async () => {
     expect(await runPipeline('   ', null)).toEqual({ status: 'empty' });
   });
+
+  it('reports empty for a valid template with null data (missing-data fixture)', async () => {
+    const { template } = GOLDEN_FIXTURES[0];
+    expect(await runPipeline(template, null)).toEqual({ status: 'empty' });
+  });
+
+  it('reports empty for a valid template with undefined data', async () => {
+    const { template } = GOLDEN_FIXTURES[0];
+    expect(await runPipeline(template, undefined)).toEqual({ status: 'empty' });
+  });
+
+  it('renders (not empty) when data is an empty object — `{}` is data', async () => {
+    const { template } = GOLDEN_FIXTURES[0];
+    const result = await runPipeline(template, {});
+    expect(result.status).toBe('rendered');
+  });
 });
 
 describe('runPipeline — validation failures (E7-S2)', () => {

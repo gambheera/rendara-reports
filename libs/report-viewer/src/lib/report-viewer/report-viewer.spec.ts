@@ -254,6 +254,106 @@ describe('ReportViewer (E7-S3 navigation)', () => {
   });
 });
 
+describe('ReportViewer (E7-S5 states)', () => {
+  /** Queries a required element, failing the test (not a non-null assertion) if absent. */
+  function query<T extends Element>(container: HTMLElement, selector: string): T {
+    const found = container.querySelector<T>(selector);
+    if (found === null) {
+      throw new Error(`expected element matching "${selector}"`);
+    }
+    return found;
+  }
+
+  it('shows the loading state while the pipeline is in flight', async () => {
+    // Render but do NOT flush: the async pipeline has not resolved yet, so the
+    // viewer should be showing its loading placeholder.
+    const { container, fixture } = await render(ReportViewer, {
+      inputs: { template: golden.template, data: golden.data },
+    });
+
+    const loading = query<HTMLElement>(container, '.rdr-viewer-state--loading');
+    expect(loading.getAttribute('role')).toBe('status');
+    expect(loading.textContent).toContain('Rendering report');
+    expect(container.querySelector('.rdr-viewer-spinner')).toBeTruthy();
+    expect(container.querySelector('.rdr-viewer-skeleton')).toBeTruthy();
+
+    // Once it settles, the loading placeholder is gone and the report is painted.
+    await flush();
+    fixture.detectChanges();
+    expect(container.querySelector('.rdr-viewer-state--loading')).toBeNull();
+    expect(container.querySelector('.rdr-page')).toBeTruthy();
+  });
+
+  it('shows the empty state for a null template, without emitting (error)', async () => {
+    const error = vi.fn<(e: ViewerError) => void>();
+    const { container, fixture } = await render(ReportViewer, { on: { error } });
+    await flush();
+    fixture.detectChanges();
+
+    const empty = query<HTMLElement>(container, '.rdr-viewer-state--empty');
+    expect(empty.textContent).toContain('No data to display');
+    expect(container.querySelector('.rdr-page')).toBeNull();
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('shows the empty state for a valid template with no data (missing-data fixture)', async () => {
+    const error = vi.fn<(e: ViewerError) => void>();
+    const { container, fixture } = await render(ReportViewer, {
+      inputs: { template: golden.template, data: null },
+      on: { error },
+    });
+    await flush();
+    fixture.detectChanges();
+
+    expect(query<HTMLElement>(container, '.rdr-viewer-state--empty').textContent).toContain(
+      'No data to display',
+    );
+    expect(container.querySelector('.rdr-page')).toBeNull();
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('shows the error state and emits (error) for an invalid template', async () => {
+    const error = vi.fn<(e: ViewerError) => void>();
+    const { container, fixture } = await render(ReportViewer, {
+      inputs: { template: { schemaVersion: '1.0.0' } as unknown as RendaraTemplate },
+      on: { error },
+    });
+    await flush();
+    fixture.detectChanges();
+
+    const errorState = query<HTMLElement>(container, '.rdr-viewer-state--error');
+    expect(errorState.getAttribute('role')).toBe('alert');
+    expect(errorState.textContent).toContain("Couldn't render this report");
+    expect(errorState.textContent).toContain('Template failed validation');
+    expect(container.querySelector('.rdr-page')).toBeNull();
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error.mock.calls[0][0].kind).toBe('validation');
+  });
+
+  it('toggles the View details disclosure on the error state', async () => {
+    const { container, fixture } = await render(ReportViewer, {
+      inputs: { template: { schemaVersion: '1.0.0' } as unknown as RendaraTemplate },
+    });
+    await flush();
+    fixture.detectChanges();
+
+    const toggle = query<HTMLButtonElement>(container, '.rdr-viewer-state-btn');
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('#rdr-viewer-error-details')).toBeNull();
+
+    fireEvent.click(toggle);
+    fixture.detectChanges();
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(container.querySelector('#rdr-viewer-error-details')).toBeTruthy();
+
+    fireEvent.click(toggle);
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('#rdr-viewer-error-details')).toBeNull();
+  });
+});
+
 describe('ReportViewer (E7-S4 zoom)', () => {
   /** Renders the golden invoice in the given initial zoom and settles the pipeline. */
   async function renderViewer(initialZoom: 'fit-width' | 'fit-page' | number = 'fit-width') {
