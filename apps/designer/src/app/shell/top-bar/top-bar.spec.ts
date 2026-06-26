@@ -19,4 +19,15 @@ describe('TopBar', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Preview' }));
     expect(store.previewMode()).toBe(true);
   });
+
+  it('opens the export / import dialog when Export is activated (E6-S10)', async () => {
+    const view = await render(TopBar);
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    view.detectChanges();
+
+    expect(screen.getByRole('tab', { name: 'Export' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Import' })).toBeTruthy();
+    expect(screen.getByText('✓ validated')).toBeTruthy();
+  });
 });

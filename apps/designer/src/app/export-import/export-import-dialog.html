@@ -1,0 +1,157 @@
+<dialog #dialog class="rdr-eio" aria-labelledby="rdr-eio-title">
+  <div class="rdr-eio__inner">
+    <header class="rdr-eio__header">
+      <div class="rdr-eio__tabs" role="tablist" aria-label="Export or import template">
+        <button
+          type="button"
+          role="tab"
+          id="rdr-eio-title"
+          class="rdr-eio__tab"
+          [class.rdr-eio__tab--active]="tab() === 'export'"
+          [attr.aria-selected]="tab() === 'export'"
+          (click)="setTab('export')"
+        >
+          Export
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="rdr-eio__tab"
+          [class.rdr-eio__tab--active]="tab() === 'import'"
+          [attr.aria-selected]="tab() === 'import'"
+          (click)="setTab('import')"
+        >
+          Import
+        </button>
+      </div>
+      <button type="button" class="rdr-eio__close" aria-label="Close dialog" (click)="close()">
+        ✕
+      </button>
+    </header>
+
+    @if (tab() === 'export') {
+    <div class="rdr-eio__body" role="tabpanel" aria-label="Export template">
+      <p class="rdr-eio__lead">
+        Download the template JSON to render in any app with the Rendara viewer.
+      </p>
+
+      <div class="rdr-eio__preview-block">
+        <div class="rdr-eio__preview-head">
+          <div class="rdr-eio__preview-title">
+            <span class="rdr-eio__label">Template source</span>
+            @if (isValid()) {
+            <span class="rdr-eio__chip" aria-label="Template is valid">✓ validated</span>
+            } @else {
+            <span class="rdr-eio__chip rdr-eio__chip--invalid" role="alert">! invalid</span>
+            }
+          </div>
+          <button type="button" class="rdr-eio__copy" (click)="copy()">
+            {{ copied() ? 'Copied' : 'Copy' }}
+          </button>
+        </div>
+        <pre class="rdr-eio__code"><code>{{ serialized() }}</code></pre>
+      </div>
+
+      <div class="rdr-eio__field">
+        <label class="rdr-eio__label" for="rdr-eio-filename">Filename</label>
+        <input
+          id="rdr-eio-filename"
+          type="text"
+          class="rdr-eio__input"
+          [value]="fileName()"
+          (input)="fileName.set($any($event.target).value)"
+        />
+      </div>
+
+      <div class="rdr-eio__toggle-row">
+        <span class="rdr-eio__toggle-text">Pretty-print JSON</span>
+        <button
+          type="button"
+          role="switch"
+          class="rdr-eio__switch"
+          [class.rdr-eio__switch--on]="prettyPrint()"
+          [attr.aria-checked]="prettyPrint()"
+          aria-label="Pretty-print JSON"
+          (click)="togglePretty()"
+        >
+          <span class="rdr-eio__switch-pill" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+
+    <footer class="rdr-eio__footer">
+      <button type="button" rdr-button variant="secondary" (click)="close()">Cancel</button>
+      <button
+        type="button"
+        rdr-button
+        variant="primary"
+        [disabled]="!isValid()"
+        (click)="download()"
+      >
+        Download JSON
+      </button>
+    </footer>
+    } @else {
+    <div class="rdr-eio__body" role="tabpanel" aria-label="Import template">
+      <input
+        #fileInput
+        type="file"
+        class="rdr-eio__file-input"
+        accept="application/json,.json"
+        (change)="onFileSelected($event)"
+      />
+
+      <button
+        type="button"
+        class="rdr-eio__dropzone"
+        [class.rdr-eio__dropzone--active]="dragActive()"
+        (click)="openPicker()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave()"
+        (drop)="onDrop($event)"
+      >
+        <span class="rdr-eio__dropzone-icon" aria-hidden="true">&#8682;</span>
+        <span class="rdr-eio__dropzone-text">
+          Drop a .json file here or <span class="rdr-eio__dropzone-link">browse</span>
+        </span>
+        <span class="rdr-eio__dropzone-hint">Older templates are migrated automatically</span>
+      </button>
+
+      @if (staged(); as item) {
+      <div class="rdr-eio__success">
+        <span class="rdr-eio__success-icon" aria-hidden="true">✓</span>
+        <span class="rdr-eio__success-text">
+          {{ item.fileName }} validated successfully @if (item.result.migrated &&
+          item.result.fromVersion) {
+          <span class="rdr-eio__success-note">· migrated from {{ item.result.fromVersion }}</span>
+          }
+        </span>
+        <span class="rdr-eio__success-size">{{ stagedSize() }}</span>
+      </div>
+      } @if (importErrors().length > 0) {
+      <div class="rdr-eio__errors" role="alert">
+        <p class="rdr-eio__errors-title">This file couldn't be imported:</p>
+        <ul class="rdr-eio__errors-list">
+          @for (error of importErrors(); track $index) {
+          <li class="rdr-eio__error">{{ error }}</li>
+          }
+        </ul>
+      </div>
+      }
+    </div>
+
+    <footer class="rdr-eio__footer">
+      <button type="button" rdr-button variant="secondary" (click)="close()">Cancel</button>
+      <button
+        type="button"
+        rdr-button
+        variant="primary"
+        [disabled]="staged() === null"
+        (click)="confirmImport()"
+      >
+        Import template
+      </button>
+    </footer>
+    }
+  </div>
+</dialog>
