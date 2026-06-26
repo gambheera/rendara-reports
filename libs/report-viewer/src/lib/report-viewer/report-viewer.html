@@ -1,9 +1,11 @@
-<!-- E7-S2 render pipeline + E7-S3 page navigation. A successful pipeline paints
-     the chrome: a thumbnail rail, the page-navigation bar, the scrolling page
-     area (single page or the continuous stack), and a bottom page-status. An
-     empty or errored pipeline paints nothing (the loading/empty/error UI lands
-     in E7-S5; the full configurable toolbar lands in Epic 8). -->
-@if (renderModel(); as model) {
+<!-- E7-S2 render pipeline + E7-S3 page navigation + E7-S5 feedback states. The
+     pipeline's view status drives a single switch: while it runs the viewer
+     shows a loading placeholder; a null/blank template or one with no data
+     settles to the empty state; a surfaced failure settles to the error state;
+     a successful pass paints the chrome (thumbnail rail, page-navigation bar,
+     scrolling page area, bottom page-status). The full configurable toolbar
+     lands in Epic 8. -->
+@switch (viewStatus()) { @case ('rendered') { @if (renderModel(); as model) {
 <div class="rdr-viewer-shell">
   <!-- Left thumbnail rail: one mini single-page render per page; the current
        page is outlined in the accent and reflected to assistive tech. -->
@@ -136,4 +138,96 @@
     </div>
   </div>
 </div>
+} }
+
+<!-- Loading: spinner + reassurance + a skeleton page, announced politely. -->
+@case ('loading') {
+<div class="rdr-viewer-state rdr-viewer-state--loading" role="status" aria-live="polite">
+  <span class="rdr-viewer-spinner" aria-hidden="true"></span>
+  <p class="rdr-viewer-state-title">Rendering report…</p>
+  <div class="rdr-viewer-skeleton" aria-hidden="true">
+    <span class="rdr-viewer-skeleton-line rdr-viewer-skeleton-line--title"></span>
+    <span class="rdr-viewer-skeleton-line"></span>
+    <span class="rdr-viewer-skeleton-line"></span>
+    <span class="rdr-viewer-skeleton-line rdr-viewer-skeleton-line--short"></span>
+    <div class="rdr-viewer-skeleton-blocks">
+      <span class="rdr-viewer-skeleton-block"></span>
+      <span class="rdr-viewer-skeleton-block"></span>
+    </div>
+  </div>
+</div>
 }
+
+<!-- Empty: no data to render yet. -->
+@case ('empty') {
+<div class="rdr-viewer-state rdr-viewer-state--empty" role="status">
+  <span class="rdr-viewer-state-icon" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+    </svg>
+  </span>
+  <p class="rdr-viewer-state-title">No data to display</p>
+  <p class="rdr-viewer-state-detail">Provide a data JSON to render this report.</p>
+</div>
+}
+
+<!-- Error: a surfaced (never thrown) failure, with the reason and a details
+     disclosure for the structured validator problems. -->
+@case ('error') {
+<div class="rdr-viewer-state rdr-viewer-state--error" role="alert">
+  <span class="rdr-viewer-state-icon rdr-viewer-state-icon--danger" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v6" />
+      <path d="M12 16.5h.01" />
+    </svg>
+  </span>
+  <p class="rdr-viewer-state-title">Couldn't render this report</p>
+  <p class="rdr-viewer-state-detail">{{ viewError()?.message }}</p>
+  <button
+    type="button"
+    class="rdr-viewer-state-btn"
+    [attr.aria-expanded]="detailsOpen()"
+    aria-controls="rdr-viewer-error-details"
+    (click)="toggleDetails()"
+  >
+    {{ detailsOpen() ? 'Hide details' : 'View details' }}
+  </button>
+  @if (detailsOpen()) {
+  <div id="rdr-viewer-error-details" class="rdr-viewer-state-details">
+    @if (viewError()?.details?.length) {
+    <ul class="rdr-viewer-state-details-list">
+      @for (problem of viewError()?.details; track $index) {
+      <li>
+        @if (problem.path) {
+        <code>{{ problem.path }}</code>
+        } {{ problem.message }}
+      </li>
+      }
+    </ul>
+    } @else {
+    <p>{{ viewError()?.kind }} error — no further details available.</p>
+    }
+  </div>
+  }
+</div>
+} }

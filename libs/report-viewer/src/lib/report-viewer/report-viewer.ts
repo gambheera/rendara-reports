@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { type RendaraTemplate } from '@rendara/report-schema';
+import { type RendaraTemplate, type RendaraValidationError } from '@rendara/report-schema';
 import { ReportDocument, type ViewportSize } from '@rendara/report-renderer';
 
 import { runPipeline, type PipelineResult } from './report-pipeline';
@@ -98,9 +98,21 @@ const THUMBNAIL_WIDTH_PX = 104;
  * {@link zoomOut} / {@link zoomOptions} helpers, tested without the DOM. The
  * thumbnail rail stays pinned to `fit-width` regardless of the main zoom.
  *
- * The loading/empty/error *UI* (E7-S5) builds on this pipeline; the configurable
- * toolbar (print / export / watermark, per-button visibility) lands in Epic 8.
- * Until E7-S5, an empty or errored pipeline paints nothing.
+ * **E7-S5 adds the loading / empty / error states** so the viewer never shows a
+ * blank crash. A {@link viewStatus} drives a `@switch`: while the (async)
+ * pipeline is in flight it is `'loading'` (spinner + skeleton); a `null`/blank
+ * template or a template with no `data` to bind settles to `'empty'`
+ * ("No data to display"); a surfaced {@link ViewerError} settles to `'error'`
+ * (a calm danger icon + the reason + a **View details** disclosure for the
+ * structured validator problems) *and* still emits the brief-§8 `(error)`; a
+ * successful pass is `'rendered'` and paints the navigation chrome. Loading is
+ * seeded synchronously at pipeline kickoff and, like the result, is token-guarded
+ * so a stale resolution can never flip a newer load. Because the pipeline effect
+ * depends only on `template`/`data`/`config`, the loading state never flashes
+ * during page navigation or zoom.
+ *
+ * The configurable toolbar (print / export / watermark, per-button visibility)
+ * lands in Epic 8.
  */
 @Component({
   selector: 'rdr-report-viewer',
@@ -198,6 +210,24 @@ export class ReportViewer {
   /** The rendered model painted by the shared renderer, or `null` (empty/error/pending). */
   protected readonly renderModel = signal<RenderModel | null>(null);
 
+  /**
+   * Which feedback state the viewer presents (E7-S5). Seeded `'loading'` because
+   * the pipeline effect runs immediately on mount; settles to `'empty'`,
+   * `'error'` or `'rendered'` when the pipeline resolves.
+   */
+  protected readonly viewStatus = signal<'loading' | 'empty' | 'error' | 'rendered'>('loading');
+
+  /** The surfaced failure for the `'error'` state; `null` in every other state. */
+  protected readonly viewError = signal<ViewerError | null>(null);
+
+  /** The structured validator problems for the error disclosure; `[]` when none. */
+  protected readonly errorDetails = computed<readonly RendaraValidationError[]>(
+    () => this.viewError()?.details ?? [],
+  );
+
+  /** Whether the error **View details** disclosure is expanded. */
+  protected readonly detailsOpen = signal(false);
+
   /** 1-based page currently in view; `0` when nothing is rendered. Drives the controls. */
   protected readonly currentPage = signal(0);
 
@@ -245,6 +275,10 @@ export class ReportViewer {
       const data = this.data();
       const config = this.resolvedConfig();
       const pass = ++this.token;
+
+      // Show the loading state while this pass is in flight. The token guard in
+      // the resolution below means a stale `.then` can never flip a newer load.
+      this.viewStatus.set('loading');
 
       void runPipeline(template, data, {
         locale: config.locale,
@@ -321,6 +355,11 @@ export class ReportViewer {
     this.resolvedZoomFactor.set(factor);
   }
 
+  /** Toggles the error **View details** disclosure (E7-S5). */
+  protected toggleDetails(): void {
+    this.detailsOpen.update((open) => !open);
+  }
+
   /**
    * Keyboard navigation (host listener): arrows / `PageUp`·`PageDown` page,
    * `Home`·`End` jump to the ends. Keystrokes inside the goto input are left
@@ -385,23 +424,35 @@ export class ReportViewer {
     }
   }
 
-  /** Routes a pipeline result to the render model, page state and the public outputs. */
+  /**
+   * Routes a pipeline result to the render model, page state, view status and the
+   * public outputs. Setting {@link viewStatus} here (off the loading state seeded
+   * at kickoff) is what swaps the placeholder for the chrome — or the friendly
+   * empty/error state — once the pass resolves.
+   */
   private applyResult(result: PipelineResult): void {
     switch (result.status) {
       case 'rendered':
         this.renderModel.set(result);
+        this.viewError.set(null);
         // Clamp the current page into the new document (starts at page 1).
         this.currentPage.set(clampPage(this.currentPage() || 1, result.document.pageCount));
+        this.viewStatus.set('rendered');
         this.rendered.emit({ pageCount: result.document.pageCount });
         break;
       case 'error':
         this.renderModel.set(null);
         this.currentPage.set(0);
+        this.detailsOpen.set(false);
+        this.viewError.set(result.error);
+        this.viewStatus.set('error');
         this.error.emit(result.error);
         break;
       case 'empty':
         this.renderModel.set(null);
         this.currentPage.set(0);
+        this.viewError.set(null);
+        this.viewStatus.set('empty');
         break;
     }
   }
