@@ -554,3 +554,90 @@ describe('ReportViewer (E8-S1 configurable toolbar)', () => {
     expect(custom.closest('[role="toolbar"]')).toBeTruthy();
   });
 });
+
+describe('ReportViewer (E8-S2 print)', () => {
+  /** Renders the multi-page golden in the given page mode and settles the pipeline. */
+  async function renderViewer(pageMode: 'single' | 'continuous' = 'continuous') {
+    const harness = await render(ReportViewer, {
+      inputs: { template: golden.template, data: multiPageData, config: { pageMode } },
+    });
+    await flush();
+    harness.fixture.detectChanges();
+    return harness;
+  }
+
+  /** Queries a required element, failing the test (not a non-null assertion) if absent. */
+  function query<T extends Element>(container: HTMLElement, selector: string): T {
+    const found = container.querySelector<T>(selector);
+    if (found === null) {
+      throw new Error(`expected element matching "${selector}"`);
+    }
+    return found;
+  }
+
+  /** The total page count parsed from the bottom status. */
+  function totalPages(container: HTMLElement): number {
+    return Number(
+      container.querySelector('.rdr-viewer-status')?.textContent?.match(/of (\d+)/)?.[1] ?? '0',
+    );
+  }
+
+  it('wires the Print button to window.print()', async () => {
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    try {
+      const { container } = await renderViewer();
+      fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Print"]'));
+      expect(printSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      printSpy.mockRestore();
+    }
+  });
+
+  it('does not throw when window.print is unavailable (SSR-safe guard)', async () => {
+    const original = window.print;
+    // Simulate a runtime without a print implementation.
+    (window as { print?: () => void }).print = undefined;
+    try {
+      const { container } = await renderViewer();
+      expect(() =>
+        fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Print"]')),
+      ).not.toThrow();
+    } finally {
+      window.print = original;
+    }
+  });
+
+  it('renders a hidden print mirror with every page at natural size', async () => {
+    const { container } = await renderViewer('continuous');
+    const total = totalPages(container);
+    expect(total).toBeGreaterThan(1);
+
+    const mirror = query<HTMLElement>(container, '.rdr-viewer-print');
+    const pages = mirror.querySelectorAll('.rdr-viewer-print-page');
+    expect(pages.length).toBe(total);
+    // One rendered page slot per paper page, in order (the slot carries the
+    // canonical page number; the inner sheet repeats it, so scope to the slot).
+    const numbers = Array.from(mirror.querySelectorAll('.rdr-page-slot[data-page-number]')).map(
+      (el) => el.getAttribute('data-page-number'),
+    );
+    expect(numbers).toEqual(Array.from({ length: total }, (_, i) => String(i + 1)));
+  });
+
+  it('mirrors every page even in single page mode (where the scroll shows one)', async () => {
+    const { container } = await renderViewer('single');
+    const total = totalPages(container);
+
+    // The on-screen scroll shows only the current page in single mode...
+    expect(container.querySelectorAll('.rdr-viewer-scroll .rdr-page-slot').length).toBe(1);
+    // ...but the print mirror still carries all of them.
+    expect(container.querySelectorAll('.rdr-viewer-print .rdr-page-slot').length).toBe(total);
+  });
+
+  it('renders each mirror page through the shared renderer (vector page sheets)', async () => {
+    const { container } = await renderViewer('continuous');
+    const mirror = query<HTMLElement>(container, '.rdr-viewer-print');
+    // Each page is a real renderer sheet, not a rasterised image.
+    expect(mirror.querySelectorAll('.rdr-page').length).toBe(totalPages(container));
+    expect(mirror.querySelector('img.rdr-page')).toBeNull();
+  });
+});

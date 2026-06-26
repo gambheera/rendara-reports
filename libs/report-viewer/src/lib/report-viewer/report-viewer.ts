@@ -121,9 +121,17 @@ const THUMBNAIL_WIDTH_PX = 104;
  * right. Each control is shown/hidden by a flag on {@link ViewerToolbarConfig}
  * (`config.toolbar`), resolved against {@link DEFAULT_TOOLBAR_CONFIG} so every
  * flag is concrete; a hidden control is absent from the DOM, and `visible: false`
- * drops the whole bar. The action buttons are accessible, themed placeholders
- * here — their *behaviour* lands in E8-S2 (print), E8-S3 (export) and E8-S4
- * (watermark).
+ * drops the whole bar.
+ *
+ * **E8-S2 wires the Print action** (brief §7). The component carries a hidden
+ * **print-only mirror** of every page, each rendered through the *same* shared
+ * {@link ReportDocument} at natural size (zoom 1) — so what prints is exactly what
+ * was designed, with vector (DOM) text. On screen the mirror is `display:none`;
+ * under `@media print` the interactive shell is hidden and the mirror is shown,
+ * with a viewer-owned `break-after: page` putting one sheet on each paper page,
+ * over the renderer's shared print stylesheet (ADR 0010/0011). The Print button
+ * calls the native {@link onPrint} (`window.print()`), guarded for SSR. Export
+ * (E8-S3) and Watermark (E8-S4) remain accessible placeholders.
  */
 @Component({
   selector: 'rdr-report-viewer',
@@ -382,14 +390,25 @@ export class ReportViewer {
   }
 
   /**
-   * Toolbar action placeholders (E8-S1). The buttons exist, are configurable and
-   * accessible now; their behaviour is wired by the dedicated stories — Print in
-   * E8-S2, Export PDF in E8-S3, Watermark in E8-S4 — which replace these no-ops.
+   * Prints the report (E8-S2). The template carries a hidden print-only mirror of
+   * every page at natural size (zoom 1), shown only under `@media print` while the
+   * interactive chrome is hidden, so the browser's native `window.print()` emits
+   * crisp, vector, correctly-paginated output — one sheet per paper page — against
+   * the renderer's shared print stylesheet (ADR 0010). Guarded so it is a no-op
+   * during SSR or in a runtime without `window.print` (the component stays
+   * SSR-safe; the call only runs on a user click in the browser).
    */
   protected onPrint(): void {
-    // E8-S2: print stylesheet + window.print().
+    if (typeof window !== 'undefined' && typeof window.print === 'function') {
+      window.print();
+    }
   }
 
+  /**
+   * Toolbar action placeholders (E8-S1). The buttons exist, are configurable and
+   * accessible now; their behaviour is wired by the dedicated stories — Export PDF
+   * in E8-S3 and Watermark in E8-S4 — which replace these no-ops.
+   */
   protected onExport(): void {
     // E8-S3: PdfExporter dialog + download.
   }
