@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { DesignerShell } from './shell/designer-shell';
 import { PreviewMode } from './preview/preview-mode';
 import { DesignerStore } from './state/designer-store';
+import { DraftPersistenceService } from './state/draft-persistence.service';
 
 /**
  * Designer app root. It mounts the four-zone workspace shell (E5-S1), or the
@@ -9,6 +10,10 @@ import { DesignerStore } from './state/designer-store';
  * preview replaces the whole editing chrome (no side panels), per brief §12.2.
  * The legal designer -> {schema, engine, renderer, ui-kit} dependencies (brief §4)
  * are exercised by the shell's child components as later stories wire them in.
+ *
+ * Injecting {@link DraftPersistenceService} here constructs it at bootstrap so
+ * draft restore, autosave and the unsaved-changes guard (E6-S11) are live for the
+ * whole session.
  */
 @Component({
   imports: [DesignerShell, PreviewMode],
@@ -23,4 +28,9 @@ import { DesignerStore } from './state/designer-store';
 })
 export class App {
   protected readonly store = inject(DesignerStore);
+
+  constructor() {
+    // Construct draft persistence so restore/autosave/guard run for the session.
+    inject(DraftPersistenceService);
+  }
 }

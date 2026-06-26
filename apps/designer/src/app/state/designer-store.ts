@@ -606,6 +606,16 @@ export const DesignerStore = signalStore(
         patchState(store, { dirty: false });
       },
       /**
+       * Marks the document dirty (E6-S11). Symmetric with {@link markClean}: used
+       * when a restored local draft is loaded, since draft work has not been saved
+       * to a file and so should drive the "unsaved changes" status and the
+       * navigation guard. View-only flag flip — it does not touch the template or
+       * undo history.
+       */
+      markDirty(): void {
+        patchState(store, { dirty: true });
+      },
+      /**
        * Loads imported sample data (E6-S6), replacing any previous import. Sample
        * data is a designer aid (it feeds the Data tab's field tree and later
        * binding), held in view-state — it never touches the template, the dirty

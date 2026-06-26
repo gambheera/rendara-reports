@@ -4,13 +4,16 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/angular';
 import { goldenInvoiceTemplate } from '@rendara/report-schema';
 import { ExportImportDialog } from './export-import-dialog';
 import { DesignerStore } from '../state/designer-store';
+import { DRAFT_STORAGE, createMemoryStorage } from '../state/draft-persistence.service';
 import { serializeTemplate } from '../state/template-io';
 
 type Store = InstanceType<typeof DesignerStore>;
 
 /** Renders the dialog and opens it on the given tab. */
 async function open(tab: 'export' | 'import' = 'export', seed?: (store: Store) => void) {
-  const view = await render(ExportImportDialog);
+  const view = await render(ExportImportDialog, {
+    providers: [{ provide: DRAFT_STORAGE, useValue: createMemoryStorage() }],
+  });
   const store = TestBed.inject(DesignerStore);
   seed?.(store);
   const dialog = view.fixture.componentInstance;

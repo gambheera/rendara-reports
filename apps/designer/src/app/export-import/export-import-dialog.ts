@@ -10,6 +10,7 @@ import {
 import { isValidTemplate } from '@rendara/report-schema';
 import { Button } from '@rendara/ui-kit';
 import { DesignerStore } from '../state/designer-store';
+import { DraftPersistenceService } from '../state/draft-persistence.service';
 import {
   importTemplate,
   serializeTemplate,
@@ -80,6 +81,7 @@ function formatBytes(bytes: number): string {
 })
 export class ExportImportDialog {
   private readonly store = inject(DesignerStore);
+  private readonly draftPersistence = inject(DraftPersistenceService);
   private readonly dialogRef = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
 
@@ -158,6 +160,10 @@ export class ExportImportDialog {
    * Downloads the current template as a JSON file (E6-S10). The document is
    * validated first so a broken template is never written out; on success a `Blob`
    * is offered through a transient anchor and the object URL is revoked.
+   *
+   * Saving to a file is the "Save" of the designer's file UX (E6-S11): the document
+   * is now marked clean — the status returns to "Saved" and the local autosaved
+   * draft is no longer needed, so the autosave effect clears it.
    */
   protected download(): void {
     if (!this.isValid()) return;
@@ -168,6 +174,7 @@ export class ExportImportDialog {
     anchor.download = this.normalizedFileName();
     anchor.click();
     URL.revokeObjectURL(url);
+    this.store.markClean();
   }
 
   /** Ensures the download name is non-empty and ends in `.json`. */
@@ -227,10 +234,15 @@ export class ExportImportDialog {
     this.staged.set({ fileName: file.name, sizeBytes: file.size, result });
   }
 
-  /** Loads the staged template into the designer and closes (E6-S10). */
+  /**
+   * Loads the staged template into the designer and closes (E6-S10). Replacing the
+   * current document is destructive, so it goes behind the unsaved-changes guard
+   * (E6-S11): if the open document has unsaved edits the author must confirm first.
+   */
   protected confirmImport(): void {
     const staged = this.staged();
     if (staged === null) return;
+    if (!this.draftPersistence.confirmDiscard()) return;
     this.store.loadTemplate(staged.result.template);
     this.close();
   }
