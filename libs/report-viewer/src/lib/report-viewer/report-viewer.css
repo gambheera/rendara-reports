@@ -460,6 +460,42 @@
   }
 }
 
+/* Print path (E8-S2) --------------------------------------------------- */
+/* The print-only mirror is hidden on screen; under `@media print` the
+   interactive shell is hidden and the mirror is shown, so `window.print()`
+   emits all pages at natural size — one sheet per paper page. The child
+   `report-document` carries the renderer's own print stylesheet (white sheet,
+   `@page { margin: 0 }`, colour-adjust); the viewer adds the inter-page page
+   break and lets the host flow naturally. */
+.rdr-viewer-print {
+  display: none;
+}
+
+@media print {
+  /* Flow the pages instead of constraining them to the on-screen viewport. */
+  :host {
+    height: auto;
+  }
+
+  /* Hide the interactive chrome (rail, toolbar, scroll, status). */
+  .rdr-viewer-shell {
+    display: none !important;
+  }
+
+  /* Reveal the all-pages mirror and force one sheet per paper page. */
+  .rdr-viewer-print {
+    display: block;
+  }
+
+  .rdr-viewer-print-page {
+    break-after: page;
+  }
+
+  .rdr-viewer-print-page:last-child {
+    break-after: auto;
+  }
+}
+
 /* Visually-hidden label, kept accessible to screen readers. */
 .rdr-viewer-sr-only {
   position: absolute;

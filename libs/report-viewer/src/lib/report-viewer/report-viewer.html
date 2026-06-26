@@ -239,6 +239,28 @@
     </div>
   </div>
 </div>
+
+<!-- Print-only mirror (E8-S2): every page rendered through the same shared
+     renderer at natural size (zoom 1), one document per page. Hidden on screen
+     (`display:none`); under `@media print` the interactive shell is hidden and
+     this mirror is shown, so `window.print()` emits all pages — vector text, one
+     sheet per paper page — regardless of the on-screen page mode or zoom. Each
+     page is wrapped in a viewer-owned div so the `break-after: page` rule lives
+     in the viewer's own (encapsulated) stylesheet. -->
+<div class="rdr-viewer-print" aria-hidden="true">
+  @for (n of pageNumbers(); track n) {
+  <div class="rdr-viewer-print-page">
+    <rdr-report-document
+      [document]="model.document"
+      [template]="model.template"
+      [resolvedValues]="model.resolvedValues"
+      [layout]="'single'"
+      [currentPage]="n"
+      [zoom]="1"
+    />
+  </div>
+  }
+</div>
 } }
 
 <!-- Loading: spinner + reassurance + a skeleton page, announced politely. -->
