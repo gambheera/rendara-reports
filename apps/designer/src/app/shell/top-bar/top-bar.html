@@ -21,7 +21,7 @@
 <div class="rdr-top-bar__actions">
   <button type="button" rdr-button variant="secondary" disabled>Import data</button>
   <button type="button" rdr-button variant="secondary" (click)="enterPreview()">Preview</button>
-  <button type="button" rdr-button variant="primary" disabled>Export</button>
+  <button type="button" rdr-button variant="primary" (click)="openExport()">Export</button>
   <button
     type="button"
     rdr-button
@@ -33,3 +33,5 @@
     <span class="rdr-top-bar__icon" aria-hidden="true">&#8943;</span>
   </button>
 </div>
+
+<rdr-export-import-dialog />
