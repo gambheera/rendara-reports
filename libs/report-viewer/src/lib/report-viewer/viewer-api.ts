@@ -29,13 +29,32 @@ export type ViewerZoom = ZoomSpec;
 export type ViewerPageMode = PageLayoutMode;
 
 /**
- * Toolbar configuration. v1 (E7-S1) exposes only whole-toolbar visibility; the
- * per-button show/hide map and custom-action slot (brief §8) extend this
- * interface in E8-S1 without breaking existing callers.
+ * Toolbar configuration (brief §8). Every flag defaults to `true` (see
+ * {@link DEFAULT_TOOLBAR_CONFIG}), so a host opts *out* of a control by setting
+ * its flag to `false`; a hidden control is absent from the DOM entirely, not just
+ * visually hidden. `visible: false` removes the whole toolbar.
+ *
+ * E7-S1 shipped only {@link visible}; E8-S1 adds the per-button map. The host can
+ * additionally project its own controls into the toolbar through the
+ * `[rdr-toolbar-actions]` content slot — that custom-action slot needs no config
+ * here. The Print/Export/Watermark *behaviour* lands in E8-S2/S3/S4; these flags
+ * govern only whether each button is present.
  */
 export interface ViewerToolbarConfig {
   /** Show the toolbar (default) or hide it entirely. */
   readonly visible?: boolean;
+  /** Show the document title (from `template.metadata.name`). Default `true`. */
+  readonly title?: boolean;
+  /** Show the page-navigation group (prev · goto / total · next). Default `true`. */
+  readonly navigation?: boolean;
+  /** Show the zoom group (− · % · + stepper and fit-mode dropdown). Default `true`. */
+  readonly zoom?: boolean;
+  /** Show the Print action button (behaviour: E8-S2). Default `true`. */
+  readonly print?: boolean;
+  /** Show the Export action button (behaviour: E8-S3). Default `true`. */
+  readonly export?: boolean;
+  /** Show the Watermark action button (behaviour: E8-S4). Default `true`. */
+  readonly watermark?: boolean;
 }
 
 /**
@@ -107,4 +126,19 @@ export const DEFAULT_VIEWER_CONFIG: Required<Omit<ViewerConfig, 'locale'>> &
   toolbar: { visible: true },
   watermark: null,
   pageMode: 'continuous',
+};
+
+/**
+ * Resolved defaults for {@link ViewerToolbarConfig} — every control on. The
+ * component spreads the host's `config.toolbar` over these, so each per-button
+ * flag is concrete (E8-S1) and the show/hide checks never read `undefined`.
+ */
+export const DEFAULT_TOOLBAR_CONFIG: Required<ViewerToolbarConfig> = {
+  visible: true,
+  title: true,
+  navigation: true,
+  zoom: true,
+  print: true,
+  export: true,
+  watermark: true,
 };

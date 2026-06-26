@@ -105,17 +105,51 @@
   min-height: 0;
 }
 
-/* Page-navigation bar ----------------------------------------------------- */
+/* Configurable toolbar (E8-S1) ------------------------------------------- */
+/* Three zones: title (start), nav + zoom (center), actions + host slot (end).
+   The side zones flex equally so the centre group stays optically centered even
+   when the title or action set differs in width. */
 .rdr-viewer-nav {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   height: 44px;
   padding: 0 12px;
   background: var(--rdr-viewer-surface);
   border-bottom: 1px solid var(--rdr-viewer-hairline);
+}
+
+.rdr-viewer-nav-zone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rdr-viewer-nav-zone--start {
+  flex: 1 1 0;
+  justify-content: flex-start;
+}
+
+.rdr-viewer-nav-zone--center {
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+.rdr-viewer-nav-zone--end {
+  flex: 1 1 0;
+  justify-content: flex-end;
+}
+
+/* Document title: recessive, truncates rather than wrapping the bar. */
+.rdr-viewer-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rdr-viewer-text);
 }
 
 .rdr-viewer-nav-group {

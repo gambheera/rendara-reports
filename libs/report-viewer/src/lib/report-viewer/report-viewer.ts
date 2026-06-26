@@ -31,6 +31,7 @@ import {
   type ZoomOption,
 } from './viewer-zoom';
 import {
+  DEFAULT_TOOLBAR_CONFIG,
   DEFAULT_VIEWER_CONFIG,
   type PageChangeEvent,
   type RenderedEvent,
@@ -38,6 +39,7 @@ import {
   type ViewerError,
   type ViewerPageMode,
   type ViewerTheme,
+  type ViewerToolbarConfig,
   type ViewerZoom,
 } from './viewer-api';
 
@@ -111,8 +113,17 @@ const THUMBNAIL_WIDTH_PX = 104;
  * depends only on `template`/`data`/`config`, the loading state never flashes
  * during page navigation or zoom.
  *
- * The configurable toolbar (print / export / watermark, per-button visibility)
- * lands in Epic 8.
+ * **E8-S1 makes the toolbar configurable** (brief §8). The recessive top bar is
+ * now a three-zone `role="toolbar"`: the document title (from
+ * {@link RendaraTemplate} metadata) on the left, the page-navigation and zoom
+ * groups in the centre, and the Print / Export / Watermark action buttons plus a
+ * host **custom-action slot** (`[rdr-toolbar-actions]` content projection) on the
+ * right. Each control is shown/hidden by a flag on {@link ViewerToolbarConfig}
+ * (`config.toolbar`), resolved against {@link DEFAULT_TOOLBAR_CONFIG} so every
+ * flag is concrete; a hidden control is absent from the DOM, and `visible: false`
+ * drops the whole bar. The action buttons are accessible, themed placeholders
+ * here — their *behaviour* lands in E8-S2 (print), E8-S3 (export) and E8-S4
+ * (watermark).
  */
 @Component({
   selector: 'rdr-report-viewer',
@@ -164,6 +175,21 @@ export class ReportViewer {
 
   /** The `--rdr-*` overrides as a host style map; `{}` when no theme is set. */
   protected readonly themeStyle = computed<Record<string, string>>(() => this.theme() ?? {});
+
+  /**
+   * The resolved toolbar config (E8-S1): the host's `config.toolbar` spread over
+   * {@link DEFAULT_TOOLBAR_CONFIG}, so each per-button flag is concrete and the
+   * template's `@if` show/hide checks never read `undefined`.
+   */
+  protected readonly toolbar = computed<Required<ViewerToolbarConfig>>(() => ({
+    ...DEFAULT_TOOLBAR_CONFIG,
+    ...(this.resolvedConfig().toolbar ?? {}),
+  }));
+
+  /** The document title shown on the left of the toolbar (template metadata); `''` until rendered. */
+  protected readonly documentTitle = computed<string>(
+    () => this.renderModel()?.template.metadata.name ?? '',
+  );
 
   /** The host-configured initial zoom; seeds {@link zoomSpec} and re-syncs it on change. */
   protected readonly initialZoom = computed<ViewerZoom>(
@@ -353,6 +379,23 @@ export class ReportViewer {
   /** Tracks the factor the renderer resolved the {@link zoomSpec} to (drives the readout). */
   protected onZoomChange(factor: number): void {
     this.resolvedZoomFactor.set(factor);
+  }
+
+  /**
+   * Toolbar action placeholders (E8-S1). The buttons exist, are configurable and
+   * accessible now; their behaviour is wired by the dedicated stories — Print in
+   * E8-S2, Export PDF in E8-S3, Watermark in E8-S4 — which replace these no-ops.
+   */
+  protected onPrint(): void {
+    // E8-S2: print stylesheet + window.print().
+  }
+
+  protected onExport(): void {
+    // E8-S3: PdfExporter dialog + download.
+  }
+
+  protected onWatermark(): void {
+    // E8-S4: watermark toggle/config dialog.
   }
 
   /** Toggles the error **View details** disclosure (E7-S5). */

@@ -448,3 +448,109 @@ describe('ReportViewer (E7-S4 zoom)', () => {
     expect(query<HTMLSelectElement>(container, '#rdr-viewer-zoom').value).toBe('0.75');
   });
 });
+
+describe('ReportViewer (E8-S1 configurable toolbar)', () => {
+  /** Renders the golden invoice with the given toolbar config and settles the pipeline. */
+  async function renderViewer(toolbar?: Record<string, boolean>) {
+    const harness = await render(ReportViewer, {
+      inputs: {
+        template: golden.template,
+        data: golden.data,
+        config: toolbar ? { toolbar } : {},
+      },
+    });
+    await flush();
+    harness.fixture.detectChanges();
+    return harness;
+  }
+
+  /** Queries a required element, failing the test (not a non-null assertion) if absent. */
+  function query<T extends Element>(container: HTMLElement, selector: string): T {
+    const found = container.querySelector<T>(selector);
+    if (found === null) {
+      throw new Error(`expected element matching "${selector}"`);
+    }
+    return found;
+  }
+
+  it('renders a single role="toolbar" with all controls present by default', async () => {
+    const { container } = await renderViewer();
+
+    const toolbar = query<HTMLElement>(container, '[role="toolbar"]');
+    expect(toolbar.getAttribute('aria-label')).toBe('Viewer toolbar');
+    expect(container.querySelector('.rdr-viewer-title')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Previous page"]')).toBeTruthy();
+    expect(container.querySelector('#rdr-viewer-zoom')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Print"]')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Export PDF"]')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Watermark"]')).toBeTruthy();
+  });
+
+  it('shows the document title from template metadata', async () => {
+    const { container } = await renderViewer();
+    expect(query<HTMLElement>(container, '.rdr-viewer-title').textContent?.trim()).toBe(
+      golden.template.metadata.name,
+    );
+  });
+
+  it('gives the action buttons accessible labels', async () => {
+    const { container } = await renderViewer();
+    for (const label of ['Print', 'Export PDF', 'Watermark']) {
+      const btn = query<HTMLButtonElement>(container, `[aria-label="${label}"]`);
+      expect(btn.tagName).toBe('BUTTON');
+      expect(btn.getAttribute('aria-label')).toBe(label);
+    }
+  });
+
+  it('hides individual controls from the DOM via config.toolbar flags', async () => {
+    const { container } = await renderViewer({
+      title: false,
+      navigation: false,
+      zoom: false,
+      print: false,
+      export: false,
+      watermark: false,
+    });
+
+    // The bar itself remains, but every flagged-off control is absent.
+    expect(container.querySelector('[role="toolbar"]')).toBeTruthy();
+    expect(container.querySelector('.rdr-viewer-title')).toBeNull();
+    expect(container.querySelector('[aria-label="Previous page"]')).toBeNull();
+    expect(container.querySelector('#rdr-viewer-zoom')).toBeNull();
+    expect(container.querySelector('[aria-label="Print"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Export PDF"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Watermark"]')).toBeNull();
+  });
+
+  it('hides only the named button, leaving the others present', async () => {
+    const { container } = await renderViewer({ print: false });
+    expect(container.querySelector('[aria-label="Print"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Export PDF"]')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Watermark"]')).toBeTruthy();
+  });
+
+  it('removes the whole toolbar when visible is false, still rendering the report', async () => {
+    const { container } = await renderViewer({ visible: false });
+    expect(container.querySelector('[role="toolbar"]')).toBeNull();
+    expect(container.querySelector('.rdr-page')).toBeTruthy();
+  });
+
+  it('projects host content into the custom-action slot', async () => {
+    const { container, fixture } = await render(
+      `<rdr-report-viewer [template]="template" [data]="data">
+         <button rdr-toolbar-actions aria-label="Refresh">Refresh</button>
+       </rdr-report-viewer>`,
+      {
+        imports: [ReportViewer],
+        componentProperties: { template: golden.template, data: golden.data },
+      },
+    );
+    await flush();
+    fixture.detectChanges();
+
+    const custom = query<HTMLButtonElement>(container, '[rdr-toolbar-actions]');
+    expect(custom.textContent?.trim()).toBe('Refresh');
+    // The projected button lands inside the toolbar's end zone.
+    expect(custom.closest('[role="toolbar"]')).toBeTruthy();
+  });
+});

@@ -24,8 +24,11 @@ const paginatedData = {
  * inputs (`template`, `data`, `config`, `theme`) and outputs (`rendered`,
  * `pageChange`, `error`) — and the **render pipeline** (E7-S2): it validates,
  * binds and paginates the template+data through the shared engine and paints the
- * result with the shared renderer. These stories feed it the canonical invoice
- * golden so the body shows a live, paginated report.
+ * result with the shared renderer. It carries the **configurable toolbar**
+ * (E8-S1): a title, page-navigation and zoom groups, Print / Export / Watermark
+ * action buttons and a host custom-action slot, each shown/hidden via
+ * `config.toolbar`. These stories feed it the canonical invoice golden so the
+ * body shows a live, paginated report.
  */
 const meta: Meta<ReportViewer> = {
   title: 'report-viewer/ReportViewer',
@@ -96,6 +99,50 @@ export const Zoom: Story = {
     template: invoice.template,
     data: invoice.data,
     config: { initialZoom: 0.75, pageMode: 'continuous' },
+  },
+};
+
+/**
+ * Configured toolbar (E8-S1): `config.toolbar` shows/hides each control. Here the
+ * Print, Export and Watermark action buttons are hidden, leaving only the title,
+ * page navigation and zoom — a hidden control is absent from the DOM, not just
+ * visually hidden.
+ */
+export const ConfiguredToolbar: Story = {
+  args: {
+    template: invoice.template,
+    data: invoice.data,
+    config: {
+      initialZoom: 'fit-width',
+      pageMode: 'continuous',
+      toolbar: { print: false, export: false, watermark: false },
+    },
+  },
+};
+
+/**
+ * Custom toolbar action (E8-S1): a host projects its own button into the toolbar
+ * through the `[rdr-toolbar-actions]` content slot, sitting alongside the
+ * built-in actions.
+ */
+export const CustomToolbarAction: Story = {
+  render: (args) => ({
+    props: args,
+    template: `
+      <rdr-report-viewer
+        [template]="template"
+        [data]="data"
+        [config]="config"
+        style="display:block;height:600px"
+      >
+        <button rdr-toolbar-actions class="rdr-viewer-nav-btn" aria-label="Refresh">⟳</button>
+      </rdr-report-viewer>
+    `,
+  }),
+  args: {
+    template: invoice.template,
+    data: invoice.data,
+    config: { initialZoom: 'fit-width', pageMode: 'continuous' },
   },
 };
 
