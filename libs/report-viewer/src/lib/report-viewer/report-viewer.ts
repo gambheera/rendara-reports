@@ -46,6 +46,9 @@ import {
   type ViewerZoom,
 } from './viewer-api';
 import { defaultPdfExporter } from './default-pdf-exporter';
+import { downloadBlob } from './file-download';
+import { ensureExtension, slugifyFilename } from './filename';
+import { serializeTemplateSource, sourceFilename } from './viewer-source';
 import { ExportDialog, type ExportDialogResult } from './export-dialog';
 import { WatermarkDialog, type WatermarkDialogResult } from './watermark-dialog';
 
@@ -155,6 +158,15 @@ const THUMBNAIL_WIDTH_PX = 104;
  * flows through the *same* render path to the on-screen pages, the print mirror
  * (E8-S2) and the PDF export (E8-S3) alike — stamped on every page, honoured in
  * print and export (story acceptance).
+ *
+ * **E8-S5 adds the Download-source action** (optional viewer extra). A toolbar
+ * button ({@link onDownloadSource}) downloads the report's *source* — its
+ * validated {@link RendaraTemplate} (the schema contract, brief §5) — as a
+ * canonical, pretty-printed JSON file, named from `config.sourceFilename` / the
+ * document title. The serialisation re-imports to an equivalent template (schema
+ * round-trip) and the download goes through the shared, SSR-guarded
+ * {@link downloadBlob}. The button is gated by the `config.toolbar.source` flag
+ * like every other action.
  */
 @Component({
   selector: 'rdr-report-viewer',
@@ -309,7 +321,7 @@ export class ReportViewer {
   protected readonly exportFilename = computed<string>(() => {
     const configured = this.resolvedConfig().exportFilename;
     const base = configured ?? slugifyFilename(this.documentTitle()) ?? 'report';
-    return ensurePdfExtension(base);
+    return ensureExtension(base, '.pdf');
   });
 
   /** 1-based page currently in view; `0` when nothing is rendered. Drives the controls. */
@@ -498,7 +510,7 @@ export class ReportViewer {
       document: model.document,
       template: model.template,
       resolvedValues: model.resolvedValues,
-      filename: ensurePdfExtension(result.filename),
+      filename: ensureExtension(result.filename, '.pdf'),
       pages: this.resolveExportPages(result),
       includeWatermark: result.includeWatermark,
       metadata: this.resolvedConfig().pdfMetadata,
@@ -550,6 +562,25 @@ export class ReportViewer {
   protected onWatermarkApply(result: WatermarkDialogResult): void {
     this.watermarkOpen.set(false);
     this.activeWatermark.set(result.watermark);
+  }
+
+  /**
+   * Downloads the report's **source** — its validated {@link RendaraTemplate} (the
+   * schema contract, brief §5) — as a canonical, pretty-printed JSON file (E8-S5).
+   * The filename comes from `config.sourceFilename`, else a slug of the document
+   * title, else `report`, always ending in `.json`. A no-op until a document is
+   * rendered, and SSR-safe: the download goes through the shared, guarded
+   * {@link downloadBlob}, so a runtime without the DOM/`URL` APIs never throws.
+   */
+  protected onDownloadSource(): void {
+    const model = this.renderModel();
+    if (!model) {
+      return;
+    }
+    const json = serializeTemplateSource(model.template);
+    const filename = sourceFilename(this.documentTitle(), this.resolvedConfig().sourceFilename);
+    const blob = new Blob([json], { type: 'application/json' });
+    downloadBlob(blob, filename);
   }
 
   /** Toggles the error **View details** disclosure (E7-S5). */
@@ -653,25 +684,4 @@ export class ReportViewer {
         break;
     }
   }
-}
-
-/** Ensures a filename ends in `.pdf` (case-insensitive), appending it when absent. */
-function ensurePdfExtension(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed === '') {
-    return 'report.pdf';
-  }
-  return /\.pdf$/i.test(trimmed) ? trimmed : `${trimmed}.pdf`;
-}
-
-/**
- * Slugs a document title into a safe filename stem (lowercase, alphanumerics +
- * dashes), or `null` when there is nothing usable — letting the caller fall back.
- */
-function slugifyFilename(title: string): string | null {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return slug.length > 0 ? slug : null;
 }

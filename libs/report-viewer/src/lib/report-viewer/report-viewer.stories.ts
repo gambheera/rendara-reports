@@ -25,10 +25,10 @@ const paginatedData = {
  * `pageChange`, `error`) — and the **render pipeline** (E7-S2): it validates,
  * binds and paginates the template+data through the shared engine and paints the
  * result with the shared renderer. It carries the **configurable toolbar**
- * (E8-S1): a title, page-navigation and zoom groups, Print / Export / Watermark
- * action buttons and a host custom-action slot, each shown/hidden via
- * `config.toolbar`. These stories feed it the canonical invoice golden so the
- * body shows a live, paginated report.
+ * (E8-S1): a title, page-navigation and zoom groups, Print / Export / Watermark /
+ * Download-source (E8-S5) action buttons and a host custom-action slot, each
+ * shown/hidden via `config.toolbar`. These stories feed it the canonical invoice
+ * golden so the body shows a live, paginated report.
  */
 const meta: Meta<ReportViewer> = {
   title: 'report-viewer/ReportViewer',
@@ -181,6 +181,24 @@ export const Watermark: Story = {
       initialZoom: 'fit-width',
       pageMode: 'continuous',
       watermark: { type: 'text', text: 'CONFIDENTIAL', opacity: 0.15, angleDeg: -45 },
+    },
+  },
+};
+
+/**
+ * Download source (E8-S5): click **Download source** in the toolbar to save the
+ * report's source — its validated template — as a `.json` file. The filename comes
+ * from `config.sourceFilename` (here `acme-invoice-template`), else the document
+ * title; re-importing the file yields an equivalent template (schema round-trip).
+ */
+export const DownloadSource: Story = {
+  args: {
+    template: invoice.template,
+    data: invoice.data,
+    config: {
+      initialZoom: 'fit-width',
+      pageMode: 'continuous',
+      sourceFilename: 'acme-invoice-template',
     },
   },
 };

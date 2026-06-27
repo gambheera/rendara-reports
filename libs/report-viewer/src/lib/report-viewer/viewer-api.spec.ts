@@ -47,6 +47,7 @@ describe('report-viewer public API contract (E7-S1)', () => {
       pdfExporter: undefined,
       exportFilename: undefined,
       pdfMetadata: undefined,
+      sourceFilename: undefined,
     });
   });
 

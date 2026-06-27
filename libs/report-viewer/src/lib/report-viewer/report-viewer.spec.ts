@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render } from '@testing-library/angular';
 import { GOLDEN_FIXTURES, type RendaraTemplate } from '@rendara/report-schema';
 
@@ -912,5 +912,104 @@ describe('ReportViewer (E8-S4 watermark)', () => {
 
     expect(container.querySelector('[role="dialog"]')).toBeNull();
     expect(container.querySelector('.rdr-watermark-text')).toBeNull();
+  });
+});
+
+describe('ReportViewer (E8-S5 download source)', () => {
+  // jsdom has no object-URL APIs by default; install spies and restore originals.
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+
+  afterEach(() => {
+    URL.createObjectURL = originalCreate;
+    URL.revokeObjectURL = originalRevoke;
+    vi.restoreAllMocks();
+  });
+
+  /** Renders the golden invoice with the given config and settles the pipeline. */
+  async function renderViewer(config: Record<string, unknown> = {}) {
+    const harness = await render(ReportViewer, {
+      inputs: { template: golden.template, data: golden.data, config },
+    });
+    await flush();
+    harness.fixture.detectChanges();
+    return harness;
+  }
+
+  function query<T extends Element>(container: HTMLElement, selector: string): T {
+    const found = container.querySelector<T>(selector);
+    if (found === null) {
+      throw new Error(`expected element matching "${selector}"`);
+    }
+    return found;
+  }
+
+  /**
+   * Installs object-URL spies and records the blob + suggested filename each
+   * anchor download is invoked with (the anchor click is stubbed). `createObjectURL`
+   * receives the blob; the click that follows carries the anchor's `download` name.
+   */
+  function captureDownload() {
+    const blobs: Blob[] = [];
+    const filenames: string[] = [];
+    URL.createObjectURL = vi.fn((blob: Blob) => {
+      blobs.push(blob);
+      return 'blob:mock';
+    });
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      filenames.push(this.download);
+    });
+    return { blobs, filenames };
+  }
+
+  it('renders the Download source action by default', async () => {
+    const { container } = await renderViewer();
+    const btn = query<HTMLButtonElement>(container, '[aria-label="Download source"]');
+    expect(btn.tagName).toBe('BUTTON');
+    expect(btn.getAttribute('aria-label')).toBe('Download source');
+  });
+
+  it('hides the Download source action when config.toolbar.source is false', async () => {
+    const { container } = await renderViewer({ toolbar: { source: false } });
+    expect(container.querySelector('[aria-label="Download source"]')).toBeNull();
+    // The other actions are untouched.
+    expect(container.querySelector('[aria-label="Export PDF"]')).toBeTruthy();
+  });
+
+  it('downloads the template JSON named from the document title', async () => {
+    const { blobs, filenames } = captureDownload();
+    const { container } = await renderViewer();
+
+    fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Download source"]'));
+
+    expect(filenames).toHaveLength(1);
+    // golden invoice name "Invoice — Acme Corp" → "invoice-acme-corp.json".
+    expect(filenames[0]).toBe('invoice-acme-corp.json');
+    // A non-empty JSON blob is downloaded; the exact round-trippable payload is
+    // asserted in viewer-source.spec.ts (serializeTemplateSource).
+    expect(blobs[0].type).toBe('application/json');
+    expect(blobs[0].size).toBeGreaterThan(0);
+  });
+
+  it('honours config.sourceFilename, ensuring a .json suffix', async () => {
+    const { filenames } = captureDownload();
+    const { container } = await renderViewer({ sourceFilename: 'my-template' });
+
+    fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Download source"]'));
+
+    expect(filenames[0]).toBe('my-template.json');
+  });
+
+  it('shows no Download source action (and downloads nothing) before a document renders', async () => {
+    const { filenames } = captureDownload();
+    // No template → the empty state, so there is no toolbar / button to click and
+    // nothing is downloaded.
+    const { container } = await render(ReportViewer);
+    await flush();
+    expect(container.querySelector('[aria-label="Download source"]')).toBeNull();
+    expect(filenames).toHaveLength(0);
   });
 });
