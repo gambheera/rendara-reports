@@ -219,7 +219,12 @@ describe('serializePageToHtml watermark (E4-S7)', () => {
     const doc = certificateDoc();
     const html = serializePageToHtml(
       buildPageViewModel(doc.pages[0], doc.geometry, {
-        watermark: { type: 'image', src: 'https://cdn.example/seal.png', opacity: 0.3, angleDeg: 0 },
+        watermark: {
+          type: 'image',
+          src: 'https://cdn.example/seal.png',
+          opacity: 0.3,
+          angleDeg: 0,
+        },
       }),
     );
     expect(html).toContain('<img class="rdr-watermark-image"');
@@ -331,5 +336,79 @@ describe('serializePageToHtml design-mode hooks (E4-S6)', () => {
     );
 
     expect(explicitView).toBe(defaultHtml);
+  });
+});
+
+describe('serializePageToHtml search highlighting (E8-S6)', () => {
+  async function invoiceDoc() {
+    const resolved = new Map<string, ResolvedDataTable>();
+    for (const element of goldenInvoiceTemplate.body.elements) {
+      if (isDataTableElement(element)) {
+        resolved.set(element.id, await resolveDataTable(element, goldenInvoiceData));
+      }
+    }
+    return paginate(goldenInvoiceTemplate, resolved);
+  }
+
+  it('is byte-identical to the default when no highlight query is supplied', async () => {
+    const doc = await invoiceDoc();
+    const defaultHtml = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+    const emptyQuery = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenInvoiceTemplate,
+        highlightQuery: '',
+      }),
+    );
+    expect(emptyQuery).toBe(defaultHtml);
+    // A query that matches nothing also leaves the output untouched.
+    const noMatch = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenInvoiceTemplate,
+        highlightQuery: 'zzzznomatch',
+      }),
+    );
+    expect(noMatch).toBe(defaultHtml);
+  });
+
+  it('wraps matched runs in <mark class="rdr-mark"> for the title literal', async () => {
+    const doc = await invoiceDoc();
+    const html = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenInvoiceTemplate,
+        highlightQuery: 'invoice',
+      }),
+    );
+    // The title literal "INVOICE" is wrapped (case-insensitive match).
+    expect(html).toContain('<mark class="rdr-mark">INVOICE</mark>');
+  });
+
+  it('escapes matched text inside the mark', () => {
+    const doc = paginate(goldenCertificateTemplate, new Map());
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry);
+    const tampered = {
+      ...vm,
+      elements: [
+        {
+          id: 'el_x',
+          type: 'text' as const,
+          leftPx: 0,
+          topPx: 0,
+          widthPx: 10,
+          heightPx: 10,
+          zIndex: 0,
+          boxStyle: {},
+          content: {
+            kind: 'text' as const,
+            text: '<b>x</b>',
+            textStyle: {},
+            segments: [{ text: '<b>x</b>', mark: true }],
+          },
+        },
+      ],
+    };
+    const html = serializePageToHtml(tampered);
+    expect(html).toContain('<mark class="rdr-mark">&lt;b&gt;x&lt;/b&gt;</mark>');
   });
 });

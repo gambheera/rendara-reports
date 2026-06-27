@@ -116,6 +116,13 @@ export class ReportRenderer {
    * engine's `PaginatedDocument.watermark` here. `null` (the default) → none.
    */
   readonly watermark = input<Watermark | null>(null);
+  /**
+   * Search-highlight query (E8-S6): a non-empty string paints every matching run
+   * of a text element / table cell / group label as a `<mark>`. `null`/empty (the
+   * default) leaves the page byte-stable. Driven by the viewer's in-report search;
+   * the designer never sets it.
+   */
+  readonly highlight = input<string | null>(null);
 
   /** The pure view-model for the current inputs. */
   protected readonly vm = computed<PageViewModel>(() =>
@@ -126,6 +133,7 @@ export class ReportRenderer {
       resolvedValues: this.resolvedValues(),
       mode: this.mode(),
       watermark: this.watermark(),
+      highlightQuery: this.highlight(),
     }),
   );
 

@@ -89,3 +89,17 @@ const config: ViewerConfig = {
   },
 };
 ```
+
+## In-report search (E8-S6)
+
+The toolbar's **Find in report** (magnifier) action opens a compact Find bar.
+Typing a query highlights every matching run of text — text elements, data-table
+cells and group labels — across all pages, shows an `N / total` match count, and
+lets you step through hits with the prev/next buttons (or `Enter` /
+`Shift+Enter`); the active match is scrolled into view. Matching is
+case-insensitive.
+
+Search is a **screen-only** aid: highlights never appear in **Print** or **PDF
+export** output. Hide the control with `config.toolbar.search: false`. The
+highlight colours are themeable via the renderer's `--rdr-search-highlight` and
+`--rdr-search-active` CSS custom properties.

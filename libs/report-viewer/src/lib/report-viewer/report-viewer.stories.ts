@@ -26,8 +26,8 @@ const paginatedData = {
  * binds and paginates the template+data through the shared engine and paints the
  * result with the shared renderer. It carries the **configurable toolbar**
  * (E8-S1): a title, page-navigation and zoom groups, Print / Export / Watermark /
- * Download-source (E8-S5) action buttons and a host custom-action slot, each
- * shown/hidden via `config.toolbar`. These stories feed it the canonical invoice
+ * Download-source (E8-S5) / Find (E8-S6) action buttons and a host custom-action
+ * slot, each shown/hidden via `config.toolbar`. These stories feed it the canonical invoice
  * golden so the body shows a live, paginated report.
  */
 const meta: Meta<ReportViewer> = {
@@ -200,6 +200,22 @@ export const DownloadSource: Story = {
       pageMode: 'continuous',
       sourceFilename: 'acme-invoice-template',
     },
+  },
+};
+
+/**
+ * In-report search (E8-S6): click the **Find in report** (magnifier) toolbar
+ * action to open a compact Find bar, then type a query. Matching runs are
+ * highlighted across every page, the count reads `N / total`, and the prev/next
+ * buttons (or Enter / Shift+Enter) step the active match into view. Search is a
+ * screen-only aid — it never changes Print or PDF output. Hide it with
+ * `config.toolbar.search: false`.
+ */
+export const Search: Story = {
+  args: {
+    template: invoice.template,
+    data: invoice.data,
+    config: { initialZoom: 'fit-width', pageMode: 'continuous' },
   },
 };
 

@@ -98,6 +98,12 @@ export class ReportDocument {
    * that already knows its viewport (or a test) can pin it here.
    */
   readonly availableSize = input<ViewportSize | null>(null);
+  /**
+   * Search-highlight query (E8-S6), forwarded verbatim to every page so matching
+   * text/cell/label runs paint as `<mark>`. `null`/empty (the default) leaves the
+   * document byte-stable. Driven by the viewer's in-report search.
+   */
+  readonly highlight = input<string | null>(null);
 
   /** Emits the resolved scale factor whenever it changes (e.g. for a "100%" readout). */
   readonly zoomChange = output<number>();

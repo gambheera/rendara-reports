@@ -120,6 +120,19 @@ const FALLBACK_FONT: FontSpec = { family: 'Inter', sizePt: 10 };
 // Content view types (E4-S2): what to paint inside a positioned host box.
 // ---------------------------------------------------------------------------
 
+/**
+ * One run of a text value split for search highlighting (E8-S6): a slice of the
+ * display string flagged as a search match (`mark: true`) or plain text. Present
+ * only when a non-empty search query matched the value; otherwise the value is
+ * painted from its plain `text` so non-search output stays byte-stable.
+ */
+export interface TextSegment {
+  /** The slice of the source text. */
+  readonly text: string;
+  /** `true` when this slice is a search-query match (painted as a `<mark>`). */
+  readonly mark: boolean;
+}
+
 /** A block of (already-resolved) text plus the inline style to paint it with. */
 export interface TextContentView {
   readonly kind: 'text';
@@ -127,6 +140,12 @@ export interface TextContentView {
   readonly text: string;
   /** Inline styles for the text run (font, colour, alignment, wrapping). */
   readonly textStyle: StyleMap;
+  /**
+   * Search-highlight split of {@link text} (E8-S6): set only when a non-empty
+   * highlight query matched, so a renderer can paint `<mark>` runs. `undefined`
+   * when there is no query or no match, keeping non-search output byte-stable.
+   */
+  readonly segments?: readonly TextSegment[];
 }
 
 /** A vector shape, described as an SVG primitive in natural box px. */
@@ -266,6 +285,8 @@ export interface TableCellView {
   readonly widthPx: number;
   /** Inline styles for the cell (padding, font, alignment, clipping). */
   readonly cellStyle: StyleMap;
+  /** Search-highlight split of {@link text} (E8-S6); see {@link TextContentView.segments}. */
+  readonly segments?: readonly TextSegment[];
 }
 
 /** A full-table-width band label (group header/footer), spanning every column. */
@@ -274,6 +295,8 @@ export interface TableLabelView {
   readonly text: string;
   /** Inline styles for the label (padding, emphasised font, alignment). */
   readonly labelStyle: StyleMap;
+  /** Search-highlight split of {@link text} (E8-S6); see {@link TextContentView.segments}. */
+  readonly segments?: readonly TextSegment[];
 }
 
 /**
@@ -378,6 +401,15 @@ export interface PageViewOptions {
    * ADR 0007), not a template-schema field. Omit (or `null`) for no watermark.
    */
   readonly watermark?: Watermark | null;
+  /**
+   * Search-highlight query (E8-S6): when a non-empty string, every painted text
+   * value (text elements, table cells, group labels) is split into
+   * {@link TextSegment}s so matches render as `<mark>`. Empty/`undefined` (the
+   * default) leaves every value's `segments` `undefined`, so the view-model — and
+   * thus the renderer DOM and the serializer — is byte-identical to non-search
+   * output. Case-insensitive (see {@link findTextMatches}).
+   */
+  readonly highlightQuery?: string | null;
 }
 
 /**
@@ -399,6 +431,7 @@ export function buildPageViewModel(
   const resolvedValues = options?.resolvedValues ?? EMPTY_VALUES;
   const elementsById = template ? indexElements(template) : null;
   const defaultFont = template?.page.defaultFont ?? FALLBACK_FONT;
+  const highlightQuery = options?.highlightQuery ?? '';
 
   const { pagePx, printable } = geometry;
 
@@ -406,7 +439,14 @@ export function buildPageViewModel(
   // for equal z; the explicit `zIndex` makes paint order independent of DOM order.
   const elements: ElementBoxView[] = [...page.header, ...page.elements, ...page.footer].map(
     (placed) =>
-      toElementBoxView(placed, elementsById?.get(placed.id), resolvedValues, defaultFont, dpi),
+      toElementBoxView(
+        placed,
+        elementsById?.get(placed.id),
+        resolvedValues,
+        defaultFont,
+        dpi,
+        highlightQuery,
+      ),
   );
 
   // Table slices (E4-S3): position each slice against its source element's frame
@@ -420,7 +460,7 @@ export function buildPageViewModel(
     if (source?.type !== 'dataTable') {
       continue;
     }
-    tables.push(toTableView(slice, source, defaultFont, dpi));
+    tables.push(toTableView(slice, source, defaultFont, dpi, highlightQuery));
   }
 
   return {
@@ -444,6 +484,109 @@ export function buildPageViewModel(
 /** A stable empty map so the default path allocates nothing. */
 const EMPTY_VALUES: ReadonlyMap<string, string> = new Map();
 
+// ---------------------------------------------------------------------------
+// Search highlighting (E8-S6) — the pure match-finding + segment split shared by
+// the renderer (to paint `<mark>` runs) and the viewer's search (to count/locate
+// hits). Kept here, in the lowest renderer module, so both consumers fold text
+// the same way and the on-screen highlight lines up with the match index.
+// ---------------------------------------------------------------------------
+
+/** A half-open `[start, start+length)` match within a text value, in code-unit offsets. */
+export interface MatchRange {
+  readonly start: number;
+  readonly length: number;
+}
+
+/** A stable empty result so the no-query path allocates nothing. */
+const EMPTY_MATCHES: readonly MatchRange[] = [];
+
+/**
+ * Finds every (non-overlapping, left-to-right) occurrence of `query` in `text`,
+ * case-insensitively. The empty/whitespace-only query matches nothing. Pure and
+ * allocation-free on the common no-match path. Matching folds case with
+ * {@link String.toLowerCase}; if folding would shift offsets (rare locale-specific
+ * characters whose lowercase has a different length) the comparison falls back to
+ * an exact, case-sensitive scan so the returned offsets always index `text`.
+ */
+export function findTextMatches(text: string, query: string): readonly MatchRange[] {
+  const needle = query.trim();
+  if (needle.length === 0 || text.length === 0) {
+    return EMPTY_MATCHES;
+  }
+  const lowerText = text.toLowerCase();
+  const lowerNeedle = needle.toLowerCase();
+  // Case-folding must preserve length for the lower-cased offsets to index `text`.
+  const haystack = lowerText.length === text.length ? lowerText : text;
+  const find = lowerText.length === text.length ? lowerNeedle : needle;
+  const out: MatchRange[] = [];
+  let from = 0;
+  for (;;) {
+    const at = haystack.indexOf(find, from);
+    if (at === -1) {
+      break;
+    }
+    out.push({ start: at, length: find.length });
+    from = at + find.length;
+  }
+  return out.length > 0 ? out : EMPTY_MATCHES;
+}
+
+/**
+ * Splits `text` into alternating plain / matched {@link TextSegment}s for the
+ * given `query`. Returns `undefined` when the query is empty or does not match,
+ * so a value with no hit keeps its plain `text` and the rendered output stays
+ * byte-stable. Segment texts concatenate back to the original `text` exactly.
+ */
+export function splitHighlightSegments(
+  text: string,
+  query: string,
+): readonly TextSegment[] | undefined {
+  const matches = findTextMatches(text, query);
+  if (matches.length === 0) {
+    return undefined;
+  }
+  const segments: TextSegment[] = [];
+  let cursor = 0;
+  for (const match of matches) {
+    if (match.start > cursor) {
+      segments.push({ text: text.slice(cursor, match.start), mark: false });
+    }
+    segments.push({ text: text.slice(match.start, match.start + match.length), mark: true });
+    cursor = match.start + match.length;
+  }
+  if (cursor < text.length) {
+    segments.push({ text: text.slice(cursor), mark: false });
+  }
+  return segments;
+}
+
+/**
+ * Collects every searchable text value on a page in the **same order** the
+ * renderer paints them (E8-S6): each text element, then each table's cells and
+ * group label, row by row. The viewer's search builds its match index from this
+ * so a match's ordinal lines up with the painted `<mark>` order. Non-text
+ * elements (shapes, images) and empty boxes contribute nothing.
+ */
+export function collectPageText(vm: PageViewModel): readonly string[] {
+  const out: string[] = [];
+  for (const box of vm.elements) {
+    if (box.content.kind === 'text') {
+      out.push(box.content.text);
+    }
+  }
+  for (const table of vm.tables) {
+    for (const row of table.rows) {
+      for (const cell of row.cells) {
+        out.push(cell.text);
+      }
+      if (row.label) {
+        out.push(row.label.text);
+      }
+    }
+  }
+  return out;
+}
+
 /** Indexes every element across the three bands by id, for content lookup. */
 function indexElements(template: RendaraTemplate): Map<string, TemplateElement> {
   const map = new Map<string, TemplateElement>();
@@ -462,10 +605,20 @@ function toElementBoxView(
   resolvedValues: ReadonlyMap<string, string>,
   defaultFont: FontSpec,
   dpi: number,
+  highlightQuery: string,
 ): ElementBoxView {
   const widthPx = placed.boxPx.wPx;
   const heightPx = placed.boxPx.hPx;
-  const content = buildContent(placed, source, resolvedValues, defaultFont, dpi, widthPx, heightPx);
+  const content = buildContent(
+    placed,
+    source,
+    resolvedValues,
+    defaultFont,
+    dpi,
+    widthPx,
+    heightPx,
+    highlightQuery,
+  );
   // Vertical alignment only realises for text (the only flex host box); other
   // types ignore it. Shapes paint their own fill/stroke via SVG, so box
   // decoration (fill/border/padding) is meaningful for text and images only.
@@ -496,13 +649,14 @@ function buildContent(
   dpi: number,
   widthPx: number,
   heightPx: number | null,
+  highlightQuery: string,
 ): ElementContentView {
   if (!source) {
     return EMPTY_CONTENT;
   }
   switch (source.type) {
     case 'text':
-      return buildTextContent(placed, source, resolvedValues, defaultFont, dpi);
+      return buildTextContent(placed, source, resolvedValues, defaultFont, dpi, highlightQuery);
     case 'shape':
       return buildShapeContent(source, dpi, widthPx, heightPx ?? 0);
     case 'image':
@@ -526,9 +680,18 @@ function buildTextContent(
   resolvedValues: ReadonlyMap<string, string>,
   defaultFont: FontSpec,
   dpi: number,
+  highlightQuery: string,
 ): TextContentView {
   const text = resolveTextString(placed, element, resolvedValues);
-  return { kind: 'text', text, textStyle: textRunStyle(element.style, defaultFont, dpi) };
+  const base: TextContentView = {
+    kind: 'text',
+    text,
+    textStyle: textRunStyle(element.style, defaultFont, dpi),
+  };
+  const segments = splitHighlightSegments(text, highlightQuery);
+  // Only attach `segments` when there is a match, so non-search output stays
+  // byte-identical (and deep-equal) to before this feature.
+  return segments ? { ...base, segments } : base;
 }
 
 /**
@@ -790,6 +953,7 @@ function toTableView(
   element: DataTableElement,
   defaultFont: FontSpec,
   dpi: number,
+  highlightQuery: string,
 ): TableView {
   const leftPx = mmToPx(element.frame.xMm, dpi);
   const widthPx = slice.columns.reduce((sum, c) => sum + c.widthPx, 0);
@@ -806,6 +970,7 @@ function toTableView(
       fontSizePx,
       padding,
       dpi,
+      highlightQuery,
     ),
   );
 
@@ -830,26 +995,26 @@ function toTableRowView(
   fontSizePx: number,
   padding: CellPaddingMm,
   dpi: number,
+  highlightQuery: string,
 ): TableRowView {
   // Header / footer / subtotal / grand-total text is emphasised; detail is plain.
   const emphasised = row.kind !== 'detail';
   const cells: TableCellView[] = columns.map((column, i) => {
     const cell = row.cells[i];
-    return {
+    const text = cell?.text ?? '';
+    const segments = splitHighlightSegments(text, highlightQuery);
+    const base: TableCellView = {
       columnKey: column.key,
-      text: cell?.text ?? '',
+      text,
       leftPx: column.xPx,
       widthPx: column.widthPx,
       cellStyle: tableTextStyle(column.align, fontFamily, fontSizePx, padding, dpi, emphasised),
     };
+    return segments ? { ...base, segments } : base;
   });
 
   const label: TableLabelView | null = row.label
-    ? {
-        text: row.label.text,
-        // A band label spans the table content width; group bands are always bold.
-        labelStyle: tableTextStyle(row.label.align, fontFamily, fontSizePx, padding, dpi, true),
-      }
+    ? buildTableLabelView(row.label, fontFamily, fontSizePx, padding, dpi, highlightQuery)
     : null;
 
   return {
@@ -862,6 +1027,24 @@ function toTableRowView(
     rowStyle: tableRowDecoration(row.kind),
     continued: row.continued ?? false,
   };
+}
+
+/** Builds the {@link TableLabelView} for a group band label, with optional search segments. */
+function buildTableLabelView(
+  label: { readonly text: string; readonly align: ColumnAlign },
+  fontFamily: string,
+  fontSizePx: number,
+  padding: CellPaddingMm,
+  dpi: number,
+  highlightQuery: string,
+): TableLabelView {
+  const base: TableLabelView = {
+    text: label.text,
+    // A band label spans the table content width; group bands are always bold.
+    labelStyle: tableTextStyle(label.align, fontFamily, fontSizePx, padding, dpi, true),
+  };
+  const segments = splitHighlightSegments(label.text, highlightQuery);
+  return segments ? { ...base, segments } : base;
 }
 
 /** The text/box style shared by table cells and band labels (padding, font, align). */

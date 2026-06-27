@@ -664,6 +664,39 @@ export function renderWatermarkPageHtml(): string {
 }
 
 // ---------------------------------------------------------------------------
+// Search-highlight fixture (E8-S6): the plain-table page rendered with an active
+// in-report search query, so the serializer wraps matching runs in
+// `<mark class="rdr-mark">` exactly as the viewer's Find feature paints them. The
+// first mark is promoted to the active style (`rdr-mark--active`) to capture both
+// the match and the current-match treatment in one snapshot. The query matches the
+// "Lamp" products in the table, demonstrating highlights inside data-table cells.
+// ---------------------------------------------------------------------------
+
+/** Zoom for the search-highlight fixture page (A4 portrait), sized to the harness viewport. */
+export const SEARCH_HIGHLIGHT_FIXTURE_ZOOM = 0.75;
+
+/** The in-report search query stamped on the search-highlight fixture. */
+const SEARCH_HIGHLIGHT_QUERY = 'Lamp';
+
+/**
+ * Renders the plain-table fixture page with the {@link SEARCH_HIGHLIGHT_QUERY}
+ * highlight active, then promotes the first match to the active style — the same
+ * `<mark>` markup the viewer paints. Deterministic.
+ */
+export function renderSearchHighlightPageHtml(): string {
+  const doc = paginate(plainTableTemplate, new Map([[PLAIN_TABLE_ID, PLAIN_TABLE_RESOLVED]]));
+  const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+    zoom: SEARCH_HIGHLIGHT_FIXTURE_ZOOM,
+    template: plainTableTemplate,
+    highlightQuery: SEARCH_HIGHLIGHT_QUERY,
+  });
+  const html = serializePageToHtml(vm);
+  // The viewer toggles `rdr-mark--active` on the current match via the live DOM;
+  // mirror that on the first mark so the snapshot shows the active treatment too.
+  return html.replace('<mark class="rdr-mark">', '<mark class="rdr-mark rdr-mark--active">');
+}
+
+// ---------------------------------------------------------------------------
 // Style-isolation fixture (E4-S5): the exact content of an isolated render root —
 // the shared reset/theme/chrome stylesheet plus a serialized report page. The
 // e2e attaches a shadow root to a host element (under hostile global CSS) and
