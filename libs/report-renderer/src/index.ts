@@ -34,3 +34,8 @@ export * from './lib/serialize-page-html';
 // hit-target attribute map to a rendered element/table in design mode, the bridge
 // that keeps the component DOM in lock-step with the headless serializer.
 export * from './lib/rdr-design-attrs';
+
+// Client-side PDF export (E8-S3): a pure, dependency-free renderer that walks the
+// shared page view-model into a selectable-text, vector PDF — the default behind
+// the viewer's swappable `PdfExporter` (ADR 0012).
+export * from './lib/pdf/render-pdf';

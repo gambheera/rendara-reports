@@ -1,6 +1,9 @@
-import type { Watermark } from '@rendara/report-engine';
-import type { PageLayoutMode, ZoomSpec } from '@rendara/report-renderer';
-import type { RendaraValidationError } from '@rendara/report-schema';
+import type { PaginatedDocument, Watermark } from '@rendara/report-engine';
+import type { PageLayoutMode, PdfMetadata, ZoomSpec } from '@rendara/report-renderer';
+import type { RendaraTemplate, RendaraValidationError } from '@rendara/report-schema';
+
+/** Re-exported so host apps that supply a custom {@link PdfExporter} get its typing. */
+export type { PdfMetadata } from '@rendara/report-renderer';
 
 /**
  * Public API surface for `@rendara/report-viewer` (E7-S1).
@@ -58,6 +61,47 @@ export interface ViewerToolbarConfig {
 }
 
 /**
+ * A swappable PDF export strategy (brief §7/§8, E8-S3). The viewer ships a
+ * **default client-side implementation** ({@link defaultPdfExporter}) that builds
+ * a selectable-text, vector PDF in the browser and downloads it. A host can pass
+ * its own implementation via {@link ViewerConfig.pdfExporter} — e.g. one that
+ * POSTs the {@link PdfExportRequest} to a server-side Puppeteer/Playwright route
+ * for pixel-perfect or batch output (the documented optional server path).
+ */
+export interface PdfExporter {
+  /** Produces (and, for the client-side default, downloads) the PDF. */
+  export(request: PdfExportRequest): Promise<PdfExportResult>;
+}
+
+/** Everything an exporter needs to produce a PDF for the current report. */
+export interface PdfExportRequest {
+  /** The paginated document (the viewer's current render). */
+  readonly document: PaginatedDocument;
+  /** The validated template supplying each element's style + content. */
+  readonly template: RendaraTemplate;
+  /** Resolved binding display strings by element id (from the engine resolver). */
+  readonly resolvedValues: ReadonlyMap<string, string>;
+  /** The download filename (always ends in `.pdf`). */
+  readonly filename: string;
+  /** 1-based page numbers to include, in order; omit/undefined for every page. */
+  readonly pages?: readonly number[];
+  /** Whether to stamp the document watermark (when one is configured). */
+  readonly includeWatermark: boolean;
+  /** PDF `/Info` metadata. */
+  readonly metadata?: PdfMetadata;
+}
+
+/** Result of a {@link PdfExporter.export}. */
+export interface PdfExportResult {
+  /** Number of pages written to the PDF. */
+  readonly pageCount: number;
+  /** The filename the PDF was produced under. */
+  readonly filename: string;
+  /** The PDF bytes, when the exporter produced them client-side (the default). */
+  readonly blob?: Blob;
+}
+
+/**
  * Runtime configuration for the viewer (brief §8 `config`). Every field is
  * optional; omitted fields fall back to {@link DEFAULT_VIEWER_CONFIG}.
  */
@@ -72,6 +116,12 @@ export interface ViewerConfig {
   readonly watermark?: Watermark | null;
   /** Single-page vs. continuous scroll. */
   readonly pageMode?: ViewerPageMode;
+  /** Swap the default client-side PDF exporter (E8-S3) for a custom one. */
+  readonly pdfExporter?: PdfExporter;
+  /** Default export filename (the dialog pre-fills it); a `.pdf` suffix is ensured. */
+  readonly exportFilename?: string;
+  /** PDF `/Info` metadata applied to the export (title/author/…). */
+  readonly pdfMetadata?: PdfMetadata;
 }
 
 /**
@@ -119,13 +169,18 @@ export interface ViewerError {
  * `config` over these so every field is concrete at render time, and consumers
  * can reference the same baseline.
  */
-export const DEFAULT_VIEWER_CONFIG: Required<Omit<ViewerConfig, 'locale'>> &
-  Pick<ViewerConfig, 'locale'> = {
+export const DEFAULT_VIEWER_CONFIG: Required<
+  Omit<ViewerConfig, 'locale' | 'pdfExporter' | 'exportFilename' | 'pdfMetadata'>
+> &
+  Pick<ViewerConfig, 'locale' | 'pdfExporter' | 'exportFilename' | 'pdfMetadata'> = {
   locale: undefined,
   initialZoom: 'fit-width',
   toolbar: { visible: true },
   watermark: null,
   pageMode: 'continuous',
+  pdfExporter: undefined,
+  exportFilename: undefined,
+  pdfMetadata: undefined,
 };
 
 /**

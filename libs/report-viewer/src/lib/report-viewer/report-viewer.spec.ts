@@ -3,7 +3,7 @@ import { fireEvent, render } from '@testing-library/angular';
 import { GOLDEN_FIXTURES, type RendaraTemplate } from '@rendara/report-schema';
 
 import { ReportViewer } from './report-viewer';
-import type { PageChangeEvent, RenderedEvent, ViewerError } from './viewer-api';
+import type { PageChangeEvent, PdfExportRequest, RenderedEvent, ViewerError } from './viewer-api';
 
 /**
  * Component tests for the viewer (E7-S1 public API + E7-S2 render pipeline).
@@ -639,5 +639,148 @@ describe('ReportViewer (E8-S2 print)', () => {
     // Each page is a real renderer sheet, not a rasterised image.
     expect(mirror.querySelectorAll('.rdr-page').length).toBe(totalPages(container));
     expect(mirror.querySelector('img.rdr-page')).toBeNull();
+  });
+});
+
+describe('ReportViewer (E8-S3 export PDF)', () => {
+  /** Renders the multi-page golden with the given config and settles the pipeline. */
+  async function renderViewer(config: Record<string, unknown> = {}) {
+    const harness = await render(ReportViewer, {
+      inputs: { template: golden.template, data: multiPageData, config },
+    });
+    await flush();
+    harness.fixture.detectChanges();
+    return harness;
+  }
+
+  function query<T extends Element>(container: HTMLElement, selector: string): T {
+    const found = container.querySelector<T>(selector);
+    if (found === null) {
+      throw new Error(`expected element matching "${selector}"`);
+    }
+    return found;
+  }
+
+  /** Captures the request a swappable stub exporter is invoked with. */
+  function stubExporter() {
+    const calls: PdfExportRequest[] = [];
+    const exporter = {
+      export: vi.fn((request: PdfExportRequest) => {
+        calls.push(request);
+        return Promise.resolve({
+          pageCount: request.document.pageCount,
+          filename: request.filename,
+        });
+      }),
+    };
+    return { exporter, calls };
+  }
+
+  function openDialog(container: HTMLElement): void {
+    fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Export PDF"]'));
+  }
+
+  it('opens the export dialog from the toolbar Export action', async () => {
+    const { container } = await renderViewer();
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+
+    openDialog(container);
+    const dialog = query<HTMLElement>(container, '[role="dialog"]');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.textContent).toContain('Export PDF');
+  });
+
+  it('pre-fills the filename from the document title (slugified, .pdf)', async () => {
+    const { container } = await renderViewer();
+    openDialog(container);
+    // golden invoice name "Invoice — Acme Corp" → "invoice-acme-corp.pdf".
+    expect(query<HTMLInputElement>(container, '#rdr-export-filename').value).toBe(
+      'invoice-acme-corp.pdf',
+    );
+  });
+
+  it('honours config.exportFilename, ensuring a .pdf suffix', async () => {
+    const { container } = await renderViewer({ exportFilename: 'statement' });
+    openDialog(container);
+    expect(query<HTMLInputElement>(container, '#rdr-export-filename').value).toBe('statement.pdf');
+  });
+
+  it('runs a swappable stub exporter with the resolved request and closes', async () => {
+    const { exporter, calls } = stubExporter();
+    const { container, fixture } = await renderViewer({ pdfExporter: exporter });
+
+    openDialog(container);
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-export-btn--primary'));
+    await flush();
+    fixture.detectChanges();
+
+    expect(exporter.export).toHaveBeenCalledTimes(1);
+    expect(calls[0].filename).toBe('invoice-acme-corp.pdf');
+    expect(calls[0].includeWatermark).toBe(false); // no watermark configured
+    expect(calls[0].pages).toBeUndefined(); // "All" scope
+    expect(calls[0].document).toBeTruthy();
+    // The dialog closes after a successful export.
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it('passes only the current page when the Current scope is chosen', async () => {
+    const { exporter, calls } = stubExporter();
+    const { container } = await renderViewer({ pdfExporter: exporter });
+
+    // Move to page 2, then export the current page.
+    fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Next page"]'));
+    openDialog(container);
+    const segs = container.querySelectorAll<HTMLButtonElement>(
+      '[role="dialog"] button[aria-pressed]',
+    );
+    fireEvent.click(segs[1]); // Current
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-export-btn--primary'));
+
+    expect(calls[0].pages).toEqual([2]);
+  });
+
+  it('forwards the watermark choice when a watermark is configured', async () => {
+    const { exporter, calls } = stubExporter();
+    const { container } = await renderViewer({
+      pdfExporter: exporter,
+      watermark: { type: 'text', text: 'DRAFT', opacity: 0.1, angleDeg: -45 },
+    });
+
+    openDialog(container);
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-export-btn--primary'));
+
+    expect(calls[0].includeWatermark).toBe(true);
+  });
+
+  it('cancels without invoking the exporter', async () => {
+    const { exporter } = stubExporter();
+    const { container } = await renderViewer({ pdfExporter: exporter });
+
+    openDialog(container);
+    fireEvent.click(
+      query<HTMLButtonElement>(container, '.rdr-export-btn:not(.rdr-export-btn--primary)'),
+    );
+
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(exporter.export).not.toHaveBeenCalled();
+  });
+
+  it('surfaces an exporter failure through (error) instead of throwing', async () => {
+    const error = vi.fn();
+    const failing = { export: vi.fn(() => Promise.reject(new Error('boom'))) };
+    const { container, fixture } = await render(ReportViewer, {
+      inputs: { template: golden.template, data: multiPageData, config: { pdfExporter: failing } },
+      on: { error },
+    });
+    await flush();
+    fixture.detectChanges();
+
+    openDialog(container);
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-export-btn--primary'));
+    await flush();
+
+    expect(error).toHaveBeenCalledTimes(1);
+    expect(error.mock.calls[0][0].kind).toBe('render');
+    expect(error.mock.calls[0][0].message).toContain('Failed to export PDF');
   });
 });
