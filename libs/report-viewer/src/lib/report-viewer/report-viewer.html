@@ -261,7 +261,19 @@
   </div>
   }
 </div>
-} }
+
+<!-- Export PDF dialog (E8-S3): opened by the toolbar Export action. Its choices
+     are resolved into a PdfExportRequest and run through the swappable exporter. -->
+@if (exportOpen()) {
+<rdr-export-dialog
+  [defaultFilename]="exportFilename()"
+  [totalPages]="totalPages()"
+  [currentPage]="currentPage()"
+  [hasWatermark]="hasWatermark()"
+  (confirmExport)="onExportConfirm($event)"
+  (dismiss)="onExportCancel()"
+/>
+} } }
 
 <!-- Loading: spinner + reassurance + a skeleton page, announced politely. -->
 @case ('loading') {

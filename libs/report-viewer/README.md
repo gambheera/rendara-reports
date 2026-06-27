@@ -34,7 +34,7 @@ export class HostApp {
 | ---------- | ----------------------------------- | ------------------------------------------------------------------------ |
 | `template` | `RendaraTemplate \| string \| null` | A validated template object or a raw JSON string. `null` paints nothing. |
 | `data`     | `unknown`                           | Arbitrary host JSON bound into the template.                             |
-| `config`   | `ViewerConfig`                      | `locale`, `initialZoom`, `toolbar`, `watermark`, `pageMode`.             |
+| `config`   | `ViewerConfig`                      | `locale`, `initialZoom`, `toolbar`, `watermark`, `pageMode`, `pdfExporter`, `exportFilename`, `pdfMetadata`. |
 | `theme`    | `ViewerTheme`                       | `--rdr-*` CSS custom-property overrides for the host.                    |
 
 | Output       | Payload              | Fired when                                       |
@@ -58,3 +58,34 @@ On any change to `template`/`data`/`config` the viewer runs a single, shared
 The pipeline is **total**: a failure surfaces through `(error)` (and the viewer
 paints nothing) rather than throwing. It is the same engine path the designer
 preview uses, so the viewer and the designer agree pixel-for-pixel.
+
+## Export PDF (E8-S3)
+
+The toolbar's **Export PDF** action opens a dialog (filename · pages · include
+watermark) and produces a PDF through a **swappable `PdfExporter`**:
+
+- **Default (client-side):** `defaultPdfExporter` renders a **selectable-text,
+  vector** PDF entirely in the browser via the shared renderer — no server
+  round-trip, no heavy dependency, no rasterisation — and downloads it. It covers
+  text, vector shapes, table grids and a text watermark; it does **not** paint
+  images and approximates typography (base-14 Helvetica). For pixel-perfect
+  output use **Print** or a server-side exporter. See [ADR 0012](../../docs/adr/0012-viewer-pdf-export.md).
+- **Custom / server-side:** pass your own `config.pdfExporter` to, e.g., POST the
+  `PdfExportRequest` to a Puppeteer/Playwright route for pixel-perfect or batch
+  output.
+
+```ts
+// Swap in a server-side exporter (the documented optional path):
+const config: ViewerConfig = {
+  exportFilename: 'invoice.pdf',
+  pdfMetadata: { title: 'Invoice INV-2042', author: 'Acme Corp' },
+  pdfExporter: {
+    async export(req) {
+      const res = await fetch('/api/pdf', { method: 'POST', body: serialize(req) });
+      const blob = await res.blob();
+      download(blob, req.filename);
+      return { pageCount: req.document.pageCount, filename: req.filename, blob };
+    },
+  },
+};
+```

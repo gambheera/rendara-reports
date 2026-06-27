@@ -147,6 +147,26 @@ export const CustomToolbarAction: Story = {
 };
 
 /**
+ * Export PDF (E8-S3): click **Export PDF** in the toolbar to open the dialog
+ * (filename · pages · include watermark) and download a selectable-text, vector
+ * PDF generated in the browser. `config.exportFilename` and `config.pdfMetadata`
+ * pre-fill the filename and the PDF `/Info`; a host can swap in its own
+ * `config.pdfExporter` (e.g. a server-side Puppeteer route).
+ */
+export const Export: Story = {
+  args: {
+    template: invoice.template,
+    data: paginatedData,
+    config: {
+      initialZoom: 'fit-width',
+      pageMode: 'continuous',
+      exportFilename: 'invoice-acme.pdf',
+      pdfMetadata: { title: 'Invoice INV-2042', author: 'Acme Corp' },
+    },
+  },
+};
+
+/**
  * Empty state (E7-S5): no template supplied — the viewer shows the calm
  * "No data to display" placeholder instead of a blank area.
  */

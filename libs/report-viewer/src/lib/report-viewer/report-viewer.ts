@@ -34,6 +34,8 @@ import {
   DEFAULT_TOOLBAR_CONFIG,
   DEFAULT_VIEWER_CONFIG,
   type PageChangeEvent,
+  type PdfExporter,
+  type PdfExportRequest,
   type RenderedEvent,
   type ViewerConfig,
   type ViewerError,
@@ -42,6 +44,8 @@ import {
   type ViewerToolbarConfig,
   type ViewerZoom,
 } from './viewer-api';
+import { defaultPdfExporter } from './default-pdf-exporter';
+import { ExportDialog, type ExportDialogResult } from './export-dialog';
 
 /** The successful arm of {@link PipelineResult}: the model the renderer paints. */
 type RenderModel = Extract<PipelineResult, { status: 'rendered' }>;
@@ -130,12 +134,20 @@ const THUMBNAIL_WIDTH_PX = 104;
  * under `@media print` the interactive shell is hidden and the mirror is shown,
  * with a viewer-owned `break-after: page` putting one sheet on each paper page,
  * over the renderer's shared print stylesheet (ADR 0010/0011). The Print button
- * calls the native {@link onPrint} (`window.print()`), guarded for SSR. Export
- * (E8-S3) and Watermark (E8-S4) remain accessible placeholders.
+ * calls the native {@link onPrint} (`window.print()`), guarded for SSR.
+ *
+ * **E8-S3 wires the Export PDF action** (brief §7). The button opens an accessible
+ * {@link ExportDialog} (filename · pages · quality · include-watermark) whose
+ * choices the component resolves into a {@link PdfExportRequest} and hands to a
+ * **swappable** {@link PdfExporter} — `config.pdfExporter` if the host supplied
+ * one, else the {@link defaultPdfExporter}, which renders a selectable-text,
+ * vector PDF in the browser via the shared renderer (no heavy dependency, no
+ * rasterisation; ADR 0012) and downloads it. Watermark (E8-S4) remains an
+ * accessible placeholder.
  */
 @Component({
   selector: 'rdr-report-viewer',
-  imports: [ReportDocument],
+  imports: [ReportDocument, ExportDialog],
   templateUrl: './report-viewer.html',
   styleUrl: './report-viewer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -261,6 +273,24 @@ export class ReportViewer {
 
   /** Whether the error **View details** disclosure is expanded. */
   protected readonly detailsOpen = signal(false);
+
+  /** Whether the Export PDF dialog is open (E8-S3). */
+  protected readonly exportOpen = signal(false);
+
+  /** Whether a watermark is configured, gating the dialog's include-watermark toggle. */
+  protected readonly hasWatermark = computed<boolean>(
+    () => (this.resolvedConfig().watermark ?? null) !== null,
+  );
+
+  /**
+   * The default export filename: the host's `config.exportFilename` if set, else a
+   * slug of the document title, else `report.pdf`. The `.pdf` suffix is ensured.
+   */
+  protected readonly exportFilename = computed<string>(() => {
+    const configured = this.resolvedConfig().exportFilename;
+    const base = configured ?? slugifyFilename(this.documentTitle()) ?? 'report';
+    return ensurePdfExtension(base);
+  });
 
   /** 1-based page currently in view; `0` when nothing is rendered. Drives the controls. */
   protected readonly currentPage = signal(0);
@@ -404,13 +434,67 @@ export class ReportViewer {
     }
   }
 
-  /**
-   * Toolbar action placeholders (E8-S1). The buttons exist, are configurable and
-   * accessible now; their behaviour is wired by the dedicated stories — Export PDF
-   * in E8-S3 and Watermark in E8-S4 — which replace these no-ops.
-   */
+  /** Opens the Export PDF dialog (E8-S3); a no-op until a document is rendered. */
   protected onExport(): void {
-    // E8-S3: PdfExporter dialog + download.
+    if (this.renderModel()) {
+      this.exportOpen.set(true);
+    }
+  }
+
+  /** Closes the Export PDF dialog without exporting. */
+  protected onExportCancel(): void {
+    this.exportOpen.set(false);
+  }
+
+  /**
+   * Resolves the dialog's choices into a {@link PdfExportRequest} and runs the
+   * active exporter (the host's `config.pdfExporter`, else {@link defaultPdfExporter}).
+   * The exporter owns the download; here we only build the request and close. A
+   * surfaced failure is mapped to the `(error)` output rather than thrown.
+   */
+  protected async onExportConfirm(result: ExportDialogResult): Promise<void> {
+    this.exportOpen.set(false);
+    const model = this.renderModel();
+    if (!model) {
+      return;
+    }
+    const exporter: PdfExporter = this.resolvedConfig().pdfExporter ?? defaultPdfExporter;
+    const request: PdfExportRequest = {
+      document: model.document,
+      template: model.template,
+      resolvedValues: model.resolvedValues,
+      filename: ensurePdfExtension(result.filename),
+      pages: this.resolveExportPages(result),
+      includeWatermark: result.includeWatermark,
+      metadata: this.resolvedConfig().pdfMetadata,
+    };
+    try {
+      await exporter.export(request);
+    } catch (cause) {
+      const detail = cause instanceof Error ? cause.message : String(cause);
+      this.error.emit({ kind: 'render', message: `Failed to export PDF: ${detail}` });
+    }
+  }
+
+  /**
+   * Maps the dialog's page scope to the 1-based page list the exporter expects:
+   * `all` → every page (undefined), `current` → just the visible page, `range` →
+   * the (clamped, ordered) inclusive span.
+   */
+  private resolveExportPages(result: ExportDialogResult): readonly number[] | undefined {
+    const total = this.totalPages();
+    if (result.scope === 'current') {
+      return [clampPage(this.currentPage(), total)];
+    }
+    if (result.scope === 'range') {
+      const from = clampPage(Math.min(result.rangeFrom, result.rangeTo), total);
+      const to = clampPage(Math.max(result.rangeFrom, result.rangeTo), total);
+      if (from === 0 || to === 0) {
+        return undefined;
+      }
+      return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+    }
+    return undefined;
   }
 
   protected onWatermark(): void {
@@ -518,4 +602,25 @@ export class ReportViewer {
         break;
     }
   }
+}
+
+/** Ensures a filename ends in `.pdf` (case-insensitive), appending it when absent. */
+function ensurePdfExtension(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed === '') {
+    return 'report.pdf';
+  }
+  return /\.pdf$/i.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+}
+
+/**
+ * Slugs a document title into a safe filename stem (lowercase, alphanumerics +
+ * dashes), or `null` when there is nothing usable — letting the caller fall back.
+ */
+function slugifyFilename(title: string): string | null {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug.length > 0 ? slug : null;
 }

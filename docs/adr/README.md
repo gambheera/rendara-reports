@@ -33,6 +33,7 @@ have the context behind the code.
 | [0009](0009-renderer-style-isolation.md)              | Renderer style isolation: emulated default + opt-in Shadow DOM   | Accepted | E4-S5 |
 | [0010](0010-renderer-print-stylesheet.md)             | Renderer print stylesheet: a shared `@media print` block         | Accepted | E4-S8 |
 | [0011](0011-viewer-print-path.md)                     | Viewer print path: hidden per-page mirror + native `window.print()` | Accepted | E8-S2 |
+| [0012](0012-viewer-pdf-export.md)                     | Viewer PDF export: dependency-free selectable-text writer behind a swappable `PdfExporter` | Accepted | E8-S3 |
 
 > **Numbering note:** ADRs 0001–0004 were written first, during E0-S5…S8, each
 > recording one Epic 0 tooling decision. The foundational stack/architecture ADR
