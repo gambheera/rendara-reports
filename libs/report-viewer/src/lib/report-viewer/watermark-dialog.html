@@ -1,0 +1,185 @@
+<!-- E8-S4 Watermark dialog. A modal over a dismissing backdrop; the panel traps
+     focus (CDK), is labelled by its title, and cancels on Escape. Matches the
+     watermark mockup tab (reconciled per brief §12.3): Enable · Type · Text /
+     Image · Opacity / Angle / Color · live Preview · Cancel / Apply. -->
+<!-- The backdrop is a decorative click-to-dismiss affordance; keyboard users
+     dismiss via the Cancel button or Escape (handled on the dialog below). -->
+<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+<div class="rdr-wm-backdrop" (click)="onCancel()"></div>
+
+<div
+  class="rdr-wm-dialog"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="titleId"
+  cdkTrapFocus
+  cdkTrapFocusAutoCapture
+  (keydown)="onKeydown($event)"
+>
+  <h2 [id]="titleId" class="rdr-wm-title">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 2.5 6 9a6 6 0 1 0 12 0z" />
+    </svg>
+    Watermark
+  </h2>
+
+  <div class="rdr-wm-body">
+    <!-- Enable -->
+    <div class="rdr-wm-row">
+      <div>
+        <span class="rdr-wm-label rdr-wm-label--inline">Enable watermark</span>
+        <span class="rdr-wm-hint">Stamp every page, print and export</span>
+      </div>
+      <button
+        type="button"
+        class="rdr-wm-toggle"
+        role="switch"
+        [class.rdr-wm-toggle--on]="enabled()"
+        [attr.aria-checked]="enabled()"
+        aria-label="Enable watermark"
+        (click)="toggleEnabled()"
+      >
+        <span class="rdr-wm-toggle-knob"></span>
+      </button>
+    </div>
+
+    <!-- Type -->
+    <span class="rdr-wm-label" id="rdr-wm-type-label">Type</span>
+    <div class="rdr-wm-segmented" role="group" aria-labelledby="rdr-wm-type-label">
+      <button
+        type="button"
+        class="rdr-wm-seg"
+        [class.rdr-wm-seg--active]="type() === 'text'"
+        [attr.aria-pressed]="type() === 'text'"
+        [disabled]="!enabled()"
+        (click)="setType('text')"
+      >
+        Text
+      </button>
+      <button
+        type="button"
+        class="rdr-wm-seg"
+        [class.rdr-wm-seg--active]="type() === 'image'"
+        [attr.aria-pressed]="type() === 'image'"
+        [disabled]="!enabled()"
+        (click)="setType('image')"
+      >
+        Image
+      </button>
+    </div>
+
+    @if (type() === 'text') {
+    <!-- Text caption -->
+    <label class="rdr-wm-label" for="rdr-wm-text">Text</label>
+    <input
+      id="rdr-wm-text"
+      class="rdr-wm-input"
+      type="text"
+      [value]="text()"
+      [disabled]="!enabled()"
+      (input)="onTextInput($event)"
+    />
+    } @else {
+    <!-- Image URL -->
+    <label class="rdr-wm-label" for="rdr-wm-src">Image URL</label>
+    <input
+      id="rdr-wm-src"
+      class="rdr-wm-input"
+      type="text"
+      inputmode="url"
+      placeholder="https://… or data:image/…"
+      [value]="src()"
+      [disabled]="!enabled()"
+      (input)="onSrcInput($event)"
+    />
+    }
+
+    <!-- Opacity / Angle / Color -->
+    <div class="rdr-wm-grid">
+      <div class="rdr-wm-field">
+        <label class="rdr-wm-label" for="rdr-wm-opacity">Opacity ({{ opacityPercent() }}%)</label>
+        <input
+          id="rdr-wm-opacity"
+          class="rdr-wm-range"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          [value]="opacityPercent()"
+          [disabled]="!enabled()"
+          (input)="onOpacityInput($event)"
+        />
+      </div>
+      <div class="rdr-wm-field">
+        <label class="rdr-wm-label" for="rdr-wm-angle">Angle</label>
+        <input
+          id="rdr-wm-angle"
+          class="rdr-wm-input rdr-wm-input--num"
+          type="number"
+          min="-180"
+          max="180"
+          step="1"
+          [value]="angleDeg()"
+          [disabled]="!enabled()"
+          (input)="onAngleInput($event)"
+        />
+      </div>
+      <div class="rdr-wm-field">
+        <label class="rdr-wm-label" for="rdr-wm-color">Color</label>
+        <input
+          id="rdr-wm-color"
+          class="rdr-wm-color"
+          type="color"
+          [value]="color()"
+          [disabled]="!enabled() || type() === 'image'"
+          (input)="onColorInput($event)"
+        />
+      </div>
+    </div>
+
+    <!-- Live preview tile -->
+    <span class="rdr-wm-label">Preview</span>
+    <div class="rdr-wm-preview">
+      <div class="rdr-wm-preview-page">
+        <span class="rdr-wm-preview-line"></span>
+        <span class="rdr-wm-preview-line rdr-wm-preview-line--short"></span>
+        <span class="rdr-wm-preview-line"></span>
+        <span class="rdr-wm-preview-line rdr-wm-preview-line--short"></span>
+        @if (enabled()) {
+        <div class="rdr-wm-preview-mark" [style.opacity]="previewOpacity()">
+          @if (type() === 'image' && src().trim()) {
+          <img
+            class="rdr-wm-preview-image"
+            [src]="src()"
+            alt=""
+            [style.transform]="previewTransform()"
+          />
+          } @else if (type() === 'text') {
+          <span
+            class="rdr-wm-preview-text"
+            [style.transform]="previewTransform()"
+            [style.color]="color()"
+            >{{ previewText() }}</span
+          >
+          }
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="rdr-wm-actions">
+    <button type="button" class="rdr-wm-btn" (click)="onCancel()">Cancel</button>
+    <button type="button" class="rdr-wm-btn rdr-wm-btn--primary" (click)="onApply()">Apply</button>
+  </div>
+</div>

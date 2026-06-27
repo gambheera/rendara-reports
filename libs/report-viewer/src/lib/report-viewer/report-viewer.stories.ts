@@ -167,6 +167,25 @@ export const Export: Story = {
 };
 
 /**
+ * Watermark (E8-S4): click **Watermark** in the toolbar to open the dialog
+ * (enable · text/image · opacity · angle · color, with a live preview) and stamp
+ * a watermark on every page. This story starts with a `config.watermark`
+ * pre-applied, so the diagonal "CONFIDENTIAL" overlay shows on load and seeds the
+ * dialog; the same watermark is honoured in print and PDF export.
+ */
+export const Watermark: Story = {
+  args: {
+    template: invoice.template,
+    data: paginatedData,
+    config: {
+      initialZoom: 'fit-width',
+      pageMode: 'continuous',
+      watermark: { type: 'text', text: 'CONFIDENTIAL', opacity: 0.15, angleDeg: -45 },
+    },
+  },
+};
+
+/**
  * Empty state (E7-S5): no template supplied — the viewer shows the calm
  * "No data to display" placeholder instead of a blank area.
  */

@@ -43,8 +43,8 @@
          Watermark action buttons plus a host custom-action slot (right). Each
          control is shown/hidden by a `config.toolbar` flag; a hidden control is
          absent from the DOM, and `visible: false` drops the whole bar. The
-         action buttons are accessible placeholders here — their behaviour lands
-         in E8-S2 (print), E8-S3 (export) and E8-S4 (watermark). -->
+         action buttons drive E8-S2 (print), E8-S3 (export) and E8-S4
+         (watermark). -->
     @if (toolbar().visible) {
     <div class="rdr-viewer-nav" role="toolbar" aria-label="Viewer toolbar">
       <!-- Left zone: document title. -->
@@ -272,6 +272,17 @@
   [hasWatermark]="hasWatermark()"
   (confirmExport)="onExportConfirm($event)"
   (dismiss)="onExportCancel()"
+/>
+}
+
+<!-- Watermark dialog (E8-S4): opened by the toolbar Watermark action. The
+     resolved watermark is set as the active watermark, which re-runs the pipeline
+     so it stamps the on-screen pages, the print mirror and the PDF export. -->
+@if (watermarkOpen()) {
+<rdr-watermark-dialog
+  [watermark]="activeWatermark()"
+  (applyWatermark)="onWatermarkApply($event)"
+  (dismiss)="onWatermarkCancel()"
 />
 } } }
 
