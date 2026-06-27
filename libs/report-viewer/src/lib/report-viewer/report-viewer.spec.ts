@@ -784,3 +784,133 @@ describe('ReportViewer (E8-S3 export PDF)', () => {
     expect(error.mock.calls[0][0].message).toContain('Failed to export PDF');
   });
 });
+
+describe('ReportViewer (E8-S4 watermark)', () => {
+  /** Renders the multi-page golden with the given config and settles the pipeline. */
+  async function renderViewer(config: Record<string, unknown> = {}) {
+    const harness = await render(ReportViewer, {
+      inputs: { template: golden.template, data: multiPageData, config },
+    });
+    await flush();
+    harness.fixture.detectChanges();
+    return harness;
+  }
+
+  function query<T extends Element>(container: HTMLElement, selector: string): T {
+    const found = container.querySelector<T>(selector);
+    if (found === null) {
+      throw new Error(`expected element matching "${selector}"`);
+    }
+    return found;
+  }
+
+  /** Captures the request a swappable stub exporter is invoked with. */
+  function stubExporter() {
+    const calls: PdfExportRequest[] = [];
+    const exporter = {
+      export: vi.fn((request: PdfExportRequest) => {
+        calls.push(request);
+        return Promise.resolve({
+          pageCount: request.document.pageCount,
+          filename: request.filename,
+        });
+      }),
+    };
+    return { exporter, calls };
+  }
+
+  function openWatermark(container: HTMLElement): void {
+    fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Watermark"]'));
+  }
+
+  it('opens the watermark dialog from the toolbar Watermark action', async () => {
+    const { container } = await renderViewer();
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+
+    openWatermark(container);
+    const dialog = query<HTMLElement>(container, '[role="dialog"]');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.textContent).toContain('Watermark');
+  });
+
+  it('seeds the dialog from config.watermark', async () => {
+    const { container } = await renderViewer({
+      watermark: { type: 'text', text: 'DRAFT', opacity: 0.2, angleDeg: -45 },
+    });
+    openWatermark(container);
+    expect(query<HTMLInputElement>(container, '#rdr-wm-text').value).toBe('DRAFT');
+  });
+
+  it('stamps an applied text watermark on every on-screen page', async () => {
+    const { container, fixture } = await renderViewer();
+    // No watermark configured → none painted.
+    expect(container.querySelector('.rdr-watermark-text')).toBeNull();
+
+    openWatermark(container);
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-wm-toggle'));
+    fireEvent.input(query<HTMLInputElement>(container, '#rdr-wm-text'), {
+      target: { value: 'CONFIDENTIAL' },
+    });
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-wm-btn--primary'));
+    await flush();
+    fixture.detectChanges();
+
+    // The dialog closed and the watermark now paints (screen pages + print mirror).
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    const marks = container.querySelectorAll('.rdr-watermark-text');
+    expect(marks.length).toBeGreaterThan(0);
+    expect(marks[0].textContent).toContain('CONFIDENTIAL');
+  });
+
+  it('carries an applied watermark into the PDF export', async () => {
+    const { exporter, calls } = stubExporter();
+    const { container, fixture } = await renderViewer({ pdfExporter: exporter });
+
+    // Apply a watermark through the dialog.
+    openWatermark(container);
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-wm-toggle'));
+    fireEvent.input(query<HTMLInputElement>(container, '#rdr-wm-text'), {
+      target: { value: 'PAID' },
+    });
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-wm-btn--primary'));
+    await flush();
+    fixture.detectChanges();
+
+    // Then export — the export dialog defaults include-watermark on, and the
+    // paginated document now carries the watermark.
+    fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Export PDF"]'));
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-export-btn--primary'));
+    await flush();
+
+    expect(calls[0].includeWatermark).toBe(true);
+    expect(calls[0].document.watermark).toMatchObject({ type: 'text', text: 'PAID' });
+  });
+
+  it('clears the watermark when applied with the toggle off', async () => {
+    const { container, fixture } = await renderViewer({
+      watermark: { type: 'text', text: 'DRAFT', opacity: 0.2, angleDeg: -45 },
+    });
+    expect(container.querySelector('.rdr-watermark-text')).toBeTruthy();
+
+    openWatermark(container);
+    // Turn the enable toggle off, then apply.
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-wm-toggle'));
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-wm-btn--primary'));
+    await flush();
+    fixture.detectChanges();
+
+    expect(container.querySelector('.rdr-watermark-text')).toBeNull();
+  });
+
+  it('leaves the watermark unchanged when the dialog is cancelled', async () => {
+    const { container, fixture } = await renderViewer();
+    openWatermark(container);
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-wm-toggle'));
+    fireEvent.click(query<HTMLButtonElement>(container, '.rdr-wm-btn:not(.rdr-wm-btn--primary)'));
+    await flush();
+    fixture.detectChanges();
+
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(container.querySelector('.rdr-watermark-text')).toBeNull();
+  });
+});

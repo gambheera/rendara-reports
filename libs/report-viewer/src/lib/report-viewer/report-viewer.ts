@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { type RendaraTemplate, type RendaraValidationError } from '@rendara/report-schema';
 import { ReportDocument, type ViewportSize } from '@rendara/report-renderer';
+import type { Watermark } from '@rendara/report-engine';
 
 import { runPipeline, type PipelineResult } from './report-pipeline';
 import {
@@ -46,6 +47,7 @@ import {
 } from './viewer-api';
 import { defaultPdfExporter } from './default-pdf-exporter';
 import { ExportDialog, type ExportDialogResult } from './export-dialog';
+import { WatermarkDialog, type WatermarkDialogResult } from './watermark-dialog';
 
 /** The successful arm of {@link PipelineResult}: the model the renderer paints. */
 type RenderModel = Extract<PipelineResult, { status: 'rendered' }>;
@@ -142,12 +144,21 @@ const THUMBNAIL_WIDTH_PX = 104;
  * **swappable** {@link PdfExporter} — `config.pdfExporter` if the host supplied
  * one, else the {@link defaultPdfExporter}, which renders a selectable-text,
  * vector PDF in the browser via the shared renderer (no heavy dependency, no
- * rasterisation; ADR 0012) and downloads it. Watermark (E8-S4) remains an
- * accessible placeholder.
+ * rasterisation; ADR 0012) and downloads it.
+ *
+ * **E8-S4 wires the Watermark action** (brief §8). The button opens an accessible
+ * {@link WatermarkDialog} (enable · text/image · opacity · angle · color) whose
+ * resolved {@link Watermark} the component holds in {@link activeWatermark} — a
+ * signal seeded from `config.watermark` and re-synced when the host changes it,
+ * but otherwise owned by the dialog so a user-set watermark persists across
+ * re-renders. Because the pipeline reads {@link activeWatermark}, the watermark
+ * flows through the *same* render path to the on-screen pages, the print mirror
+ * (E8-S2) and the PDF export (E8-S3) alike — stamped on every page, honoured in
+ * print and export (story acceptance).
  */
 @Component({
   selector: 'rdr-report-viewer',
-  imports: [ReportDocument, ExportDialog],
+  imports: [ReportDocument, ExportDialog, WatermarkDialog],
   templateUrl: './report-viewer.html',
   styleUrl: './report-viewer.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -277,10 +288,19 @@ export class ReportViewer {
   /** Whether the Export PDF dialog is open (E8-S3). */
   protected readonly exportOpen = signal(false);
 
-  /** Whether a watermark is configured, gating the dialog's include-watermark toggle. */
-  protected readonly hasWatermark = computed<boolean>(
-    () => (this.resolvedConfig().watermark ?? null) !== null,
-  );
+  /** Whether the Watermark dialog is open (E8-S4). */
+  protected readonly watermarkOpen = signal(false);
+
+  /**
+   * The watermark stamped on every page (E8-S4): seeded from `config.watermark`,
+   * re-synced when the host changes it, but otherwise owned by the
+   * {@link WatermarkDialog} so a user-set watermark persists across re-renders.
+   * The pipeline reads this, so it flows to screen, print and export alike.
+   */
+  protected readonly activeWatermark = signal<Watermark | null>(null);
+
+  /** Whether a watermark is configured, gating the export dialog's include-watermark toggle. */
+  protected readonly hasWatermark = computed<boolean>(() => this.activeWatermark() !== null);
 
   /**
    * The default export filename: the host's `config.exportFilename` if set, else a
@@ -333,11 +353,15 @@ export class ReportViewer {
   /** The last host-configured initial zoom, so {@link zoomSpec} re-syncs only on a real change. */
   private lastInitialZoom: ViewerZoom | undefined;
 
+  /** The last host-configured watermark, so {@link activeWatermark} re-syncs only on a real change. */
+  private lastConfiguredWatermark: Watermark | null | undefined;
+
   constructor() {
     effect(() => {
       const template = this.template();
       const data = this.data();
       const config = this.resolvedConfig();
+      const watermark = this.activeWatermark();
       const pass = ++this.token;
 
       // Show the loading state while this pass is in flight. The token guard in
@@ -346,7 +370,7 @@ export class ReportViewer {
 
       void runPipeline(template, data, {
         locale: config.locale,
-        watermark: config.watermark ?? null,
+        watermark,
       }).then((result) => {
         // Discard if a newer pass started while this one was resolving.
         if (pass !== this.token) {
@@ -364,6 +388,17 @@ export class ReportViewer {
       if (initial !== this.lastInitialZoom) {
         this.lastInitialZoom = initial;
         this.zoomSpec.set(initial);
+      }
+    });
+
+    // Seed the active watermark from the host's `config.watermark`, and re-sync
+    // only when the host changes it — so a watermark the user sets through the
+    // dialog persists across re-renders, but a deliberate config change applies.
+    effect(() => {
+      const configured = this.resolvedConfig().watermark ?? null;
+      if (configured !== this.lastConfiguredWatermark) {
+        this.lastConfiguredWatermark = configured;
+        this.activeWatermark.set(configured);
       }
     });
 
@@ -497,8 +532,24 @@ export class ReportViewer {
     return undefined;
   }
 
+  /** Opens the Watermark dialog (E8-S4). */
   protected onWatermark(): void {
-    // E8-S4: watermark toggle/config dialog.
+    this.watermarkOpen.set(true);
+  }
+
+  /** Closes the Watermark dialog without changing the watermark. */
+  protected onWatermarkCancel(): void {
+    this.watermarkOpen.set(false);
+  }
+
+  /**
+   * Applies the dialog's resolved watermark (or `null` to clear it) and closes.
+   * Setting {@link activeWatermark} re-runs the pipeline, so the new watermark is
+   * stamped on the on-screen pages, the print mirror and the PDF export alike.
+   */
+  protected onWatermarkApply(result: WatermarkDialogResult): void {
+    this.watermarkOpen.set(false);
+    this.activeWatermark.set(result.watermark);
   }
 
   /** Toggles the error **View details** disclosure (E7-S5). */

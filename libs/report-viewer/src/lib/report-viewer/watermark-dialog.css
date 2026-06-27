@@ -1,0 +1,303 @@
+/**
+ * Watermark dialog styles (E8-S4). Scoped to the component (emulated
+ * encapsulation) and built entirely on the viewer's own `--rdr-viewer-*` tokens
+ * (declared on the host in report-viewer.css), so the dialog never leaks into the
+ * host app and host CSS can re-theme it. Accent indigo #4F46E5 per brief §12.3.
+ */
+
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--rdr-viewer-text, #111827);
+}
+
+.rdr-wm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(17 24 39 / 35%);
+}
+
+.rdr-wm-dialog {
+  position: relative;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--rdr-viewer-surface, #ffffff);
+  border-radius: 12px;
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 10%),
+    0 4px 6px -4px rgb(0 0 0 / 10%);
+}
+
+.rdr-wm-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 16px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rdr-viewer-accent, #4f46e5);
+  border-bottom: 1px solid var(--rdr-viewer-hairline, #e5e7eb);
+}
+
+.rdr-wm-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rdr-wm-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+  margin-top: 8px;
+}
+
+.rdr-wm-label--inline {
+  display: block;
+  color: var(--rdr-viewer-text, #111827);
+  font-size: 13px;
+  margin-top: 0;
+}
+
+.rdr-wm-hint {
+  font-size: 12px;
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+}
+
+.rdr-wm-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--rdr-viewer-input-border, #d1d5db);
+  border-radius: 6px;
+  background: var(--rdr-viewer-surface, #ffffff);
+  color: var(--rdr-viewer-text, #111827);
+}
+
+.rdr-wm-input--num {
+  width: 64px;
+  text-align: center;
+}
+
+.rdr-wm-input:focus-visible,
+.rdr-wm-seg:focus-visible,
+.rdr-wm-range:focus-visible,
+.rdr-wm-color:focus-visible,
+.rdr-wm-toggle:focus-visible,
+.rdr-wm-btn:focus-visible {
+  outline: 2px solid var(--rdr-viewer-accent, #4f46e5);
+  outline-offset: 1px;
+}
+
+.rdr-wm-input:disabled {
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+  background: var(--rdr-viewer-panel, #f9fafb);
+}
+
+.rdr-wm-segmented {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--rdr-viewer-panel, #f9fafb);
+  border: 1px solid var(--rdr-viewer-input-border, #d1d5db);
+  border-radius: 8px;
+}
+
+.rdr-wm-seg {
+  flex: 1;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rdr-wm-seg--active {
+  background: var(--rdr-viewer-surface, #ffffff);
+  color: var(--rdr-viewer-accent, #4f46e5);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+.rdr-wm-seg:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rdr-wm-grid {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 4px;
+}
+
+.rdr-wm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rdr-wm-field .rdr-wm-label {
+  margin-top: 0;
+}
+
+.rdr-wm-range {
+  width: 100%;
+  accent-color: var(--rdr-viewer-accent, #4f46e5);
+  cursor: pointer;
+}
+
+.rdr-wm-color {
+  width: 44px;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid var(--rdr-viewer-input-border, #d1d5db);
+  border-radius: 6px;
+  background: var(--rdr-viewer-surface, #ffffff);
+  cursor: pointer;
+}
+
+.rdr-wm-color:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rdr-wm-range:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rdr-wm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rdr-wm-toggle {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--rdr-viewer-input-border, #d1d5db);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.rdr-wm-toggle--on {
+  background: var(--rdr-viewer-accent, #4f46e5);
+}
+
+.rdr-wm-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 0.12s ease;
+}
+
+.rdr-wm-toggle--on .rdr-wm-toggle-knob {
+  transform: translateX(18px);
+}
+
+.rdr-wm-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 140px;
+  background: var(--rdr-viewer-panel, #f9fafb);
+  border: 1px solid var(--rdr-viewer-hairline, #e5e7eb);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rdr-wm-preview-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  width: 96px;
+  height: 124px;
+  padding: 12px;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid var(--rdr-viewer-hairline, #e5e7eb);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+.rdr-wm-preview-line {
+  height: 4px;
+  border-radius: 2px;
+  background: #f1f5f9;
+}
+
+.rdr-wm-preview-line--short {
+  width: 60%;
+}
+
+.rdr-wm-preview-mark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.rdr-wm-preview-text {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+}
+
+.rdr-wm-preview-image {
+  max-width: 60%;
+  max-height: 60%;
+}
+
+.rdr-wm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--rdr-viewer-hairline, #e5e7eb);
+}
+
+.rdr-wm-btn {
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+  cursor: pointer;
+}
+
+.rdr-wm-btn--primary {
+  background: var(--rdr-viewer-accent, #4f46e5);
+  color: #ffffff;
+}

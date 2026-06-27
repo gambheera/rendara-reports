@@ -9,3 +9,6 @@ export * from './lib/report-viewer/viewer-api';
 // The default client-side PDF exporter (E8-S3): renders a selectable-text vector
 // PDF in the browser and downloads it. Exported so hosts can wrap/reuse it.
 export { defaultPdfExporter } from './lib/report-viewer/default-pdf-exporter';
+
+// The watermark dialog result type (E8-S4), for hosts wiring custom watermark UI.
+export type { WatermarkDialogResult } from './lib/report-viewer/watermark-dialog';

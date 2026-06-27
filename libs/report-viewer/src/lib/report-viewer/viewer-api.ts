@@ -5,6 +5,9 @@ import type { RendaraTemplate, RendaraValidationError } from '@rendara/report-sc
 /** Re-exported so host apps that supply a custom {@link PdfExporter} get its typing. */
 export type { PdfMetadata } from '@rendara/report-renderer';
 
+/** Re-exported so hosts can type `config.watermark` (E8-S4) without reaching into the engine. */
+export type { Watermark } from '@rendara/report-engine';
+
 /**
  * Public API surface for `@rendara/report-viewer` (E7-S1).
  *
