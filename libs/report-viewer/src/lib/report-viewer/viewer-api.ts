@@ -61,6 +61,8 @@ export interface ViewerToolbarConfig {
   readonly export?: boolean;
   /** Show the Watermark action button (behaviour: E8-S4). Default `true`. */
   readonly watermark?: boolean;
+  /** Show the Download-source action button (behaviour: E8-S5). Default `true`. */
+  readonly source?: boolean;
 }
 
 /**
@@ -125,6 +127,8 @@ export interface ViewerConfig {
   readonly exportFilename?: string;
   /** PDF `/Info` metadata applied to the export (title/author/…). */
   readonly pdfMetadata?: PdfMetadata;
+  /** Filename for the Download-source action (E8-S5); a `.json` suffix is ensured. */
+  readonly sourceFilename?: string;
 }
 
 /**
@@ -173,9 +177,12 @@ export interface ViewerError {
  * can reference the same baseline.
  */
 export const DEFAULT_VIEWER_CONFIG: Required<
-  Omit<ViewerConfig, 'locale' | 'pdfExporter' | 'exportFilename' | 'pdfMetadata'>
+  Omit<ViewerConfig, 'locale' | 'pdfExporter' | 'exportFilename' | 'pdfMetadata' | 'sourceFilename'>
 > &
-  Pick<ViewerConfig, 'locale' | 'pdfExporter' | 'exportFilename' | 'pdfMetadata'> = {
+  Pick<
+    ViewerConfig,
+    'locale' | 'pdfExporter' | 'exportFilename' | 'pdfMetadata' | 'sourceFilename'
+  > = {
   locale: undefined,
   initialZoom: 'fit-width',
   toolbar: { visible: true },
@@ -184,6 +191,7 @@ export const DEFAULT_VIEWER_CONFIG: Required<
   pdfExporter: undefined,
   exportFilename: undefined,
   pdfMetadata: undefined,
+  sourceFilename: undefined,
 };
 
 /**
@@ -199,4 +207,5 @@ export const DEFAULT_TOOLBAR_CONFIG: Required<ViewerToolbarConfig> = {
   print: true,
   export: true,
   watermark: true,
+  source: true,
 };

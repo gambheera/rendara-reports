@@ -1,5 +1,6 @@
 import { renderDocumentToPdf } from '@rendara/report-renderer';
 
+import { downloadBlob } from './file-download';
 import type { PdfExporter, PdfExportRequest, PdfExportResult } from './viewer-api';
 
 /**
@@ -30,35 +31,10 @@ export const defaultPdfExporter: PdfExporter = {
     });
 
     const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
-    triggerDownload(blob, request.filename);
+    // Download via the shared, SSR-guarded helper (a no-op outside the browser,
+    // so the exporter still returns the bytes without throwing).
+    downloadBlob(blob, request.filename);
 
     return Promise.resolve({ pageCount, filename: request.filename, blob });
   },
 };
-
-/**
- * Downloads a blob under `filename` via a transient object-URL anchor. A no-op in
- * a runtime without the DOM/`URL` APIs (SSR), so the exporter never throws there.
- */
-function triggerDownload(blob: Blob, filename: string): void {
-  if (
-    typeof document === 'undefined' ||
-    typeof URL === 'undefined' ||
-    typeof URL.createObjectURL !== 'function'
-  ) {
-    return;
-  }
-  const url = URL.createObjectURL(blob);
-  try {
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.rel = 'noopener';
-    anchor.style.display = 'none';
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
