@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.lib.json",
+  "compilerOptions": {
+    "declarationMap": false,
+    "baseUrl": "../..",
+    "paths": {
+      "@rendara/report-schema": ["dist/libs/report-schema/types/rendara-report-schema.d.ts"]
+    }
+  }
+}

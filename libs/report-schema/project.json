@@ -5,6 +5,14 @@
   "projectType": "library",
   "tags": ["scope:schema", "type:util"],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:package",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "options": {
+        "project": "libs/report-schema/ng-package.json",
+        "tsConfig": "libs/report-schema/tsconfig.lib.json"
+      }
+    },
     "generate-schema": {
       "executor": "nx:run-commands",
       "options": {

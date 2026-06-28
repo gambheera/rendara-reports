@@ -5,6 +5,15 @@
   "projectType": "library",
   "tags": ["scope:engine", "type:util"],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:package",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "dependsOn": ["^build"],
+      "options": {
+        "project": "libs/report-engine/ng-package.json",
+        "tsConfig": "libs/report-engine/tsconfig.lib.prod.json"
+      }
+    },
     "test": {
       "outputs": [
         "{projectRoot}/{options.coverage.reportsDirectory}",

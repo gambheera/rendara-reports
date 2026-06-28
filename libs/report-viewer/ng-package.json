@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/ng-packagr/ng-package.schema.json",
+  "dest": "../../dist/libs/report-viewer",
+  "lib": {
+    "entryFile": "src/index.ts"
+  },
+  "allowedNonPeerDependencies": [
+    "@rendara/report-engine",
+    "@rendara/report-renderer",
+    "@rendara/report-schema",
+    "ajv",
+    "ajv-formats",
+    "jsonata"
+  ]
+}

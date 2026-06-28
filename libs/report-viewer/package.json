@@ -4,7 +4,21 @@
   "description": "Embeddable Angular report viewer for Rendara Reports (renderer + toolbar + public API).",
   "license": "MIT",
   "private": false,
+  "sideEffects": false,
   "publishConfig": {
     "access": "public"
+  },
+  "peerDependencies": {
+    "@angular/cdk": "^21.0.0",
+    "@angular/core": "^21.0.0"
+  },
+  "dependencies": {
+    "@rendara/report-engine": "workspace:*",
+    "@rendara/report-renderer": "workspace:*",
+    "@rendara/report-schema": "workspace:*",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "jsonata": "2.2.1",
+    "tslib": "^2.3.0"
   }
 }

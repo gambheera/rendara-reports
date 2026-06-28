@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.lib.json",
+  "compilerOptions": {
+    "declarationMap": false,
+    "baseUrl": "../..",
+    "paths": {
+      "@rendara/report-engine": ["dist/libs/report-engine/types/rendara-report-engine.d.ts"],
+      "@rendara/report-renderer": ["dist/libs/report-renderer/types/rendara-report-renderer.d.ts"],
+      "@rendara/report-schema": ["dist/libs/report-schema/types/rendara-report-schema.d.ts"]
+    }
+  },
+  "angularCompilerOptions": {
+    "compilationMode": "partial"
+  }
+}
