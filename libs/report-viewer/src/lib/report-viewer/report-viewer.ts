@@ -179,6 +179,16 @@ const THUMBNAIL_WIDTH_PX = 104;
  * the `N / total` count and next/prev navigation are correct in any page mode; the
  * active match is painted + scrolled into view by a live-DOM {@link afterRenderEffect}.
  * The whole control is gated by the `config.toolbar.search` flag.
+ *
+ * **E8-S7 makes the thumbnail rail optional** (optional viewer extra). The left
+ * rail itself (mini single-page renders, active-page outline, click-to-jump) has
+ * existed since E7-S3; this story makes it *optional* per the brief-§12.2 "optional
+ * left thumbnail rail". A toolbar toggle button ({@link toggleThumbnails}) shows /
+ * hides the rail at runtime via {@link thumbnailsOpen} — a hidden rail is absent
+ * from the DOM, not just visually collapsed. The rail's initial visibility comes
+ * from `config.thumbnails` (seeded like {@link initialZoom}: a user toggle persists
+ * across re-renders, but a deliberate config change re-syncs), and the toggle
+ * button is gated by the `config.toolbar.thumbnails` flag like every other action.
  */
 @Component({
   selector: 'rdr-report-viewer',
@@ -365,6 +375,14 @@ export class ReportViewer {
     heightPx: THUMBNAIL_WIDTH_PX * 100,
   }));
 
+  /**
+   * Whether the left thumbnail rail is shown (E8-S7). Seeded from
+   * `config.thumbnails` and re-synced when the host changes it, but otherwise owned
+   * by the toolbar toggle so a user's choice persists across re-renders. When
+   * `false` the rail is absent from the DOM entirely.
+   */
+  protected readonly thumbnailsOpen = signal(true);
+
   /** The scrolling page area; present only once a document is rendered. */
   private readonly scrollArea = viewChild<ElementRef<HTMLElement>>('scrollArea');
 
@@ -440,6 +458,9 @@ export class ReportViewer {
   /** The last host-configured watermark, so {@link activeWatermark} re-syncs only on a real change. */
   private lastConfiguredWatermark: Watermark | null | undefined;
 
+  /** The last host-configured rail visibility, so {@link thumbnailsOpen} re-syncs only on a real change. */
+  private lastConfiguredThumbnails: boolean | undefined;
+
   constructor() {
     effect(() => {
       const template = this.template();
@@ -483,6 +504,17 @@ export class ReportViewer {
       if (configured !== this.lastConfiguredWatermark) {
         this.lastConfiguredWatermark = configured;
         this.activeWatermark.set(configured);
+      }
+    });
+
+    // Seed the rail visibility from the host's `config.thumbnails`, and re-sync
+    // only when the host changes it — so a user's toggle persists across
+    // re-renders, but a deliberate config change still applies (E8-S7).
+    effect(() => {
+      const configured = this.resolvedConfig().thumbnails ?? true;
+      if (configured !== this.lastConfiguredThumbnails) {
+        this.lastConfiguredThumbnails = configured;
+        this.thumbnailsOpen.set(configured);
       }
     });
 
@@ -784,6 +816,11 @@ export class ReportViewer {
     if (typeof mark.scrollIntoView === 'function') {
       mark.scrollIntoView({ block: 'center', inline: 'nearest' });
     }
+  }
+
+  /** Shows or hides the left thumbnail rail (E8-S7); a hidden rail leaves the DOM. */
+  protected toggleThumbnails(): void {
+    this.thumbnailsOpen.update((open) => !open);
   }
 
   /** Toggles the error **View details** disclosure (E7-S5). */

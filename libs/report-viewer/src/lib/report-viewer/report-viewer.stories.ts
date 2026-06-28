@@ -26,8 +26,9 @@ const paginatedData = {
  * binds and paginates the template+data through the shared engine and paints the
  * result with the shared renderer. It carries the **configurable toolbar**
  * (E8-S1): a title, page-navigation and zoom groups, Print / Export / Watermark /
- * Download-source (E8-S5) / Find (E8-S6) action buttons and a host custom-action
- * slot, each shown/hidden via `config.toolbar`. These stories feed it the canonical invoice
+ * Download-source (E8-S5) / Find (E8-S6) / thumbnail-rail toggle (E8-S7) action
+ * buttons and a host custom-action slot, each shown/hidden via `config.toolbar`.
+ * These stories feed it the canonical invoice
  * golden so the body shows a live, paginated report.
  */
 const meta: Meta<ReportViewer> = {
@@ -216,6 +217,21 @@ export const Search: Story = {
     template: invoice.template,
     data: invoice.data,
     config: { initialZoom: 'fit-width', pageMode: 'continuous' },
+  },
+};
+
+/**
+ * Optional thumbnail rail (E8-S7): the left page rail is now optional. The
+ * **Toggle page thumbnails** toolbar button shows/hides it at runtime (a hidden
+ * rail leaves the DOM), and its initial visibility is `config.thumbnails`. Here it
+ * starts hidden, giving the report the full width; click the toggle to reveal it.
+ * Hide the toggle button itself with `config.toolbar.thumbnails: false`.
+ */
+export const NoThumbnailRail: Story = {
+  args: {
+    template: invoice.template,
+    data: invoice.data,
+    config: { initialZoom: 'fit-width', pageMode: 'continuous', thumbnails: false },
   },
 };
 
