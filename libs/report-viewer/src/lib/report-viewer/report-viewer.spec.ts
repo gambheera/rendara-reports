@@ -1013,3 +1013,149 @@ describe('ReportViewer (E8-S5 download source)', () => {
     expect(filenames).toHaveLength(0);
   });
 });
+
+describe('ReportViewer (E8-S6 in-report search)', () => {
+  /** Renders the golden invoice with the given config and settles the pipeline. */
+  async function renderViewer(config: Record<string, unknown> = {}) {
+    const harness = await render(ReportViewer, {
+      inputs: { template: golden.template, data: golden.data, config },
+    });
+    await flush();
+    harness.fixture.detectChanges();
+    return harness;
+  }
+
+  function query<T extends Element>(container: HTMLElement, selector: string): T {
+    const found = container.querySelector<T>(selector);
+    if (found === null) {
+      throw new Error(`expected element matching "${selector}"`);
+    }
+    return found;
+  }
+
+  /** Types `value` into the open Find input and settles a render. */
+  async function typeQuery(
+    harness: Awaited<ReturnType<typeof renderViewer>>,
+    value: string,
+  ): Promise<void> {
+    const input = query<HTMLInputElement>(harness.container, '.rdr-viewer-search-input');
+    fireEvent.input(input, { target: { value } });
+    await flush();
+    harness.fixture.detectChanges();
+  }
+
+  it('renders the Find toggle by default', async () => {
+    const { container } = await renderViewer();
+    expect(container.querySelector('[aria-label="Find in report"]')).toBeTruthy();
+  });
+
+  it('hides the Find toggle when config.toolbar.search is false', async () => {
+    const { container } = await renderViewer({ toolbar: { search: false } });
+    expect(container.querySelector('[aria-label="Find in report"]')).toBeNull();
+    // Other actions are untouched.
+    expect(container.querySelector('[aria-label="Print"]')).toBeTruthy();
+  });
+
+  it('opens and closes the Find bar from the toolbar toggle', async () => {
+    const harness = await renderViewer();
+    const { container, fixture } = harness;
+    expect(container.querySelector('.rdr-viewer-search')).toBeNull();
+
+    fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Find in report"]'));
+    fixture.detectChanges();
+    expect(container.querySelector('.rdr-viewer-search')).toBeTruthy();
+    expect(
+      query<HTMLButtonElement>(container, '[aria-label="Find in report"]').getAttribute(
+        'aria-pressed',
+      ),
+    ).toBe('true');
+
+    fireEvent.click(query<HTMLButtonElement>(container, '[aria-label="Find in report"]'));
+    fixture.detectChanges();
+    expect(container.querySelector('.rdr-viewer-search')).toBeNull();
+  });
+
+  it('highlights matches on screen and shows the match count', async () => {
+    const harness = await renderViewer();
+    fireEvent.click(query<HTMLButtonElement>(harness.container, '[aria-label="Find in report"]'));
+    harness.fixture.detectChanges();
+
+    await typeQuery(harness, 'invoice');
+
+    const marks = harness.container.querySelectorAll('.rdr-viewer-scroll .rdr-mark');
+    expect(marks.length).toBeGreaterThan(0);
+
+    const count = query<HTMLElement>(harness.container, '.rdr-viewer-search-count');
+    // "1 / N" — active on the first match, total ≥ the number of painted marks.
+    expect(count.textContent?.trim()).toMatch(/^1 \/ \d+$/);
+  });
+
+  it('reports "0 / 0" for a query with no matches and paints no marks', async () => {
+    const harness = await renderViewer();
+    fireEvent.click(query<HTMLButtonElement>(harness.container, '[aria-label="Find in report"]'));
+    harness.fixture.detectChanges();
+
+    await typeQuery(harness, 'zzzznomatch');
+
+    expect(harness.container.querySelectorAll('.rdr-viewer-scroll .rdr-mark')).toHaveLength(0);
+    expect(
+      query<HTMLElement>(harness.container, '.rdr-viewer-search-count').textContent?.trim(),
+    ).toBe('0 / 0');
+    // Prev/next are disabled with no matches.
+    expect(query<HTMLButtonElement>(harness.container, '[aria-label="Next match"]').disabled).toBe(
+      true,
+    );
+  });
+
+  it('steps the active match with next/prev, wrapping the count', async () => {
+    const harness = await renderViewer();
+    fireEvent.click(query<HTMLButtonElement>(harness.container, '[aria-label="Find in report"]'));
+    harness.fixture.detectChanges();
+    await typeQuery(harness, 'invoice');
+
+    const countEl = query<HTMLElement>(harness.container, '.rdr-viewer-search-count');
+    const total = Number(countEl.textContent?.trim().split('/')[1]);
+    expect(total).toBeGreaterThan(0);
+
+    fireEvent.click(query<HTMLButtonElement>(harness.container, '[aria-label="Next match"]'));
+    harness.fixture.detectChanges();
+    const expectedSecond = total > 1 ? 2 : 1;
+    expect(countEl.textContent?.trim()).toBe(`${expectedSecond} / ${total}`);
+
+    // From the first match, Previous wraps to the last.
+    fireEvent.click(query<HTMLButtonElement>(harness.container, '[aria-label="Previous match"]'));
+    fireEvent.click(query<HTMLButtonElement>(harness.container, '[aria-label="Previous match"]'));
+    harness.fixture.detectChanges();
+    expect(countEl.textContent?.trim()).toBe(`${total} / ${total}`);
+  });
+
+  it('clears the query and removes marks when the Find bar is closed', async () => {
+    const harness = await renderViewer();
+    fireEvent.click(query<HTMLButtonElement>(harness.container, '[aria-label="Find in report"]'));
+    harness.fixture.detectChanges();
+    await typeQuery(harness, 'invoice');
+    expect(
+      harness.container.querySelectorAll('.rdr-viewer-scroll .rdr-mark').length,
+    ).toBeGreaterThan(0);
+
+    fireEvent.click(query<HTMLButtonElement>(harness.container, '[aria-label="Close find"]'));
+    await flush();
+    harness.fixture.detectChanges();
+
+    expect(harness.container.querySelector('.rdr-viewer-search')).toBeNull();
+    expect(harness.container.querySelectorAll('.rdr-viewer-scroll .rdr-mark')).toHaveLength(0);
+  });
+
+  it('does not highlight the print mirror (Find is a screen-only aid)', async () => {
+    const harness = await renderViewer();
+    fireEvent.click(query<HTMLButtonElement>(harness.container, '[aria-label="Find in report"]'));
+    harness.fixture.detectChanges();
+    await typeQuery(harness, 'invoice');
+
+    // Screen pages have marks; the hidden print mirror has none.
+    expect(
+      harness.container.querySelectorAll('.rdr-viewer-scroll .rdr-mark').length,
+    ).toBeGreaterThan(0);
+    expect(harness.container.querySelectorAll('.rdr-viewer-print .rdr-mark')).toHaveLength(0);
+  });
+});

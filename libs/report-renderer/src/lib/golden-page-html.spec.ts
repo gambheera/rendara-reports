@@ -10,6 +10,7 @@ import {
   renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
   renderPrintStylesheetCss,
+  renderSearchHighlightPageHtml,
   renderStyleIsolationContent,
   renderWatermarkPageHtml,
 } from './golden-page-html';
@@ -158,6 +159,22 @@ describe('renderPrintStylesheetCss (E4-S8)', () => {
     expect(css).toContain('box-shadow: none;');
     expect(css).toContain('outline: none;');
     expect(css).toContain('print-color-adjust: exact;');
+  });
+});
+
+describe('renderSearchHighlightPageHtml (E8-S6)', () => {
+  it('matches the committed visual fixture (regenerate with render-fixtures:generate)', () => {
+    const committed = readFileSync(fixturePath('search-highlight-page.html'), 'utf8');
+    expect(committed.trimEnd()).toBe(renderSearchHighlightPageHtml());
+  });
+
+  it('wraps matching table-cell runs in <mark>, with the first match active', () => {
+    const html = renderSearchHighlightPageHtml();
+    // The "Lamp" products are highlighted inside data-table cells.
+    expect(html).toContain('<mark class="rdr-mark rdr-mark--active">Lamp</mark>');
+    expect(html).toContain('<mark class="rdr-mark">Lamp</mark>');
+    // Exactly one active mark (the current match).
+    expect((html.match(/rdr-mark--active/g) ?? []).length).toBe(1);
   });
 });
 

@@ -1,4 +1,5 @@
 import {
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -49,6 +50,7 @@ import { defaultPdfExporter } from './default-pdf-exporter';
 import { downloadBlob } from './file-download';
 import { ensureExtension, slugifyFilename } from './filename';
 import { serializeTemplateSource, sourceFilename } from './viewer-source';
+import { buildSearchHits, cycleHitIndex, formatMatchCount, type SearchHit } from './viewer-search';
 import { ExportDialog, type ExportDialogResult } from './export-dialog';
 import { WatermarkDialog, type WatermarkDialogResult } from './watermark-dialog';
 
@@ -167,6 +169,16 @@ const THUMBNAIL_WIDTH_PX = 104;
  * round-trip) and the download goes through the shared, SSR-guarded
  * {@link downloadBlob}. The button is gated by the `config.toolbar.source` flag
  * like every other action.
+ *
+ * **E8-S6 adds in-report text search** (optional viewer extra). A toolbar Find
+ * toggle opens a compact search bar; the query is forwarded as the
+ * {@link ReportDocument.highlight} of the on-screen document only, so the shared
+ * renderer paints every matching run of a text element / table cell / group label
+ * as a `<mark>` (print, thumbnails and PDF export stay highlight-free). The match
+ * index is computed purely from the rendered model ({@link buildSearchHits}), so
+ * the `N / total` count and next/prev navigation are correct in any page mode; the
+ * active match is painted + scrolled into view by a live-DOM {@link afterRenderEffect}.
+ * The whole control is gated by the `config.toolbar.search` flag.
  */
 @Component({
   selector: 'rdr-report-viewer',
@@ -356,6 +368,66 @@ export class ReportViewer {
   /** The scrolling page area; present only once a document is rendered. */
   private readonly scrollArea = viewChild<ElementRef<HTMLElement>>('scrollArea');
 
+  /** The Find input, present only while the search bar is open (for autofocus). */
+  private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
+  /** Whether the in-report Find bar is open (E8-S6). */
+  protected readonly searchOpen = signal(false);
+
+  /** The current Find query; drives the highlight and the match index. */
+  protected readonly searchQuery = signal('');
+
+  /** The active match's index into {@link searchHits}; `-1` when none is active. */
+  private readonly activeHitIndexRaw = signal(-1);
+
+  /**
+   * Every match for the current query across the whole document, in paint order
+   * (E8-S6). Recomputed purely from the rendered model via {@link buildSearchHits},
+   * so the count and navigation are correct in any page mode.
+   */
+  protected readonly searchHits = computed<readonly SearchHit[]>(() =>
+    buildSearchHits(this.renderModel(), this.searchQuery()),
+  );
+
+  /** Total matches for the current query. */
+  protected readonly matchCount = computed<number>(() => this.searchHits().length);
+
+  /**
+   * The active match index, clamped to the current {@link searchHits} so a stale
+   * index (e.g. after the data changed under an open search) never points past the
+   * end. `-1` means no active match.
+   */
+  protected readonly activeHitIndex = computed<number>(() => {
+    const index = this.activeHitIndexRaw();
+    return index >= 0 && index < this.matchCount() ? index : -1;
+  });
+
+  /** The toolbar's `"3 / 12"` match readout; `''` when there is no active query. */
+  protected readonly matchLabel = computed<string>(() =>
+    formatMatchCount(
+      this.activeHitIndex(),
+      this.matchCount(),
+      this.searchQuery().trim().length > 0,
+    ),
+  );
+
+  /** Whether prev/next match navigation is available (there is at least one hit). */
+  protected readonly canStepMatch = computed<boolean>(() => this.matchCount() > 0);
+
+  /**
+   * The highlight query forwarded to the on-screen {@link ReportDocument}: the
+   * trimmed query while the Find bar is open, else `null` (no marks). Only the main
+   * scroll-area document binds this — the print mirror, thumbnails and PDF export
+   * stay highlight-free, so Find is a screen-only aid.
+   */
+  protected readonly searchHighlight = computed<string | null>(() => {
+    if (!this.searchOpen()) {
+      return null;
+    }
+    const query = this.searchQuery().trim();
+    return query.length > 0 ? query : null;
+  });
+
   /** Increments per pipeline pass; a completion for an older token is discarded. */
   private token = 0;
 
@@ -428,6 +500,21 @@ export class ReportViewer {
         this.lastEmittedKey = key;
         this.pageChange.emit({ current, total });
       }
+    });
+
+    // Focus the Find input when the search bar opens, so a user can type at once.
+    effect(() => {
+      if (this.searchOpen()) {
+        this.searchInput()?.nativeElement.focus();
+      }
+    });
+
+    // Paint the active match (E8-S6): after each render, toggle the
+    // `rdr-mark--active` class on the active hit's `<mark>` and scroll it into
+    // view. Runs after render so the marks the renderer just painted exist; reacts
+    // to the active index / hits / current page changing.
+    afterRenderEffect(() => {
+      this.paintActiveMatch();
     });
   }
 
@@ -581,6 +668,122 @@ export class ReportViewer {
     const filename = sourceFilename(this.documentTitle(), this.resolvedConfig().sourceFilename);
     const blob = new Blob([json], { type: 'application/json' });
     downloadBlob(blob, filename);
+  }
+
+  /**
+   * Opens or closes the in-report Find bar (E8-S6). Closing clears the query (and
+   * thus the highlight) and the active match, so no marks linger; an open effect
+   * focuses the input.
+   */
+  protected toggleSearch(): void {
+    if (this.searchOpen()) {
+      this.closeSearch();
+    } else {
+      this.searchOpen.set(true);
+    }
+  }
+
+  /** Closes the Find bar and clears the query + active match (removes all marks). */
+  protected closeSearch(): void {
+    this.searchOpen.set(false);
+    this.searchQuery.set('');
+    this.activeHitIndexRaw.set(-1);
+  }
+
+  /**
+   * Reacts to typing in the Find input: updates the query and activates the first
+   * match (jumping to its page) so the user sees a highlight and a `1 / N` count
+   * immediately, or clears the active match when nothing matches.
+   */
+  protected onSearchInput(event: Event): void {
+    this.searchQuery.set((event.target as HTMLInputElement).value);
+    this.activateHit(this.matchCount() > 0 ? 0 : -1);
+  }
+
+  /**
+   * Find-input keyboard map: `Enter` steps to the next match, `Shift+Enter` to the
+   * previous, `Escape` closes the bar. Other keys fall through so typing works.
+   */
+  protected onSearchKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (event.shiftKey) {
+        this.prevMatch();
+      } else {
+        this.nextMatch();
+      }
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeSearch();
+    }
+  }
+
+  /** Steps to the next match (wraps to the first), updating the active highlight. */
+  protected nextMatch(): void {
+    this.activateHit(cycleHitIndex(this.activeHitIndex(), this.matchCount(), 1));
+  }
+
+  /** Steps to the previous match (wraps to the last), updating the active highlight. */
+  protected prevMatch(): void {
+    this.activateHit(cycleHitIndex(this.activeHitIndex(), this.matchCount(), -1));
+  }
+
+  /**
+   * Makes `index` the active match: records it and jumps the viewer to its page
+   * (the after-render effect then paints + scrolls the exact `<mark>`). A negative
+   * or out-of-range index clears the active match.
+   */
+  private activateHit(index: number): void {
+    const hits = this.searchHits();
+    if (index < 0 || index >= hits.length) {
+      this.activeHitIndexRaw.set(-1);
+      return;
+    }
+    this.activeHitIndexRaw.set(index);
+    const page = hits[index].page;
+    if (page !== this.currentPage()) {
+      this.currentPage.set(page);
+    }
+  }
+
+  /**
+   * Live-DOM paint of the active match (E8-S6): clears any prior active mark, then
+   * (when there is an active hit) marks the `indexOnPage`-th `<mark>` on the hit's
+   * page as active and scrolls it into view. Locating the mark within the page's
+   * slot keeps it correct in both continuous and single-page layouts. SSR/jsdom
+   * safe — a missing `scrollIntoView` is simply skipped.
+   */
+  private paintActiveMatch(): void {
+    // No active highlight → the renderer paints no marks, so there is nothing to
+    // place or clear. Reading the (cheap) highlight signal keeps this effect a true
+    // no-op on every render while a search is closed (the common case).
+    if (this.searchHighlight() === null) {
+      return;
+    }
+    const container = this.scrollArea()?.nativeElement;
+    if (!container) {
+      return;
+    }
+    container
+      .querySelectorAll('.rdr-mark--active')
+      .forEach((el) => el.classList.remove('rdr-mark--active'));
+
+    const index = this.activeHitIndex();
+    const hits = this.searchHits();
+    if (index < 0 || index >= hits.length) {
+      return;
+    }
+    const hit = hits[index];
+    const slot = container.querySelector(`[data-page-number="${hit.page}"]`);
+    const marks = slot?.querySelectorAll<HTMLElement>('.rdr-mark');
+    const mark = marks?.[hit.indexOnPage];
+    if (!mark) {
+      return;
+    }
+    mark.classList.add('rdr-mark--active');
+    if (typeof mark.scrollIntoView === 'function') {
+      mark.scrollIntoView({ block: 'center', inline: 'nearest' });
+    }
   }
 
   /** Toggles the error **View details** disclosure (E7-S5). */

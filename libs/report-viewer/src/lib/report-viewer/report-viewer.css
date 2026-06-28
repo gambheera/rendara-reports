@@ -246,6 +246,58 @@
   outline-offset: 1px;
 }
 
+/* In-report Find bar (E8-S6) --------------------------------------------- */
+/* The toolbar Find toggle reads as pressed while the bar is open. */
+.rdr-viewer-nav-btn--active {
+  border-color: var(--rdr-viewer-accent);
+  background: var(--rdr-viewer-accent-subtle);
+  color: var(--rdr-viewer-accent);
+}
+
+/* A recessive second row under the toolbar: search field + count + prev/next +
+   close, mirroring a browser's find bar. */
+.rdr-viewer-search {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--rdr-viewer-panel);
+  border-bottom: 1px solid var(--rdr-viewer-hairline);
+}
+
+.rdr-viewer-search-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--rdr-viewer-text-secondary);
+}
+
+.rdr-viewer-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 280px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--rdr-viewer-input-border);
+  border-radius: 6px;
+  background: var(--rdr-viewer-surface);
+  color: var(--rdr-viewer-text);
+  font: inherit;
+}
+
+.rdr-viewer-search-input:focus-visible {
+  outline: 2px solid var(--rdr-viewer-accent);
+  outline-offset: 1px;
+}
+
+.rdr-viewer-search-count {
+  min-width: 56px;
+  color: var(--rdr-viewer-text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Scrolling page area ----------------------------------------------------- */
 .rdr-viewer-scroll {
   flex: 1 1 auto;

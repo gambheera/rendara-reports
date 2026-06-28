@@ -40,6 +40,7 @@ import {
   type StyleMap,
   type TableRowView,
   type TableView,
+  type TextSegment,
   type WatermarkView,
 } from './page-view-model';
 
@@ -72,6 +73,27 @@ function escapeAttr(value: string): string {
 /** Escapes text content for placement between element tags. */
 function escapeText(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Serializes a resolved text value for E8-S6 search highlighting: when the value
+ * carries {@link TextSegment}s (a query matched), each matched run is wrapped in a
+ * `<mark class="rdr-mark">` exactly as the {@link ReportRenderer} template does;
+ * otherwise (no query / no match) the plain escaped `text` is emitted, so
+ * non-search output is byte-identical to before the feature.
+ */
+function serializeHighlightable(
+  text: string,
+  segments: readonly TextSegment[] | undefined,
+): string {
+  if (!segments) {
+    return escapeText(text);
+  }
+  return segments
+    .map((seg) =>
+      seg.mark ? `<mark class="rdr-mark">${escapeText(seg.text)}</mark>` : escapeText(seg.text),
+    )
+    .join('');
 }
 
 /**
@@ -148,7 +170,7 @@ function serializeContent(content: ElementContentView): string {
     case 'text':
       return `<div class="rdr-text" style="${escapeAttr(
         inlineStyle(content.textStyle),
-      )}">${escapeText(content.text)}</div>`;
+      )}">${serializeHighlightable(content.text, content.segments)}</div>`;
     case 'shape':
       return serializeShape(content);
     case 'image':
@@ -216,13 +238,16 @@ function serializeTableRow(row: TableRowView): string {
     .map(
       (cell) =>
         `<div class="rdr-table-cell" data-column-key="${escapeAttr(cell.columnKey)}" ` +
-        `style="${escapeAttr(inlineStyle(tableCellStyle(cell)))}">${escapeText(cell.text)}</div>`,
+        `style="${escapeAttr(inlineStyle(tableCellStyle(cell)))}">${serializeHighlightable(
+          cell.text,
+          cell.segments,
+        )}</div>`,
     )
     .join('');
   const label = row.label
     ? `<div class="rdr-table-label" style="${escapeAttr(
         inlineStyle(tableLabelStyle(row.label)),
-      )}">${escapeText(row.label.text)}</div>`
+      )}">${serializeHighlightable(row.label.text, row.label.segments)}</div>`
     : '';
   return (
     `<div class="rdr-table-row" data-row-kind="${escapeAttr(row.kind)}" ` +

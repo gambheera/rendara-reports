@@ -63,6 +63,8 @@ export interface ViewerToolbarConfig {
   readonly watermark?: boolean;
   /** Show the Download-source action button (behaviour: E8-S5). Default `true`. */
   readonly source?: boolean;
+  /** Show the in-report Find (text search) control (behaviour: E8-S6). Default `true`. */
+  readonly search?: boolean;
 }
 
 /**
@@ -208,4 +210,5 @@ export const DEFAULT_TOOLBAR_CONFIG: Required<ViewerToolbarConfig> = {
   export: true,
   watermark: true,
   source: true,
+  search: true,
 };

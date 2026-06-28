@@ -228,10 +228,96 @@
             <path d="M16 4h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-2" />
           </svg>
         </button>
+        } @if (toolbar().search) {
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          [class.rdr-viewer-nav-btn--active]="searchOpen()"
+          aria-label="Find in report"
+          title="Find in report"
+          [attr.aria-pressed]="searchOpen()"
+          (click)="toggleSearch()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+        </button>
         }
         <!-- Host custom-action slot: project buttons with [rdr-toolbar-actions]. -->
         <ng-content select="[rdr-toolbar-actions]" />
       </div>
+    </div>
+    }
+
+    <!-- In-report Find bar (E8-S6): opened by the toolbar Find toggle. The query
+         highlights matches on screen and drives the match count + prev/next. -->
+    @if (toolbar().search && searchOpen()) {
+    <div class="rdr-viewer-search" role="search">
+      <span class="rdr-viewer-search-icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      </span>
+      <input
+        #searchInput
+        class="rdr-viewer-search-input"
+        type="text"
+        [value]="searchQuery()"
+        (input)="onSearchInput($event)"
+        (keydown)="onSearchKeydown($event)"
+        placeholder="Find in report"
+        aria-label="Find in report"
+        autocomplete="off"
+      />
+      <span class="rdr-viewer-search-count" aria-live="polite">{{ matchLabel() }}</span>
+      <button
+        type="button"
+        class="rdr-viewer-nav-btn"
+        aria-label="Previous match"
+        [disabled]="!canStepMatch()"
+        (click)="prevMatch()"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        class="rdr-viewer-nav-btn"
+        aria-label="Next match"
+        [disabled]="!canStepMatch()"
+        (click)="nextMatch()"
+      >
+        ›
+      </button>
+      <button
+        type="button"
+        class="rdr-viewer-nav-btn"
+        aria-label="Close find"
+        title="Close find"
+        (click)="closeSearch()"
+      >
+        ✕
+      </button>
     </div>
     }
 
@@ -252,6 +338,7 @@
         [zoom]="zoomSpec()"
         [layout]="pageMode()"
         [currentPage]="currentPage()"
+        [highlight]="searchHighlight()"
         (zoomChange)="onZoomChange($event)"
       />
     </div>

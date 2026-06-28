@@ -11,6 +11,8 @@
   --rdr-table-band-rule: #CBD5E1;
   --rdr-table-total-rule: #334155;
   --rdr-watermark-color: #9CA3AF;
+  --rdr-search-highlight: #FDE68A;
+  --rdr-search-active: #FBBF24;
 
   display: block;
 }
@@ -54,6 +56,21 @@
 
 .rdr-text {
   margin: 0;
+}
+
+/* Search highlight (E8-S6): matched runs are wrapped in <mark class="rdr-mark">.
+   Inherit the run's own colour/weight and only tint the background so the marked
+   text stays legible; the active match (current next/prev target) gets a stronger
+   tint. The viewer toggles the rdr-mark--active class on the live DOM; the style
+   lives here so it applies within the renderer's own (emulated/shadow) scope. */
+.rdr-mark {
+  background: var(--rdr-search-highlight, #fde68a);
+  color: inherit;
+  border-radius: 1px;
+}
+
+.rdr-mark--active {
+  background: var(--rdr-search-active, #fbbf24);
 }
 
 .rdr-image {

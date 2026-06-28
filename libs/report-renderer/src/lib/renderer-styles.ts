@@ -70,6 +70,10 @@ export const RDR_THEME_TOKENS: Readonly<Record<string, string>> = {
   '--rdr-table-total-rule': '#334155',
   /** Default watermark text colour when the watermark config declares none (slate-400). */
   '--rdr-watermark-color': '#9CA3AF',
+  /** Fill behind a search-highlight match (E8-S6); amber-200. */
+  '--rdr-search-highlight': '#FDE68A',
+  /** Fill behind the active (current) search match (E8-S6); amber-400. */
+  '--rdr-search-active': '#FBBF24',
 } as const;
 
 /**
@@ -103,6 +107,8 @@ export const RENDERER_THEME_CSS = `:host {
   --rdr-table-band-rule: #CBD5E1;
   --rdr-table-total-rule: #334155;
   --rdr-watermark-color: #9CA3AF;
+  --rdr-search-highlight: #FDE68A;
+  --rdr-search-active: #FBBF24;
 
   display: block;
 }
@@ -154,6 +160,21 @@ export const RENDERER_PAGE_CSS = `.rdr-page {
 
 .rdr-text {
   margin: 0;
+}
+
+/* Search highlight (E8-S6): matched runs are wrapped in <mark class="rdr-mark">.
+   Inherit the run's own colour/weight and only tint the background so the marked
+   text stays legible; the active match (current next/prev target) gets a stronger
+   tint. The viewer toggles the rdr-mark--active class on the live DOM; the style
+   lives here so it applies within the renderer's own (emulated/shadow) scope. */
+.rdr-mark {
+  background: var(--rdr-search-highlight, #fde68a);
+  color: inherit;
+  border-radius: 1px;
+}
+
+.rdr-mark--active {
+  background: var(--rdr-search-active, #fbbf24);
 }
 
 .rdr-image {
