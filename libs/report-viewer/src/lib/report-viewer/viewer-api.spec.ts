@@ -44,6 +44,7 @@ describe('report-viewer public API contract (E7-S1)', () => {
       toolbar: { visible: true },
       watermark: null,
       pageMode: 'continuous',
+      thumbnails: true,
       pdfExporter: undefined,
       exportFilename: undefined,
       pdfMetadata: undefined,

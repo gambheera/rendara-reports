@@ -1159,3 +1159,65 @@ describe('ReportViewer (E8-S6 in-report search)', () => {
     expect(harness.container.querySelectorAll('.rdr-viewer-print .rdr-mark')).toHaveLength(0);
   });
 });
+
+describe('ReportViewer (E8-S7 optional thumbnail rail)', () => {
+  /** Renders the golden invoice with the given config and settles the pipeline. */
+  async function renderViewer(config: Record<string, unknown> = {}) {
+    const harness = await render(ReportViewer, {
+      inputs: { template: golden.template, data: golden.data, config },
+    });
+    await flush();
+    harness.fixture.detectChanges();
+    return harness;
+  }
+
+  function query<T extends Element>(container: HTMLElement, selector: string): T {
+    const found = container.querySelector<T>(selector);
+    if (found === null) {
+      throw new Error(`expected element matching "${selector}"`);
+    }
+    return found;
+  }
+
+  const TOGGLE = '[aria-label="Toggle page thumbnails"]';
+
+  it('shows the rail and the toggle button by default', async () => {
+    const { container } = await renderViewer();
+    expect(container.querySelector('.rdr-viewer-rail')).toBeTruthy();
+    const toggle = query<HTMLButtonElement>(container, TOGGLE);
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('hides the rail from the DOM when config.thumbnails is false', async () => {
+    const { container } = await renderViewer({ thumbnails: false });
+    expect(container.querySelector('.rdr-viewer-rail')).toBeNull();
+    // The report still renders, and the toggle reads as not pressed.
+    expect(container.querySelector('.rdr-page')).toBeTruthy();
+    expect(query<HTMLButtonElement>(container, TOGGLE).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('hides the toggle button when config.toolbar.thumbnails is false', async () => {
+    const { container } = await renderViewer({ toolbar: { thumbnails: false } });
+    expect(container.querySelector(TOGGLE)).toBeNull();
+    // The rail itself still shows (initial visibility is unchanged) and other actions remain.
+    expect(container.querySelector('.rdr-viewer-rail')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Print"]')).toBeTruthy();
+  });
+
+  it('toggles the rail in and out of the DOM and reflects aria-pressed', async () => {
+    const { container, fixture } = await renderViewer();
+    const toggle = query<HTMLButtonElement>(container, TOGGLE);
+
+    expect(container.querySelector('.rdr-viewer-rail')).toBeTruthy();
+
+    fireEvent.click(toggle);
+    fixture.detectChanges();
+    expect(container.querySelector('.rdr-viewer-rail')).toBeNull();
+    expect(query<HTMLButtonElement>(container, TOGGLE).getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(query<HTMLButtonElement>(container, TOGGLE));
+    fixture.detectChanges();
+    expect(container.querySelector('.rdr-viewer-rail')).toBeTruthy();
+    expect(query<HTMLButtonElement>(container, TOGGLE).getAttribute('aria-pressed')).toBe('true');
+  });
+});

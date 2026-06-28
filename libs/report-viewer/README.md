@@ -30,12 +30,12 @@ export class HostApp {
 
 ## Public API (brief §8)
 
-| Input      | Type                                | Notes                                                                    |
-| ---------- | ----------------------------------- | ------------------------------------------------------------------------ |
-| `template` | `RendaraTemplate \| string \| null` | A validated template object or a raw JSON string. `null` paints nothing. |
-| `data`     | `unknown`                           | Arbitrary host JSON bound into the template.                             |
-| `config`   | `ViewerConfig`                      | `locale`, `initialZoom`, `toolbar`, `watermark`, `pageMode`, `pdfExporter`, `exportFilename`, `pdfMetadata`. |
-| `theme`    | `ViewerTheme`                       | `--rdr-*` CSS custom-property overrides for the host.                    |
+| Input      | Type                                | Notes                                                                                                                      |
+| ---------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `template` | `RendaraTemplate \| string \| null` | A validated template object or a raw JSON string. `null` paints nothing.                                                   |
+| `data`     | `unknown`                           | Arbitrary host JSON bound into the template.                                                                               |
+| `config`   | `ViewerConfig`                      | `locale`, `initialZoom`, `toolbar`, `watermark`, `pageMode`, `thumbnails`, `pdfExporter`, `exportFilename`, `pdfMetadata`. |
+| `theme`    | `ViewerTheme`                       | `--rdr-*` CSS custom-property overrides for the host.                                                                      |
 
 | Output       | Payload              | Fired when                                       |
 | ------------ | -------------------- | ------------------------------------------------ |
@@ -103,3 +103,12 @@ Search is a **screen-only** aid: highlights never appear in **Print** or **PDF
 export** output. Hide the control with `config.toolbar.search: false`. The
 highlight colours are themeable via the renderer's `--rdr-search-highlight` and
 `--rdr-search-active` CSS custom properties.
+
+## Optional thumbnail rail (E8-S7)
+
+The left **thumbnail rail** — one mini render per page, the current page outlined,
+click to jump — is optional. The toolbar's **Toggle page thumbnails** action shows
+or hides it at runtime (a hidden rail is removed from the DOM, freeing the width
+for the report). Set the rail's initial visibility with `config.thumbnails: false`
+(default `true`), and hide the toggle button itself with
+`config.toolbar.thumbnails: false`.

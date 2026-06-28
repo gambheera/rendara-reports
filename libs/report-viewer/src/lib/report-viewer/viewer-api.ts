@@ -65,6 +65,8 @@ export interface ViewerToolbarConfig {
   readonly source?: boolean;
   /** Show the in-report Find (text search) control (behaviour: E8-S6). Default `true`. */
   readonly search?: boolean;
+  /** Show the thumbnail-rail toggle button (behaviour: E8-S7). Default `true`. */
+  readonly thumbnails?: boolean;
 }
 
 /**
@@ -131,6 +133,8 @@ export interface ViewerConfig {
   readonly pdfMetadata?: PdfMetadata;
   /** Filename for the Download-source action (E8-S5); a `.json` suffix is ensured. */
   readonly sourceFilename?: string;
+  /** Initial visibility of the left thumbnail rail (E8-S7); the user can toggle it. Default `true`. */
+  readonly thumbnails?: boolean;
 }
 
 /**
@@ -190,6 +194,7 @@ export const DEFAULT_VIEWER_CONFIG: Required<
   toolbar: { visible: true },
   watermark: null,
   pageMode: 'continuous',
+  thumbnails: true,
   pdfExporter: undefined,
   exportFilename: undefined,
   pdfMetadata: undefined,
@@ -211,4 +216,5 @@ export const DEFAULT_TOOLBAR_CONFIG: Required<ViewerToolbarConfig> = {
   watermark: true,
   source: true,
   search: true,
+  thumbnails: true,
 };
