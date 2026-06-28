@@ -524,7 +524,7 @@ const NAMED_COLORS: Readonly<Record<string, PdfColor>> = {
  * Handles `var(--token, <fallback>)` (uses the fallback), `#rgb`/`#rrggbb`,
  * `rgb()`/`rgba()`, and a few named colours.
  */
-function parseColor(value: string | undefined): PdfColor | null {
+function parseColor(value: string | null | undefined): PdfColor | null {
   if (!value) {
     return null;
   }

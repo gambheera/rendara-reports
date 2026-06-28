@@ -1,0 +1,15 @@
+{
+  "name": "@rendara/report-renderer",
+  "version": "0.0.0",
+  "description": "The shared Angular renderer for Rendara Reports (template+data → paginated DOM). Bundled into @rendara/report-viewer.",
+  "license": "MIT",
+  "private": true,
+  "peerDependencies": {
+    "@angular/core": "^21.0.0"
+  },
+  "dependencies": {
+    "@rendara/report-engine": "workspace:*",
+    "@rendara/report-schema": "workspace:*",
+    "tslib": "^2.3.0"
+  }
+}

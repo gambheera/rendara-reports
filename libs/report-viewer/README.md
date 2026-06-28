@@ -4,6 +4,23 @@ The embeddable Angular **Report Viewer**: hand it a validated **Template JSON** 
 **Data JSON** and it renders the final, paginated report inside any Angular host app.
 It bundles the shared engine + renderer, so what was designed is exactly what renders.
 
+## Build & packaging (E9-S1)
+
+The package is built to **Angular Package Format (APF)** with engine + renderer +
+schema **bundled in**, so a host installs one package and gets everything:
+
+```bash
+nx run report-viewer:pack   # build schema→engine→renderer→viewer, inline, npm-pack verify
+```
+
+ng-packagr can't compile a sibling lib's _source_ into a package, so the build is
+two stages: ng-packagr emits an APF package per lib (cross-lib refs left external),
+then `tools/bundle-viewer.mjs` inlines those `@rendara/*` FESM + `.d.ts` into the
+viewer and strips them from `dependencies`. The published tarball depends only on
+Angular (peer) + jsonata/ajv/tslib. **Note:** `nx build report-viewer` alone is
+_not_ publishable (its FESM still imports `@rendara/*`); use `bundle`/`pack`. See
+[ADR 0013](../../docs/adr/0013-viewer-apf-packaging.md).
+
 ## Usage
 
 ```ts

@@ -75,3 +75,29 @@ jobs:
 
       - name: Dry-run publish of @rendara/report-schema + @rendara/report-viewer
         run: pnpm release:dry-run
+
+  viewer-apf-build:
+    name: Publishable viewer build (APF) + npm pack (E9-S1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Builds schema → engine → renderer → viewer (APF), inlines engine/renderer/
+      # schema into the viewer, then `npm pack`s and asserts the tarball is APF and
+      # self-contained (no @rendara/* deps leak). See ADR 0013.
+      - name: Build + bundle + pack @rendara/report-viewer
+        run: pnpm nx run report-viewer:pack --skip-nx-cache

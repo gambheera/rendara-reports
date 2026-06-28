@@ -6,6 +6,30 @@
   "projectType": "library",
   "tags": ["scope:viewer", "type:publishable"],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:package",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "dependsOn": ["^build"],
+      "options": {
+        "project": "libs/report-viewer/ng-package.json",
+        "tsConfig": "libs/report-viewer/tsconfig.lib.prod.json"
+      }
+    },
+    "bundle": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "options": {
+        "command": "node tools/bundle-viewer.mjs"
+      }
+    },
+    "pack": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle"],
+      "options": {
+        "command": "node tools/verify-viewer-pack.mjs"
+      }
+    },
     "test": {
       "outputs": [
         "{projectRoot}/{options.coverage.reportsDirectory}",

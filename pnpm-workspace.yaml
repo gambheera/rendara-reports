@@ -1,12 +1,16 @@
 # Rendara uses Nx's classic layout: internal projects are linked via TypeScript
 # path aliases (tsconfig.base.json "paths"), NOT pnpm package workspaces.
 #
-# The only exception is the two PUBLISHABLE packages, registered below so
-# Changesets can discover and version them (E0-S7). They still carry no build
-# config yet — packaging (ng-packagr/APF, exports, peer ranges) lands in E9;
-# until then `pnpm -r publish --dry-run` is the wired release check.
+# Registered below: the two PUBLISHABLE packages (report-schema, report-viewer)
+# so Changesets can discover and version them (E0-S7), plus report-engine and
+# report-renderer — these are `private: true` (Changesets ignores them) but are
+# listed so pnpm can link them as `workspace:*` dependencies of report-viewer.
+# report-viewer's APF build bundles engine/renderer/schema in and strips the
+# `@rendara/*` deps from the published tarball (E9-S1, see ADR 0013).
 packages:
   - 'libs/report-schema'
+  - 'libs/report-engine'
+  - 'libs/report-renderer'
   - 'libs/report-viewer'
 
 # allowBuilds lists dependencies permitted to run install/postinstall scripts
