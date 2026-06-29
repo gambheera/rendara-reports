@@ -27,7 +27,8 @@
       "executor": "nx:run-commands",
       "dependsOn": ["bundle"],
       "options": {
-        "command": "node tools/verify-viewer-pack.mjs"
+        "commands": ["node tools/verify-viewer-pack.mjs", "node tools/verify-viewer-treeshake.mjs"],
+        "parallel": false
       }
     },
     "test": {
