@@ -21,6 +21,29 @@ Angular (peer) + jsonata/ajv/tslib. **Note:** `nx build report-viewer` alone is
 _not_ publishable (its FESM still imports `@rendara/*`); use `bundle`/`pack`. See
 [ADR 0013](../../docs/adr/0013-viewer-apf-packaging.md).
 
+## Compatibility & version tolerance (E9-S2)
+
+The package is built to fit a host app's existing Angular install:
+
+- **Wide Angular peers.** `@angular/core` and `@angular/cdk` are declared as
+  `peerDependencies` over `>=20.0.0` — tested against Angular **20 (min) – 22
+  (max)**. Angular is a peer (never bundled), so it isn't duplicated into your
+  app. `@angular/common` is **not** required.
+- **Tree-shakeable.** The package is `"sideEffects": false` and ships a single
+  FESM2022, so a bundler drops it entirely when you don't reference it and you
+  pay only for what you import. (Per-feature dead-code elimination within the
+  bundle happens in your Angular app build via the Ivy optimizer.) A CI gate
+  (`tools/verify-viewer-treeshake.mjs`) proves the package has no eager side
+  effects.
+- **Single entry point.** Everything is exported from `@rendara/report-viewer`;
+  there are no secondary entry points. For framework-agnostic schema
+  validation without Angular, use the separate `@rendara/report-schema` package.
+- **SSR-safe.** All browser APIs are guarded — file download, `window.print()`
+  and the default PDF exporter no-op (or return bytes) without a DOM — so the
+  component imports and renders under server-side rendering without throwing.
+
+See [ADR 0014](../../docs/adr/0014-viewer-peer-deps-and-version-tolerance.md).
+
 ## Usage
 
 ```ts
