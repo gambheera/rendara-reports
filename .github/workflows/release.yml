@@ -101,3 +101,29 @@ jobs:
       # self-contained (no @rendara/* deps leak). See ADR 0013.
       - name: Build + bundle + pack @rendara/report-viewer
         run: pnpm nx run report-viewer:pack --skip-nx-cache
+
+  schema-pack:
+    name: Framework-agnostic schema build + Node smoke test (E9-S3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Builds @rendara/report-schema framework-agnostic (no Angular, dual ESM+CJS),
+      # then `npm pack`s and asserts the tarball is Angular-free and consumable in
+      # Node (imports + validates a golden via both import and require). See ADR 0015.
+      - name: Build + pack @rendara/report-schema
+        run: pnpm nx run report-schema:pack --skip-nx-cache

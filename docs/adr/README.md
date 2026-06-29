@@ -35,6 +35,8 @@ have the context behind the code.
 | [0011](0011-viewer-print-path.md)                     | Viewer print path: hidden per-page mirror + native `window.print()` | Accepted | E8-S2 |
 | [0012](0012-viewer-pdf-export.md)                     | Viewer PDF export: dependency-free selectable-text writer behind a swappable `PdfExporter` | Accepted | E8-S3 |
 | [0013](0013-viewer-apf-packaging.md)                  | Publishable viewer build: ng-packagr APF per lib + an esbuild/dts inline pass | Accepted | E9-S1 |
+| [0014](0014-viewer-peer-deps-and-version-tolerance.md) | Viewer wide Angular peers (`>=20`), tree-shake + version-tolerance gates | Accepted | E9-S2 |
+| [0015](0015-schema-framework-agnostic-packaging.md)   | Framework-agnostic schema build (esbuild/dts), dual ESM+CJS, Node-proven | Accepted | E9-S3 |
 
 > **Numbering note:** ADRs 0001–0004 were written first, during E0-S5…S8, each
 > recording one Epic 0 tooling decision. The foundational stack/architecture ADR
