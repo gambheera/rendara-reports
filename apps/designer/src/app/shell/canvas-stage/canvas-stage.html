@@ -1,4 +1,10 @@
-<div #scroll class="rdr-canvas__scroll" [style.backgroundSize]="gridSizePx() + ' ' + gridSizePx()">
+<div
+  #scroll
+  class="rdr-canvas__scroll"
+  tabindex="0"
+  aria-label="Report canvas scroll area"
+  [style.backgroundSize]="gridSizePx() + ' ' + gridSizePx()"
+>
   <div class="rdr-canvas__grid">
     <div class="rdr-canvas__corner" aria-hidden="true"></div>
 

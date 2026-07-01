@@ -126,6 +126,9 @@ describe('CanvasStage', () => {
     expect(container.querySelector('rdr-report-document')).toBeTruthy();
     // The renderer stamps a `data-rdr-mode="design"` marker on the page (E4-S6).
     expect(container.querySelector('[data-rdr-mode="design"]')).toBeTruthy();
+    const scrollArea = container.querySelector('.rdr-canvas__scroll');
+    expect(scrollArea?.getAttribute('tabindex')).toBe('0');
+    expect(scrollArea?.getAttribute('aria-label')).toBe('Report canvas scroll area');
   });
 
   it('shows the empty-state placeholder until an element exists', async () => {
