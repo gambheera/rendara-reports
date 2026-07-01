@@ -16,7 +16,10 @@
   --rdr-viewer-hairline: #e5e7eb;
   --rdr-viewer-input-border: #d1d5db;
   --rdr-viewer-text: #111827;
-  --rdr-viewer-text-secondary: #6b7280;
+  /* Muted grey for secondary text. Darkened from #6b7280 (E10-S1) so it clears
+     WCAG AA (≥4.5:1) on the grey backdrop the feedback states sit on (#f3f4f6 →
+     5.26:1), not just on white; the dark theme overrides this token separately. */
+  --rdr-viewer-text-secondary: #5f6672;
   --rdr-viewer-accent: #4f46e5;
   --rdr-viewer-accent-subtle: #eef2ff;
   --rdr-viewer-danger: #dc2626;

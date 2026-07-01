@@ -46,8 +46,15 @@ the exact output a host application ships.
   arrow keys.
 - **Every icon-only button** carries an `aria-label` (rename, more actions, zoom,
   snap, page setup); decorative glyphs and rulers are `aria-hidden`.
+- **The scrollable canvas is keyboard-reachable** (`tabindex="0"`) so it can be
+  scrolled with the arrow keys (WCAG 2.1.1 / axe `scrollable-region-focusable`).
 - **Focus indicators:** every interactive control shows a visible ring via the shared
   `--rdr-focus-ring` token on `:focus-visible`.
+
+The axe gate surfaced two latent issues (the designer scans had never run in CI
+before this story), both fixed here: the canvas scroll region lacked keyboard access
+(above), and the viewer's secondary text (`#6b7280`) fell just below AA on the grey
+feedback-state backdrop — darkened to `#5f6672` (5.26:1).
 
 ## Viewer — semantically structured output
 
@@ -87,6 +94,7 @@ axe's `color-contrast` rule gates these in CI; the measured ratios (WCAG AA need
 | --- | --- | --- | --- |
 | Accent `#4F46E5` | White `#ffffff` | **6.29:1** | Primary actions, selection, links |
 | Body text `#111827` | White `#ffffff` | **17.74:1** | Designer + rendered document text |
+| Secondary text `#5f6672` | Backdrop `#f3f4f6` | **5.26:1** | Viewer muted/secondary text, feedback-state detail |
 | Dark accent `#818cf8` | Dark surface `#111827` | **5.95:1** | Themed viewer (demo dark theme) |
 | Dark text `#e5e7eb` | Dark surface `#111827` | **14.33:1** | Themed viewer text |
 | Dark secondary `#94a3b8` | Dark backdrop `#0f172a` | **6.96:1** | Themed viewer secondary text |
