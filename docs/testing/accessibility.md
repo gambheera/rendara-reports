@@ -51,10 +51,17 @@ the exact output a host application ships.
 - **Focus indicators:** every interactive control shows a visible ring via the shared
   `--rdr-focus-ring` token on `:focus-visible`.
 
-The axe gate surfaced two latent issues (the designer scans had never run in CI
-before this story), both fixed here: the canvas scroll region lacked keyboard access
-(above), and the viewer's secondary text (`#6b7280`) fell just below AA on the grey
-feedback-state backdrop — darkened to `#5f6672` (5.26:1).
+Standing up the axe gate surfaced several latent issues the designer/viewer scans had
+never exercised in CI before this story; all were fixed here:
+
+- The canvas scroll region and the Export/Import dialog's JSON `<pre>` preview lacked
+  keyboard access (`scrollable-region-focusable`) — made focusable with `tabindex`.
+- The viewer's secondary text (`#6b7280`) fell just below AA on the grey feedback-state
+  backdrop — darkened to `#5f6672` (5.26:1). The Export/Import dialog's green
+  "validated" chip (`#16a34a`, ~2.95:1 on its tint) was darkened to `#166534`
+  (6.38:1), and the invalid chip to `#b91c1c`.
+- The panel-collapse button (`‹`/`›`) was 20×20px, under the WCAG 2.2 **target-size**
+  minimum (2.5.8) — bumped to 24×24px.
 
 ## Viewer — semantically structured output
 
