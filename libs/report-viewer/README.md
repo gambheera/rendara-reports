@@ -4,6 +4,64 @@ The embeddable Angular **Report Viewer**: hand it a validated **Template JSON** 
 **Data JSON** and it renders the final, paginated report inside any Angular host app.
 It bundles the shared engine + renderer, so what was designed is exactly what renders.
 
+## Quick start
+
+Install the package (Angular is a **peer** dependency you already have — see
+[Compatibility](#compatibility--version-tolerance-e9-s2)):
+
+```bash
+pnpm add @rendara/report-viewer     # or: npm i / yarn add @rendara/report-viewer
+```
+
+`ReportViewer` is a **standalone** component: import it, then hand it a
+**template** (a validated `RendaraTemplate` object _or_ a raw JSON string) and a
+**data** JSON. Both typically come from your backend at runtime — fetching and
+binding them is the developer's only job:
+
+```ts
+import { Component } from '@angular/core';
+import { ReportViewer, type RenderedEvent, type ViewerError } from '@rendara/report-viewer';
+
+@Component({
+  selector: 'app-invoice',
+  imports: [ReportViewer],
+  template: `
+    <rdr-report-viewer
+      [template]="template"
+      [data]="data"
+      (rendered)="onRendered($event)"
+      (error)="onError($event)"
+      style="display:block; height:100dvh"
+    />
+  `,
+})
+export class InvoiceComponent {
+  /** Fetch both from your backend; `template` may be a JSON string or a parsed object. */
+  protected readonly template: string = TEMPLATE_JSON;
+  protected readonly data: unknown = DATA_JSON;
+
+  protected onRendered(e: RenderedEvent): void {
+    console.log(`rendered ${e.pageCount} page(s)`);
+  }
+
+  protected onError(e: ViewerError): void {
+    console.error(e.message); // e.g. "Template failed validation: missing 'page.size'"
+  }
+}
+```
+
+That's the whole integration: the viewer **validates → binds → paginates →
+renders** the report and gives it a print / export-PDF / zoom / find toolbar.
+Everything below is optional configuration (`[config]`, `[theme]`, more outputs).
+
+- **Full input/output reference** — generated API docs (TypeDoc). Build them with
+  `pnpm docs:build` (→ `dist/docs/report-viewer/index.html`); this landing page is
+  the docs home, and every input, output and config type is documented from source.
+- **Live examples of every state** — Storybook: `npx nx storybook report-viewer`
+  (Default, Themed, Paginated, Zoom, toolbar variants, Export, Watermark, Search,
+  Empty / No-data / Error, …).
+- **Version history** — [CHANGELOG.md](CHANGELOG.md) (versioned by Changesets).
+
 ## Build & packaging (E9-S1)
 
 The package is built to **Angular Package Format (APF)** with engine + renderer +

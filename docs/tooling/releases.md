@@ -64,5 +64,11 @@ pnpm release:dry-run    # pnpm -r publish --dry-run --no-git-checks (no real pub
 `release:version` deletes the consumed changeset files and updates each
 package's `version` and `CHANGELOG.md`. Commit that as the release PR.
 
+`@rendara/report-viewer` ships a **seeded** [`CHANGELOG.md`](../../libs/report-viewer/CHANGELOG.md)
+(E9-S6): it is headed by the `# @rendara/report-viewer` line Changesets prepends
+releases under, with a `## 0.0.0 — pre-release development` summary at the bottom;
+`release:version` inserts generated version entries above it. The schema package's
+CHANGELOG is seeded the same way when it next changes.
+
 **Real publishing is not wired yet.** Once E9 adds the package builds, a
 `changeset publish` step (gated on an `NPM_TOKEN`) replaces the dry-run.
