@@ -46,6 +46,23 @@
   font-variant-numeric: var(--rdr-font-numeric);
 }
 
+/* Smart alignment guides (E5-S8): a thin indigo line marking the edge/centre the
+   moving selection has snapped to. Click-through chrome, painted while dragging. */
+.rdr-selection__guide {
+  position: absolute;
+  pointer-events: none;
+}
+
+.rdr-selection__guide--v {
+  width: 0;
+  border-left: 1px solid var(--rdr-selection);
+}
+
+.rdr-selection__guide--h {
+  height: 0;
+  border-top: 1px solid var(--rdr-selection);
+}
+
 /* The eight resize grips, centred on each corner/edge of the box. */
 .rdr-selection__handle {
   position: absolute;

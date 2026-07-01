@@ -74,6 +74,37 @@ describe('LayersPanel', () => {
     expect(store.bodyStack().map((el) => el.id)).toEqual(['a', 'c', 'b']);
   });
 
+  it('gates align (2+) and distribute (3+) on the selection size (E5-S8)', async () => {
+    const { view, store } = await renderWithThree();
+    const alignLeft = screen.getByRole('button', { name: 'Align left' }) as HTMLButtonElement;
+    const distH = screen.getByRole('button', {
+      name: 'Distribute horizontally',
+    }) as HTMLButtonElement;
+    expect(alignLeft.disabled).toBe(true);
+    expect(distH.disabled).toBe(true);
+
+    store.select(['a', 'b']);
+    view.detectChanges();
+    expect(alignLeft.disabled).toBe(false);
+    expect(distH.disabled).toBe(true);
+
+    store.select(['a', 'b', 'c']);
+    view.detectChanges();
+    expect(distH.disabled).toBe(false);
+  });
+
+  it('aligns the selection left from the toolbar (E5-S8)', async () => {
+    const view = await render(LayersPanel);
+    const store = TestBed.inject(DesignerStore);
+    store.addElement({ ...textEl('a'), frame: { xMm: 10, yMm: 0, wMm: 10, hMm: 5 } });
+    store.addElement({ ...textEl('b'), frame: { xMm: 40, yMm: 20, wMm: 10, hMm: 5 } });
+    store.select(['a', 'b']);
+    view.detectChanges();
+
+    screen.getByRole('button', { name: 'Align left' }).click();
+    expect(store.elementsById().get('b')?.frame.xMm).toBe(10);
+  });
+
   it('groups and ungroups the selection, tagging grouped rows', async () => {
     const { view, store } = await renderWithThree();
     const groupBtn = screen.getByRole('button', { name: 'Group selection' }) as HTMLButtonElement;

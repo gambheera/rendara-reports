@@ -57,6 +57,11 @@
   background: var(--rdr-color-success);
 }
 
+/* Unsaved changes: amber status to signal the document differs from the last save. */
+.rdr-top-bar__status--dirty .rdr-top-bar__status-dot {
+  background: var(--rdr-color-warning);
+}
+
 .rdr-top-bar__icon-btn {
   width: var(--rdr-size-icon-button);
   padding: 0;

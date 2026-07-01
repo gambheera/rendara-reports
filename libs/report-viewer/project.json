@@ -6,6 +6,46 @@
   "projectType": "library",
   "tags": ["scope:viewer", "type:publishable"],
   "targets": {
+    "build": {
+      "executor": "@nx/angular:package",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "dependsOn": ["^build"],
+      "options": {
+        "project": "libs/report-viewer/ng-package.json",
+        "tsConfig": "libs/report-viewer/tsconfig.lib.prod.json"
+      }
+    },
+    "bundle": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "options": {
+        "command": "node tools/bundle-viewer.mjs"
+      }
+    },
+    "pack": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle"],
+      "options": {
+        "commands": ["node tools/verify-viewer-pack.mjs", "node tools/verify-viewer-treeshake.mjs"],
+        "parallel": false
+      }
+    },
+    "local-install": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle"],
+      "outputs": ["{workspaceRoot}/node_modules/@rendara/report-viewer"],
+      "options": {
+        "command": "node tools/install-viewer-local.mjs"
+      }
+    },
+    "clean-room": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle"],
+      "options": {
+        "command": "node tools/clean-room-smoke.mjs"
+      }
+    },
     "test": {
       "outputs": [
         "{projectRoot}/{options.coverage.reportsDirectory}",
@@ -13,6 +53,13 @@
       ],
       "options": {
         "coverage.reportsDirectory": "../../coverage/libs/report-viewer"
+      }
+    },
+    "build-docs": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/docs/report-viewer"],
+      "options": {
+        "command": "typedoc --options libs/report-viewer/typedoc.json"
       }
     },
     "storybook": {

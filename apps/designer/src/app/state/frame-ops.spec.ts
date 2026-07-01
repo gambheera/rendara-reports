@@ -13,6 +13,7 @@ import {
   nudgeStepMm,
   resizeFrame,
   selectionBoxPx,
+  topElementAtPointMm,
 } from './frame-ops';
 
 /** A4 portrait sheet, the default page the canvas clamps frames within. */
@@ -177,6 +178,37 @@ describe('elementsInMarquee', () => {
 
   it('excludes elements fully outside the rectangle', () => {
     expect(elementsInMarquee(els, { xMm: 0, yMm: 0, wMm: 5, hMm: 5 })).toEqual([]);
+  });
+});
+
+describe('topElementAtPointMm', () => {
+  const els = [
+    { id: 'a', z: 1, frame: { xMm: 10, yMm: 10, wMm: 40, hMm: 20 } as Frame },
+    { id: 'b', z: 2, frame: { xMm: 30, yMm: 15, wMm: 40, hMm: 20 } as Frame },
+    { id: 'line', z: 3, frame: { xMm: 100, yMm: 100, wMm: 30, hMm: 0 } as Frame },
+  ];
+
+  it('returns the element whose frame contains the point', () => {
+    expect(topElementAtPointMm(els, { xMm: 15, yMm: 15 })).toBe('a');
+  });
+
+  it('returns the topmost (highest z) element where frames overlap', () => {
+    // (35,20) is inside both a and b; b has the higher z.
+    expect(topElementAtPointMm(els, { xMm: 35, yMm: 20 })).toBe('b');
+  });
+
+  it('returns null over empty canvas', () => {
+    expect(topElementAtPointMm(els, { xMm: 200, yMm: 250 })).toBeNull();
+  });
+
+  it('does not hit a zero-height (degenerate) element', () => {
+    expect(topElementAtPointMm(els, { xMm: 110, yMm: 100 })).toBe('line');
+    expect(topElementAtPointMm(els, { xMm: 110, yMm: 101 })).toBeNull();
+  });
+
+  it('includes the frame edges (inclusive bounds)', () => {
+    expect(topElementAtPointMm(els, { xMm: 10, yMm: 10 })).toBe('a');
+    expect(topElementAtPointMm(els, { xMm: 50, yMm: 30 })).toBe('b');
   });
 });
 

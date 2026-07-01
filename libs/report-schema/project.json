@@ -5,6 +5,23 @@
   "projectType": "library",
   "tags": ["scope:schema", "type:util"],
   "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "options": {
+        "command": "node tools/bundle-schema.mjs",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "pack": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "commands": ["node tools/verify-schema-pack.mjs", "node tools/verify-schema-node.mjs"],
+        "parallel": false,
+        "cwd": "{workspaceRoot}"
+      }
+    },
     "generate-schema": {
       "executor": "nx:run-commands",
       "options": {

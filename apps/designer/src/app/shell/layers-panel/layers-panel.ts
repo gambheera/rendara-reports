@@ -3,6 +3,7 @@ import type { TemplateElement } from '@rendara/report-schema';
 import { DesignerStore } from '../../state/designer-store';
 import { groupOf } from '../../state/group-ops';
 import type { ZOrderOp } from '../../state/z-order-ops';
+import type { AlignEdge, DistributeAxis } from '../../state/align-ops';
 
 /** One row in the layers list: the element, whether it is selected, and its group tag. */
 interface LayerItem {
@@ -74,5 +75,15 @@ export class LayersPanel {
 
   protected ungroup(): void {
     this.store.ungroupSelection();
+  }
+
+  /** Aligns the current selection along an edge (E5-S8). */
+  protected align(edge: AlignEdge): void {
+    this.store.alignSelection(edge);
+  }
+
+  /** Distributes the current selection's centres along an axis (E5-S8). */
+  protected distribute(axis: DistributeAxis): void {
+    this.store.distributeSelection(axis);
   }
 }

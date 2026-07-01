@@ -100,6 +100,22 @@ describe('ReportDocument (E4-S4)', () => {
     expect(numbers).toEqual(doc.pages.map((p) => String(p.pageNumber)));
   });
 
+  it('labels each page slot as a "Page N" group for assistive tech (E10-S1)', async () => {
+    const { doc, template } = multiPageDoc();
+    const { container } = await render(ReportDocument, {
+      inputs: { document: doc, template },
+    });
+
+    const slots = Array.from(container.querySelectorAll<HTMLElement>('.rdr-page-slot'));
+    expect(slots).toHaveLength(doc.pageCount);
+    for (const slot of slots) {
+      expect(slot.getAttribute('role')).toBe('group');
+      expect(slot.getAttribute('aria-roledescription')).toBe('page');
+      const n = slot.getAttribute('data-page-number');
+      expect(slot.getAttribute('aria-label')).toBe(`Page ${n}`);
+    }
+  });
+
   it('renders only the current page in single layout', async () => {
     const { doc, template } = multiPageDoc();
     const { container } = await render(ReportDocument, {

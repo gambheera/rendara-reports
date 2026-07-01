@@ -22,7 +22,16 @@ export default [
   ...nx.configs['flat/typescript'],
   ...nx.configs['flat/javascript'],
   {
-    ignores: ['**/dist', '.nx', '.angular', 'tmp', '**/vitest.config.*.timestamp*'],
+    ignores: [
+      '**/dist',
+      '.nx',
+      '.angular',
+      'tmp',
+      // The E9-S7 clean-room fixture is a standalone external Angular app with
+      // its own tsconfig — outside the workspace's type-aware lint program.
+      'tools/clean-room/fixture/**',
+      '**/vitest.config.*.timestamp*',
+    ],
   },
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx'],

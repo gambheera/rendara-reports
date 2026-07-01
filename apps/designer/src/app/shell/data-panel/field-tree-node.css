@@ -1,0 +1,115 @@
+:host {
+  display: block;
+}
+
+.rdr-field__row {
+  display: flex;
+  align-items: center;
+  gap: var(--rdr-space-1);
+  min-height: var(--rdr-size-row);
+  padding-right: var(--rdr-space-2);
+  border-radius: var(--rdr-radius-control);
+  color: var(--rdr-color-text-primary);
+  font-family: var(--rdr-font-ui);
+  font-size: var(--rdr-font-size-label);
+}
+
+.rdr-field__row:hover {
+  background: var(--rdr-color-surface);
+}
+
+.rdr-field__twisty,
+.rdr-field__twisty-spacer {
+  flex: none;
+  width: var(--rdr-size-icon-inline);
+  height: var(--rdr-size-icon-inline);
+}
+
+.rdr-field__twisty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--rdr-radius-control);
+  background: transparent;
+  color: var(--rdr-color-text-secondary);
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--rdr-motion-duration) var(--rdr-motion-easing);
+}
+
+.rdr-field__twisty--open {
+  transform: rotate(90deg);
+}
+
+.rdr-field__twisty:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+.rdr-field__grip {
+  flex: none;
+  color: var(--rdr-color-text-placeholder);
+  cursor: grab;
+  user-select: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.rdr-field__grip:active {
+  cursor: grabbing;
+}
+
+.rdr-field__grip:focus-visible {
+  outline: none;
+  box-shadow: var(--rdr-focus-ring);
+}
+
+/* The array-element placeholder / root rows can't be bound, so their grip is inert. */
+.rdr-field__grip--disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* Empty drag placeholder: dragging a field leaves no gap in the tree. */
+.rdr-field__drag-placeholder {
+  display: none;
+}
+
+.rdr-field__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rdr-field__chip {
+  flex: none;
+  padding: 0 var(--rdr-space-2);
+  border-radius: var(--rdr-radius-control);
+  background: var(--rdr-color-recessed);
+  color: var(--rdr-color-text-secondary);
+  font-size: var(--rdr-font-size-caption);
+  line-height: var(--rdr-line-height-caption);
+  font-variant-numeric: var(--rdr-font-numeric);
+}
+
+.rdr-field__chip--array {
+  background: var(--rdr-color-accent-subtle);
+  color: var(--rdr-color-accent);
+}
+
+.rdr-field__optional,
+.rdr-field__truncated {
+  flex: none;
+  color: var(--rdr-color-text-placeholder);
+  font-size: var(--rdr-font-size-caption);
+}
+
+.rdr-field__children {
+  display: flex;
+  flex-direction: column;
+}

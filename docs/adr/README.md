@@ -32,6 +32,16 @@ have the context behind the code.
 | [0008](0008-grouping-pagination.md)                   | Grouping & group aggregates across pages                         | Accepted | E3-S6 |
 | [0009](0009-renderer-style-isolation.md)              | Renderer style isolation: emulated default + opt-in Shadow DOM   | Accepted | E4-S5 |
 | [0010](0010-renderer-print-stylesheet.md)             | Renderer print stylesheet: a shared `@media print` block         | Accepted | E4-S8 |
+| [0011](0011-viewer-print-path.md)                     | Viewer print path: hidden per-page mirror + native `window.print()` | Accepted | E8-S2 |
+| [0012](0012-viewer-pdf-export.md)                     | Viewer PDF export: dependency-free selectable-text writer behind a swappable `PdfExporter` | Accepted | E8-S3 |
+| [0013](0013-viewer-apf-packaging.md)                  | Publishable viewer build: ng-packagr APF per lib + an esbuild/dts inline pass | Accepted | E9-S1 |
+| [0014](0014-viewer-peer-deps-and-version-tolerance.md) | Viewer wide Angular peers (`>=20`), tree-shake + version-tolerance gates | Accepted | E9-S2 |
+| [0015](0015-schema-framework-agnostic-packaging.md)   | Framework-agnostic schema build (esbuild/dts), dual ESM+CJS, Node-proven | Accepted | E9-S3 |
+| [0016](0016-viewer-demo-consumes-built-package.md)    | `viewer-demo` consumes the built viewer package; Linker/`charset` + prod-serve e2e | Accepted | E9-S4 |
+| [0017](0017-viewer-theming-and-isolation.md)          | Viewer theming API (`--rdr-*` families) + isolation guarantees; content-only shadow-DOM opt-in | Accepted | E9-S5 |
+| [0018](0018-viewer-api-docs-and-changelog.md)         | Viewer consumer docs: TypeDoc API reference, Storybook state gallery, Changesets CHANGELOG | Accepted | E9-S6 |
+| [0019](0019-viewer-clean-room-smoke-test.md)          | Clean-room install smoke test: packed tarball → fresh external Angular app → AOT build + browser render gate | Accepted | E9-S7 |
+| [0020](0020-accessible-report-output-semantics.md)    | Accessible report output via ARIA roles on the positioned DOM (table/row/columnheader/cell + page groups), not native `<table>` | Accepted | E10-S1 |
 
 > **Numbering note:** ADRs 0001–0004 were written first, during E0-S5…S8, each
 > recording one Epic 0 tooling decision. The foundational stack/architecture ADR

@@ -68,6 +68,110 @@ describe('DesignerStore', () => {
     });
   });
 
+  describe('snapping toggle (E5-S8)', () => {
+    it('defaults on, toggles and sets without marking dirty', () => {
+      expect(store.snapEnabled()).toBe(true);
+
+      store.toggleSnap();
+      expect(store.snapEnabled()).toBe(false);
+
+      store.setSnapEnabled(true);
+      expect(store.snapEnabled()).toBe(true);
+      expect(store.dirty()).toBe(false);
+    });
+  });
+
+  describe('preview mode (E6-S9)', () => {
+    it('defaults off, enters and exits without marking dirty', () => {
+      expect(store.previewMode()).toBe(false);
+
+      store.enterPreview();
+      expect(store.previewMode()).toBe(true);
+
+      store.enterPreview();
+      expect(store.previewMode()).toBe(true);
+
+      store.exitPreview();
+      expect(store.previewMode()).toBe(false);
+      expect(store.dirty()).toBe(false);
+    });
+  });
+
+  describe('align & distribute (E5-S8)', () => {
+    /** Three body elements at known frames for the align/distribute maths. */
+    function spread(): RendaraTemplate {
+      return {
+        ...createEmptyTemplate(),
+        body: {
+          elements: [
+            {
+              id: 'a',
+              type: 'text',
+              frame: { xMm: 10, yMm: 5, wMm: 20, hMm: 10 },
+              z: 1,
+              text: 'a',
+            },
+            {
+              id: 'b',
+              type: 'text',
+              frame: { xMm: 40, yMm: 30, wMm: 20, hMm: 10 },
+              z: 1,
+              text: 'b',
+            },
+            {
+              id: 'c',
+              type: 'text',
+              frame: { xMm: 90, yMm: 55, wMm: 20, hMm: 10 },
+              z: 1,
+              text: 'c',
+            },
+          ],
+        },
+      };
+    }
+
+    beforeEach(() => store.loadTemplate(spread()));
+
+    it('aligns the selection left and marks dirty', () => {
+      store.select(['a', 'b', 'c']);
+      store.alignSelection('left');
+      expect(store.bodyElements().map((el) => el.frame.xMm)).toEqual([10, 10, 10]);
+      expect(store.dirty()).toBe(true);
+    });
+
+    it('does nothing for a single selection (needs 2+)', () => {
+      store.selectOne('b');
+      store.alignSelection('left');
+      expect(store.elementsById().get('b')?.frame.xMm).toBe(40);
+      expect(store.dirty()).toBe(false);
+    });
+
+    it('distributes horizontal centres evenly', () => {
+      store.select(['a', 'b', 'c']);
+      store.distributeSelection('horizontal');
+      // centres 20, 50, 100 → even centres 20, 60, 100 → middle x = 50.
+      expect(store.elementsById().get('b')?.frame.xMm).toBe(50);
+    });
+
+    it('does nothing to distribute with fewer than three selected', () => {
+      store.select(['a', 'b']);
+      store.distributeSelection('horizontal');
+      expect(store.elementsById().get('b')?.frame.xMm).toBe(40);
+      expect(store.dirty()).toBe(false);
+    });
+
+    it('exposes canAlign (2+) and canDistribute (3+)', () => {
+      store.select(['a']);
+      expect(store.canAlign()).toBe(false);
+      expect(store.canDistribute()).toBe(false);
+      store.select(['a', 'b']);
+      expect(store.canAlign()).toBe(true);
+      expect(store.canDistribute()).toBe(false);
+      store.select(['a', 'b', 'c']);
+      expect(store.canDistribute()).toBe(true);
+    });
+  });
+
   describe('rendered document (E5-S4)', () => {
     it('paginates the empty document to a single page', () => {
       expect(store.paginatedDocument().pageCount).toBe(1);
@@ -81,6 +185,54 @@ describe('DesignerStore', () => {
 
       expect(second).not.toBe(first);
       expect(store.pageCount()).toBe(1);
+    });
+  });
+
+  describe('resolved data tables (E6-S8)', () => {
+    function tableEl() {
+      return {
+        id: 'tbl',
+        type: 'dataTable' as const,
+        frame: { xMm: 15, yMm: 30, wMm: 120, hMm: null },
+        z: 1,
+        source: { arrayExpr: 'rows' },
+        columns: [{ key: 'c1', header: 'C1', cell: { expr: '$.c1' }, widthMm: 60 }],
+        repeatHeaderOnEachPage: true,
+        keepTogether: false,
+      };
+    }
+
+    it('renders a header-only table preview when none is resolved (E6-S4 fallback)', () => {
+      store.addElement(tableEl());
+      const tables = store.paginatedDocument().pages[0].tables;
+      expect(tables).toHaveLength(1);
+      // Header row only — no detail rows without resolved data.
+      expect(tables[0].rows.every((r) => r.kind === 'header')).toBe(true);
+    });
+
+    it('overlays resolved rows + totals onto the rendered document', () => {
+      store.addElement(tableEl());
+      store.markClean(); // isolate: resolved tables are view-state, not a doc edit.
+      store.setResolvedTables(
+        new Map([
+          [
+            'tbl',
+            {
+              rows: [
+                { index: 0, data: { c1: 'a' }, cells: [{ columnKey: 'c1', value: { raw: 'a', formatted: 'a' } }] },
+                { index: 1, data: { c1: 'b' }, cells: [{ columnKey: 'c1', value: { raw: 'b', formatted: 'b' } }] },
+              ],
+              columnFooters: [],
+              errors: [],
+              diagnostics: [],
+            },
+          ],
+        ]),
+      );
+
+      const rows = store.paginatedDocument().pages[0].tables[0].rows;
+      expect(rows.filter((r) => r.kind === 'detail')).toHaveLength(2);
+      expect(store.dirty()).toBe(false); // resolved tables are view-state.
     });
   });
 
@@ -311,5 +463,357 @@ describe('DesignerStore', () => {
       store.markClean();
       expect(store.dirty()).toBe(false);
     });
+  });
+
+  describe('markDirty (E6-S11)', () => {
+    it('sets the dirty flag without touching the document', () => {
+      const before = store.template();
+      expect(store.dirty()).toBe(false);
+      store.markDirty();
+      expect(store.dirty()).toBe(true);
+      expect(store.template()).toBe(before);
+    });
+  });
+
+  describe('sample data (E6-S6)', () => {
+    const sample = {
+      fileName: 'invoice-sample.json',
+      value: { a: 1 },
+      root: { name: '$root', path: '', kind: 'object' as const },
+      truncated: false,
+    };
+
+    it('starts with no sample data', () => {
+      expect(store.sampleData()).toBeNull();
+      expect(store.hasSampleData()).toBe(false);
+    });
+
+    it('loads sample data without marking the document dirty or undoable', () => {
+      store.setSampleData(sample);
+      expect(store.sampleData()).toEqual(sample);
+      expect(store.hasSampleData()).toBe(true);
+      expect(store.dirty()).toBe(false);
+      expect(store.canUndo()).toBe(false);
+    });
+
+    it('replaces and clears sample data', () => {
+      store.setSampleData(sample);
+      const next = { ...sample, fileName: 'other.json' };
+      store.setSampleData(next);
+      expect(store.sampleData()?.fileName).toBe('other.json');
+      store.clearSampleData();
+      expect(store.sampleData()).toBeNull();
+      expect(store.hasSampleData()).toBe(false);
+    });
+
+    it('keeps sample data across an undo (it is view-state, not in history)', () => {
+      store.addElement(textEl('a'));
+      store.setSampleData(sample);
+      store.undo();
+      expect(store.bodyElements()).toEqual([]);
+      expect(store.sampleData()).toEqual(sample);
+    });
+  });
+
+  describe('undo / redo', () => {
+    it('starts with nothing to undo or redo', () => {
+      expect(store.canUndo()).toBe(false);
+      expect(store.canRedo()).toBe(false);
+    });
+
+    it('undoes an add and redoes it', () => {
+      store.addElement(textEl('a'));
+      expect(store.canUndo()).toBe(true);
+
+      store.undo();
+      expect(store.bodyElements()).toEqual([]);
+      expect(store.canUndo()).toBe(false);
+      expect(store.canRedo()).toBe(true);
+
+      store.redo();
+      expect(store.bodyElements().map((el) => el.id)).toEqual(['a']);
+      expect(store.canRedo()).toBe(false);
+    });
+
+    it('does nothing when there is nothing to undo or redo', () => {
+      const before = store.template();
+      store.undo();
+      store.redo();
+      expect(store.template()).toBe(before);
+    });
+
+    it('restores the selection that existed before a delete', () => {
+      store.loadTemplate(seededTemplate());
+      store.selectOne('b');
+      store.removeElement('b');
+      expect(store.bodyElements().map((el) => el.id)).toEqual(['a', 'c']);
+
+      store.undo();
+      expect(store.bodyElements().map((el) => el.id)).toEqual(['a', 'b', 'c']);
+      expect(store.selectedIds()).toEqual(['b']);
+    });
+
+    it('marks the document dirty after undo and redo', () => {
+      store.addElement(textEl('a'));
+      store.markClean();
+      store.undo();
+      expect(store.dirty()).toBe(true);
+      store.markClean();
+      store.redo();
+      expect(store.dirty()).toBe(true);
+    });
+
+    it('a fresh edit clears the redo stack', () => {
+      store.addElement(textEl('a'));
+      store.undo();
+      expect(store.canRedo()).toBe(true);
+      store.addElement(textEl('b'));
+      expect(store.canRedo()).toBe(false);
+    });
+
+    it('steps through a multi-edit timeline', () => {
+      store.addElement(textEl('a'));
+      store.addElement(textEl('b'));
+      store.updateElement('a', { text: 'changed' });
+
+      store.undo(); // undo the text change
+      expect((store.elementsById().get('a') as TextElement).text).toBe('a');
+      store.undo(); // undo add b
+      expect(store.bodyElements().map((el) => el.id)).toEqual(['a']);
+      store.undo(); // undo add a
+      expect(store.bodyElements()).toEqual([]);
+      expect(store.canUndo()).toBe(false);
+    });
+
+    it('treats group / ungroup as undoable steps', () => {
+      store.loadTemplate(seededTemplate());
+      store.select(['a', 'b']);
+      store.groupSelection();
+      expect(store.groups()).toHaveLength(1);
+
+      store.undo();
+      expect(store.groups()).toEqual([]);
+      store.redo();
+      expect(store.groups()).toHaveLength(1);
+    });
+
+    it('treats setPage as an undoable step', () => {
+      const landscape = { ...store.page(), orientation: 'landscape' as const };
+      store.setPage(landscape);
+      expect(store.page().orientation).toBe('landscape');
+      store.undo();
+      expect(store.page().orientation).toBe('portrait');
+    });
+
+    it('loadTemplate clears the history', () => {
+      store.addElement(textEl('a'));
+      expect(store.canUndo()).toBe(true);
+      store.loadTemplate(seededTemplate());
+      expect(store.canUndo()).toBe(false);
+      expect(store.canRedo()).toBe(false);
+    });
+  });
+
+  describe('interaction coalescing', () => {
+    beforeEach(() => store.loadTemplate(seededTemplate()));
+
+    it('coalesces a multi-step drag into a single undo entry', () => {
+      store.selectOne('a');
+      const start = store.elementsById().get('a')?.frame;
+
+      store.beginInteraction();
+      store.setFrames(new Map([['a', { xMm: 5, yMm: 5, wMm: 10, hMm: 5 }]]));
+      store.setFrames(new Map([['a', { xMm: 12, yMm: 9, wMm: 10, hMm: 5 }]]));
+      store.setFrames(new Map([['a', { xMm: 20, yMm: 15, wMm: 10, hMm: 5 }]]));
+      store.endInteraction();
+
+      expect(store.elementsById().get('a')?.frame).toMatchObject({ xMm: 20, yMm: 15 });
+
+      // A single undo reverts the entire gesture back to the pre-drag frame.
+      store.undo();
+      expect(store.elementsById().get('a')?.frame).toEqual(start);
+      expect(store.canUndo()).toBe(false);
+    });
+
+    it('records nothing when a gesture makes no change', () => {
+      store.selectOne('a');
+      store.beginInteraction();
+      store.endInteraction();
+      expect(store.canUndo()).toBe(false);
+    });
+
+    it('beginInteraction is idempotent while one is open', () => {
+      store.selectOne('a');
+      store.beginInteraction();
+      store.setFrames(new Map([['a', { xMm: 5, yMm: 5, wMm: 10, hMm: 5 }]]));
+      store.beginInteraction(); // ignored — must not capture the mid-drag frame
+      store.setFrames(new Map([['a', { xMm: 30, yMm: 30, wMm: 10, hMm: 5 }]]));
+      store.endInteraction();
+
+      store.undo();
+      expect(store.elementsById().get('a')?.frame).toMatchObject({ xMm: 0, yMm: 0 });
+    });
+  });
+
+  describe('clipboard', () => {
+    beforeEach(() => store.loadTemplate(seededTemplate()));
+
+    it('copy then paste appends an equivalent element with a new id, offset and selected', () => {
+      store.updateElement('a', { frame: { xMm: 10, yMm: 10, wMm: 20, hMm: 8 } });
+      store.selectOne('a');
+      store.copySelection();
+      expect(store.hasClipboard()).toBe(true);
+
+      const before = store.bodyElements().length;
+      store.paste();
+
+      expect(store.bodyElements().length).toBe(before + 1);
+      const pasted = store.selectedElements();
+      expect(pasted).toHaveLength(1);
+      expect(pasted[0].id).not.toBe('a');
+      expect(pasted[0].type).toBe('text');
+      expect(pasted[0].frame).toMatchObject({ xMm: 15, yMm: 15, wMm: 20, hMm: 8 });
+    });
+
+    it('paste is undoable as one step and a no-op with an empty clipboard', () => {
+      const before = store.template();
+      store.paste(); // clipboard empty
+      expect(store.template()).toBe(before);
+
+      store.selectOne('a');
+      store.copySelection();
+      store.paste();
+      expect(store.bodyElements().length).toBe(4);
+      store.undo();
+      expect(store.bodyElements().length).toBe(3);
+    });
+
+    it('cut copies then deletes in a single undo step', () => {
+      store.selectOne('b');
+      store.cutSelection();
+      expect(store.bodyElements().map((el) => el.id)).toEqual(['a', 'c']);
+      expect(store.hasClipboard()).toBe(true);
+
+      store.undo();
+      expect(store.bodyElements().map((el) => el.id)).toEqual(['a', 'b', 'c']);
+
+      // The cut element is still on the clipboard and pastes back.
+      store.paste();
+      expect(store.bodyElements().length).toBe(4);
+    });
+
+    it('duplicate clones the selection without touching the clipboard', () => {
+      store.selectOne('a');
+      store.copySelection(); // clipboard now holds [a]
+      store.selectOne('c');
+      store.duplicateSelection();
+
+      // The duplicate came from c, not from the clipboard's a.
+      const dup = store.selectedElements();
+      expect(dup).toHaveLength(1);
+      expect(dup[0].id).not.toBe('c');
+      expect((dup[0] as TextElement).text).toBe('c');
+      expect(store.bodyElements().length).toBe(4);
+      // Clipboard is unchanged: pasting still yields a copy of a.
+      store.paste();
+      expect((store.selectedElements()[0] as TextElement).text).toBe('a');
+    });
+
+    it('removeSelection deletes every selected element in one undo step', () => {
+      store.select(['a', 'c']);
+      store.removeSelection();
+      expect(store.bodyElements().map((el) => el.id)).toEqual(['b']);
+      expect(store.selectedIds()).toEqual([]);
+
+      store.undo();
+      expect(store.bodyElements().map((el) => el.id)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('copy with nothing selected keeps the clipboard empty', () => {
+      store.clearSelection();
+      store.copySelection();
+      expect(store.hasClipboard()).toBe(false);
+    });
+  });
+
+  describe('property: random ops then full undo returns to the initial document', () => {
+    /** Deterministic PRNG (mulberry32) so failures reproduce from the seed. */
+    function rng(seed: number): () => number {
+      let s = seed >>> 0;
+      return () => {
+        s = (s + 0x6d2b79f5) >>> 0;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    for (const seed of [1, 7, 42, 123, 2024]) {
+      it(`seed ${seed}`, () => {
+        store.loadTemplate(seededTemplate()); // initial: a, b, c — and an empty history
+        const initialTemplate = store.template();
+        const initialGroups = store.groups();
+        let counter = 0;
+
+        const ids = (): readonly string[] => store.bodyElements().map((el) => el.id);
+        const pick = <T>(r: number, xs: readonly T[]): T => xs[Math.floor(r * xs.length)];
+
+        const next = rng(seed);
+        const ops: Array<() => void> = [
+          () => store.addElement(textEl(`gen${counter++}`)),
+          () => {
+            const list = ids();
+            if (list.length > 0) store.removeElement(pick(next(), list));
+          },
+          () => {
+            const list = ids();
+            if (list.length > 0) {
+              store.updateElement(pick(next(), list), {
+                frame: { xMm: 5, yMm: 5, wMm: 12, hMm: 6 },
+              });
+            }
+          },
+          () => {
+            const list = ids();
+            if (list.length > 0) {
+              store.selectOne(pick(next(), list));
+              store.moveSelection(3, 2);
+            }
+          },
+          () => {
+            const list = ids();
+            if (list.length >= 2) {
+              store.select([list[0], list[1]]);
+              store.groupSelection();
+            }
+          },
+          () => {
+            const list = ids();
+            if (list.length > 0) {
+              store.selectOne(pick(next(), list));
+              store.copySelection();
+              store.paste();
+            }
+          },
+          () => {
+            const list = ids();
+            if (list.length > 0) {
+              store.selectOne(pick(next(), list));
+              store.reorderSelection('front');
+            }
+          },
+        ];
+
+        for (let i = 0; i < 40; i++) pick(next(), ops)();
+
+        // Unwind the whole timeline.
+        let guard = 0;
+        while (store.canUndo() && guard++ < 1000) store.undo();
+
+        expect(store.template()).toEqual(initialTemplate);
+        expect(store.groups()).toEqual(initialGroups);
+      });
+    }
   });
 });

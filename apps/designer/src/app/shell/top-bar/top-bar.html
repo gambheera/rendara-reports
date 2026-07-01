@@ -1,7 +1,7 @@
 <div class="rdr-top-bar__lead">
   <span class="rdr-top-bar__wordmark">Rendara</span>
   <span class="rdr-top-bar__divider" aria-hidden="true"></span>
-  <span class="rdr-top-bar__doc-name">{{ documentName }}</span>
+  <span class="rdr-top-bar__doc-name">{{ documentName() }}</span>
   <button
     type="button"
     rdr-button
@@ -12,16 +12,18 @@
   >
     <span class="rdr-top-bar__icon" aria-hidden="true">&#9998;</span>
   </button>
-  <span class="rdr-top-bar__status">
+  <span class="rdr-top-bar__status" [class.rdr-top-bar__status--dirty]="dirty()" aria-live="polite">
     <span class="rdr-top-bar__status-dot" aria-hidden="true"></span>
-    Saved
+    {{ statusLabel() }}
   </span>
 </div>
 
 <div class="rdr-top-bar__actions">
+  <button type="button" rdr-button variant="ghost" (click)="newDocument()">New</button>
+  <button type="button" rdr-button variant="ghost" (click)="openImport()">Open…</button>
   <button type="button" rdr-button variant="secondary" disabled>Import data</button>
-  <button type="button" rdr-button variant="secondary" disabled>Preview</button>
-  <button type="button" rdr-button variant="primary" disabled>Export</button>
+  <button type="button" rdr-button variant="secondary" (click)="enterPreview()">Preview</button>
+  <button type="button" rdr-button variant="primary" (click)="openExport()">Export</button>
   <button
     type="button"
     rdr-button
@@ -33,3 +35,5 @@
     <span class="rdr-top-bar__icon" aria-hidden="true">&#8943;</span>
   </button>
 </div>
+
+<rdr-export-import-dialog />

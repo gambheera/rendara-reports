@@ -142,13 +142,29 @@ describe('serializePageToHtml tables (E4-S3)', () => {
 
   it('emits a positioned table container with header, detail and footer rows', async () => {
     const html = await invoiceTableHtml();
-    expect(html).toContain('class="rdr-table" data-table-id="el_inv_table"');
+    expect(html).toContain(
+      'class="rdr-table" role="table" aria-label="Data table" data-table-id="el_inv_table"',
+    );
     expect(html).toContain('data-row-kind="header"');
     expect(html).toContain('data-row-kind="detail"');
     expect(html).toContain('data-row-kind="columnFooter"');
     expect(html).toContain('data-column-key="amt"');
     expect(html).toContain('Design consultation'); // a detail cell
     expect(html).toContain('$3,060.00'); // the grand total
+  });
+
+  it('marks up the table with ARIA table semantics (E10-S1, WCAG 2.2 AA)', async () => {
+    const html = await invoiceTableHtml();
+    // Container is a table; header cells are columnheaders; data cells are cells.
+    expect(html).toContain('role="table"');
+    expect(html).toContain('<div class="rdr-table-row" role="row" data-row-kind="header"');
+    expect(html).toContain('<div class="rdr-table-cell" role="columnheader"');
+    expect(html).toContain('<div class="rdr-table-cell" role="cell"');
+    // Every row track carries role="row"; every cell a header/data cell role — so a
+    // role="table" never has a childless (invalid) row.
+    const rows = (html.match(/class="rdr-table-row"/g) ?? []).length;
+    const rowRoles = (html.match(/class="rdr-table-row" role="row"/g) ?? []).length;
+    expect(rowRoles).toBe(rows);
   });
 
   it('escapes cell text it interpolates', () => {
@@ -219,7 +235,12 @@ describe('serializePageToHtml watermark (E4-S7)', () => {
     const doc = certificateDoc();
     const html = serializePageToHtml(
       buildPageViewModel(doc.pages[0], doc.geometry, {
-        watermark: { type: 'image', src: 'https://cdn.example/seal.png', opacity: 0.3, angleDeg: 0 },
+        watermark: {
+          type: 'image',
+          src: 'https://cdn.example/seal.png',
+          opacity: 0.3,
+          angleDeg: 0,
+        },
       }),
     );
     expect(html).toContain('<img class="rdr-watermark-image"');
@@ -331,5 +352,79 @@ describe('serializePageToHtml design-mode hooks (E4-S6)', () => {
     );
 
     expect(explicitView).toBe(defaultHtml);
+  });
+});
+
+describe('serializePageToHtml search highlighting (E8-S6)', () => {
+  async function invoiceDoc() {
+    const resolved = new Map<string, ResolvedDataTable>();
+    for (const element of goldenInvoiceTemplate.body.elements) {
+      if (isDataTableElement(element)) {
+        resolved.set(element.id, await resolveDataTable(element, goldenInvoiceData));
+      }
+    }
+    return paginate(goldenInvoiceTemplate, resolved);
+  }
+
+  it('is byte-identical to the default when no highlight query is supplied', async () => {
+    const doc = await invoiceDoc();
+    const defaultHtml = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }),
+    );
+    const emptyQuery = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenInvoiceTemplate,
+        highlightQuery: '',
+      }),
+    );
+    expect(emptyQuery).toBe(defaultHtml);
+    // A query that matches nothing also leaves the output untouched.
+    const noMatch = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenInvoiceTemplate,
+        highlightQuery: 'zzzznomatch',
+      }),
+    );
+    expect(noMatch).toBe(defaultHtml);
+  });
+
+  it('wraps matched runs in <mark class="rdr-mark"> for the title literal', async () => {
+    const doc = await invoiceDoc();
+    const html = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenInvoiceTemplate,
+        highlightQuery: 'invoice',
+      }),
+    );
+    // The title literal "INVOICE" is wrapped (case-insensitive match).
+    expect(html).toContain('<mark class="rdr-mark">INVOICE</mark>');
+  });
+
+  it('escapes matched text inside the mark', () => {
+    const doc = paginate(goldenCertificateTemplate, new Map());
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry);
+    const tampered = {
+      ...vm,
+      elements: [
+        {
+          id: 'el_x',
+          type: 'text' as const,
+          leftPx: 0,
+          topPx: 0,
+          widthPx: 10,
+          heightPx: 10,
+          zIndex: 0,
+          boxStyle: {},
+          content: {
+            kind: 'text' as const,
+            text: '<b>x</b>',
+            textStyle: {},
+            segments: [{ text: '<b>x</b>', mark: true }],
+          },
+        },
+      ],
+    };
+    const html = serializePageToHtml(tampered);
+    expect(html).toContain('<mark class="rdr-mark">&lt;b&gt;x&lt;/b&gt;</mark>');
   });
 });

@@ -25,12 +25,17 @@ import {
   boxDecorationStyle,
   buildPageViewModel,
   buildWatermarkView,
+  collectPageText,
   DEFAULT_PAGE_BACKGROUND,
   designAnchorAttrs,
   elementStyle,
+  findTextMatches,
   printableStyle,
   sanitizeImageUrl,
   sheetStyle,
+  splitHighlightSegments,
+  TABLE_ACCESSIBLE_NAME,
+  tableCellRole,
   type ElementBoxView,
   type ImageContentView,
   type PageViewModel,
@@ -897,5 +902,168 @@ describe('buildWatermarkView (E4-S7)', () => {
     const vm = buildPageViewModel(doc.pages[0], doc.geometry, { watermark: TEXT_WATERMARK });
     expect(vm.watermark?.kind).toBe('text');
     expect(vm.watermark?.text).toBe('CONFIDENTIAL');
+  });
+});
+
+describe('findTextMatches (E8-S6)', () => {
+  it('finds every case-insensitive, non-overlapping occurrence left to right', () => {
+    expect(findTextMatches('Total total TOTAL', 'total')).toEqual([
+      { start: 0, length: 5 },
+      { start: 6, length: 5 },
+      { start: 12, length: 5 },
+    ]);
+  });
+
+  it('does not overlap matches (aa in aaa is one match)', () => {
+    expect(findTextMatches('aaa', 'aa')).toEqual([{ start: 0, length: 2 }]);
+  });
+
+  it('returns nothing for an empty, whitespace-only, or unmatched query', () => {
+    expect(findTextMatches('hello', '')).toEqual([]);
+    expect(findTextMatches('hello', '   ')).toEqual([]);
+    expect(findTextMatches('hello', 'zzz')).toEqual([]);
+    expect(findTextMatches('', 'a')).toEqual([]);
+  });
+
+  it('trims the query before matching', () => {
+    expect(findTextMatches('the amount', '  amount ')).toEqual([{ start: 4, length: 6 }]);
+  });
+
+  it('returns offsets that index the original text (matches slice back correctly)', () => {
+    const text = 'Acme Corp — ACME';
+    const matches = findTextMatches(text, 'acme');
+    expect(matches.map((m) => text.slice(m.start, m.start + m.length))).toEqual(['Acme', 'ACME']);
+  });
+});
+
+describe('splitHighlightSegments (E8-S6)', () => {
+  it('splits text into alternating plain / marked runs that concatenate back', () => {
+    const segments = splitHighlightSegments('Pay the amount now', 'amount');
+    expect(segments).toEqual([
+      { text: 'Pay the ', mark: false },
+      { text: 'amount', mark: true },
+      { text: ' now', mark: false },
+    ]);
+    expect(segments?.map((s) => s.text).join('')).toBe('Pay the amount now');
+  });
+
+  it('marks a match at the very start and very end without empty plain runs', () => {
+    expect(splitHighlightSegments('amount', 'amount')).toEqual([{ text: 'amount', mark: true }]);
+    expect(splitHighlightSegments('xamount', 'amount')).toEqual([
+      { text: 'x', mark: false },
+      { text: 'amount', mark: true },
+    ]);
+  });
+
+  it('returns undefined when the query is empty or does not match (byte-stable path)', () => {
+    expect(splitHighlightSegments('hello', '')).toBeUndefined();
+    expect(splitHighlightSegments('hello', 'zzz')).toBeUndefined();
+  });
+});
+
+describe('search highlighting in the view-model (E8-S6)', () => {
+  it('omits segments entirely when no highlight query is supplied (byte-stable)', async () => {
+    const doc = await paginateInvoice();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenInvoiceTemplate,
+    });
+    for (const box of vm.elements) {
+      if (box.content.kind === 'text') {
+        expect('segments' in box.content).toBe(false);
+      }
+    }
+  });
+
+  it('attaches <mark> segments only to text that matches the query', async () => {
+    const doc = await paginateInvoice();
+    const title = goldenInvoiceTemplate.body.elements.find((e) => e.id === 'el_inv_title');
+    // The invoice title is the literal "INVOICE"; search for part of it.
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenInvoiceTemplate,
+      highlightQuery: 'invo',
+    });
+    const titleBox = vm.elements.find((e) => e.id === title?.id);
+    expect(titleBox?.content.kind).toBe('text');
+    const content = titleBox?.content as TextContentView;
+    expect(content.segments?.some((s) => s.mark)).toBe(true);
+    // A text element that does not contain the query keeps no segments.
+    const unmatched = vm.elements.find(
+      (e) =>
+        e.content.kind === 'text' &&
+        !(e.content as TextContentView).text.toLowerCase().includes('invo'),
+    );
+    if (unmatched) {
+      expect('segments' in unmatched.content).toBe(false);
+    }
+  });
+
+  it('highlights data-table cell text', async () => {
+    const doc = await paginateInvoice();
+    // Find a cell text to search for from the rendered table.
+    const plain = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenInvoiceTemplate,
+    });
+    const firstCellText = plain.tables[0]?.rows
+      .flatMap((r) => r.cells)
+      .find((c) => c.text.length > 2)?.text;
+    if (firstCellText === undefined) {
+      throw new Error('expected a table cell with searchable text');
+    }
+    const query = firstCellText.slice(0, 2);
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenInvoiceTemplate,
+      highlightQuery: query,
+    });
+    const marked = vm.tables[0].rows
+      .flatMap((r) => r.cells)
+      .some((c) => c.segments?.some((s) => s.mark));
+    expect(marked).toBe(true);
+  });
+});
+
+describe('collectPageText (E8-S6)', () => {
+  it('collects text-element strings then table cell/label strings in paint order', async () => {
+    const doc = await paginateInvoice();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate });
+    const texts = collectPageText(vm);
+
+    const elementTexts = vm.elements
+      .filter((e) => e.content.kind === 'text')
+      .map((e) => (e.content as TextContentView).text);
+    // The element texts lead the corpus, in element order.
+    expect(texts.slice(0, elementTexts.length)).toEqual(elementTexts);
+
+    // Every table cell text appears in the corpus.
+    const cellTexts = vm.tables
+      .flatMap((t) => t.rows)
+      .flatMap((r) => r.cells)
+      .map((c) => c.text);
+    for (const cell of cellTexts) {
+      expect(texts).toContain(cell);
+    }
+  });
+
+  it('skips non-text elements (shapes/images contribute nothing)', () => {
+    const doc = paginateCertificate();
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: goldenCertificateTemplate,
+    });
+    const textCount = vm.elements.filter((e) => e.content.kind === 'text').length;
+    expect(collectPageText(vm)).toHaveLength(textCount);
+  });
+});
+
+describe('accessible table roles (E10-S1)', () => {
+  it('maps a header row cell to columnheader and every other kind to cell', () => {
+    expect(tableCellRole('header')).toBe('columnheader');
+    for (const kind of ['detail', 'groupHeader', 'groupFooter', 'columnFooter'] as const) {
+      expect(tableCellRole(kind)).toBe('cell');
+    }
+  });
+
+  it('exposes a stable accessible name for the table', () => {
+    // A non-empty accessible name so a screen reader announces the region as a
+    // named table (brief §9, WCAG 2.2 AA).
+    expect(TABLE_ACCESSIBLE_NAME.trim().length).toBeGreaterThan(0);
   });
 });

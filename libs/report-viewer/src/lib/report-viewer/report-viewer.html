@@ -1,4 +1,522 @@
-<!-- E0-S2 skeleton: composes the shared renderer over an empty default page to
-     exercise the legal viewer -> {renderer, engine, schema} dependencies. Real
-     toolbar + paged output land in Epic 7+. -->
-<rdr-report-renderer [page]="page" [geometry]="geometry" />
+<!-- E7-S2 render pipeline + E7-S3 page navigation + E7-S5 feedback states +
+     E8-S1 configurable toolbar. The pipeline's view status drives a single
+     switch: while it runs the viewer shows a loading placeholder; a null/blank
+     template or one with no data settles to the empty state; a surfaced failure
+     settles to the error state; a successful pass paints the chrome (thumbnail
+     rail, configurable toolbar, scrolling page area, bottom page-status). -->
+@switch (viewStatus()) { @case ('rendered') { @if (renderModel(); as model) {
+<div class="rdr-viewer-shell">
+  <!-- Left thumbnail rail (E8-S7: optional): one mini single-page render per page;
+       the current page is outlined in the accent and reflected to assistive tech.
+       The toolbar Thumbnails toggle shows/hides it; when hidden it leaves the DOM. -->
+  @if (thumbnailsOpen()) {
+  <nav class="rdr-viewer-rail" aria-label="Pages">
+    <ol class="rdr-viewer-rail-list">
+      @for (n of pageNumbers(); track n) {
+      <li>
+        <button
+          type="button"
+          class="rdr-viewer-thumb"
+          [class.rdr-viewer-thumb--active]="n === currentPage()"
+          [attr.aria-current]="n === currentPage() ? 'page' : null"
+          [attr.aria-label]="'Go to page ' + n"
+          (click)="goToPage(n)"
+        >
+          <!-- The mini page render is a decorative preview: the button's aria-label
+               ("Go to page N") is its accessible name, so the full duplicate of the
+               report's text is hidden from assistive tech (E10-S1) — without it a
+               screen reader would read the entire report once per thumbnail. -->
+          <rdr-report-document
+            class="rdr-viewer-thumb-doc"
+            aria-hidden="true"
+            [document]="model.document"
+            [template]="model.template"
+            [resolvedValues]="model.resolvedValues"
+            [layout]="'single'"
+            [currentPage]="n"
+            [zoom]="'fit-width'"
+            [availableSize]="thumbnailSize()"
+          />
+          <span class="rdr-viewer-thumb-label" aria-hidden="true">{{ n }}</span>
+        </button>
+      </li>
+      }
+    </ol>
+  </nav>
+  }
+
+  <div class="rdr-viewer-main">
+    <!-- Configurable toolbar (E8-S1): three zones — document title (left), the
+         page-navigation and zoom groups (centre), and the Print / Export /
+         Watermark action buttons plus a host custom-action slot (right). Each
+         control is shown/hidden by a `config.toolbar` flag; a hidden control is
+         absent from the DOM, and `visible: false` drops the whole bar. The
+         action buttons drive E8-S2 (print), E8-S3 (export) and E8-S4
+         (watermark). -->
+    @if (toolbar().visible) {
+    <div class="rdr-viewer-nav" role="toolbar" aria-label="Viewer toolbar">
+      <!-- Left zone: document title. -->
+      <div class="rdr-viewer-nav-zone rdr-viewer-nav-zone--start">
+        @if (toolbar().title && documentTitle()) {
+        <span class="rdr-viewer-title" [title]="documentTitle()">{{ documentTitle() }}</span>
+        }
+      </div>
+
+      <!-- Centre zone: page-navigation and zoom groups. -->
+      <div class="rdr-viewer-nav-zone rdr-viewer-nav-zone--center">
+        @if (toolbar().navigation) {
+        <div class="rdr-viewer-nav-group">
+          <button
+            type="button"
+            class="rdr-viewer-nav-btn"
+            aria-label="Previous page"
+            [disabled]="!canPrev()"
+            (click)="goToPage(currentPage() - 1)"
+          >
+            ‹
+          </button>
+          <span class="rdr-viewer-nav-pages">
+            <label class="rdr-viewer-sr-only" for="rdr-viewer-goto">Page</label>
+            <input
+              id="rdr-viewer-goto"
+              class="rdr-viewer-nav-input"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              [max]="totalPages()"
+              [value]="currentPage()"
+              (change)="onGotoInput($event)"
+            />
+            <span class="rdr-viewer-nav-total">/ {{ totalPages() }}</span>
+          </span>
+          <button
+            type="button"
+            class="rdr-viewer-nav-btn"
+            aria-label="Next page"
+            [disabled]="!canNext()"
+            (click)="goToPage(currentPage() + 1)"
+          >
+            ›
+          </button>
+        </div>
+        } @if (toolbar().navigation && toolbar().zoom) {
+        <span class="rdr-viewer-nav-divider" aria-hidden="true"></span>
+        }
+
+        <!-- Zoom group: − · resolved % · + stepper, then the fit-mode dropdown. -->
+        @if (toolbar().zoom) {
+        <div class="rdr-viewer-nav-group">
+          <button
+            type="button"
+            class="rdr-viewer-nav-btn"
+            aria-label="Zoom out"
+            [disabled]="!canZoomOut()"
+            (click)="zoomOutClick()"
+          >
+            −
+          </button>
+          <span class="rdr-viewer-zoom-readout" aria-live="polite">{{ zoomPercentLabel() }}</span>
+          <button
+            type="button"
+            class="rdr-viewer-nav-btn"
+            aria-label="Zoom in"
+            [disabled]="!canZoomIn()"
+            (click)="zoomInClick()"
+          >
+            +
+          </button>
+          <label class="rdr-viewer-sr-only" for="rdr-viewer-zoom">Zoom level</label>
+          <select
+            id="rdr-viewer-zoom"
+            class="rdr-viewer-zoom-select"
+            (change)="onZoomSelect($event)"
+          >
+            @for (opt of zoomOptionList(); track opt.value) {
+            <option [value]="opt.value" [selected]="opt.value === zoomSelectValue()">
+              {{ opt.label }}
+            </option>
+            }
+          </select>
+        </div>
+        }
+      </div>
+
+      <!-- Right zone: Print / Export / Watermark actions and the host slot. -->
+      <div class="rdr-viewer-nav-zone rdr-viewer-nav-zone--end">
+        @if (toolbar().print) {
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          aria-label="Print"
+          title="Print"
+          (click)="onPrint()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 9V3h12v6" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2" />
+            <path d="M6 14h12v7H6z" />
+          </svg>
+        </button>
+        } @if (toolbar().export) {
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          aria-label="Export PDF"
+          title="Export PDF"
+          (click)="onExport()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 3v12" />
+            <path d="m8 11 4 4 4-4" />
+            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+          </svg>
+        </button>
+        } @if (toolbar().watermark) {
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          aria-label="Watermark"
+          title="Watermark"
+          (click)="onWatermark()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 2.5 6 9a6 6 0 1 0 12 0z" />
+          </svg>
+        </button>
+        } @if (toolbar().source) {
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          aria-label="Download source"
+          title="Download source JSON"
+          (click)="onDownloadSource()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M8 4H6a2 2 0 0 0-2 2v3a2 2 0 0 1-2 2 2 2 0 0 1 2 2v3a2 2 0 0 0 2 2h2" />
+            <path d="M16 4h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2 2 2 0 0 0-2 2v3a2 2 0 0 1-2 2h-2" />
+          </svg>
+        </button>
+        } @if (toolbar().search) {
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          [class.rdr-viewer-nav-btn--active]="searchOpen()"
+          aria-label="Find in report"
+          title="Find in report"
+          [attr.aria-pressed]="searchOpen()"
+          (click)="toggleSearch()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+        </button>
+        } @if (toolbar().thumbnails) {
+        <button
+          type="button"
+          class="rdr-viewer-nav-btn"
+          [class.rdr-viewer-nav-btn--active]="thumbnailsOpen()"
+          aria-label="Toggle page thumbnails"
+          title="Toggle page thumbnails"
+          [attr.aria-pressed]="thumbnailsOpen()"
+          (click)="toggleThumbnails()"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path d="M9 4v16" />
+          </svg>
+        </button>
+        }
+        <!-- Host custom-action slot: project buttons with [rdr-toolbar-actions]. -->
+        <ng-content select="[rdr-toolbar-actions]" />
+      </div>
+    </div>
+    }
+
+    <!-- In-report Find bar (E8-S6): opened by the toolbar Find toggle. The query
+         highlights matches on screen and drives the match count + prev/next. -->
+    @if (toolbar().search && searchOpen()) {
+    <div class="rdr-viewer-search" role="search">
+      <span class="rdr-viewer-search-icon" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      </span>
+      <input
+        #searchInput
+        class="rdr-viewer-search-input"
+        type="text"
+        [value]="searchQuery()"
+        (input)="onSearchInput($event)"
+        (keydown)="onSearchKeydown($event)"
+        placeholder="Find in report"
+        aria-label="Find in report"
+        autocomplete="off"
+      />
+      <span class="rdr-viewer-search-count" aria-live="polite">{{ matchLabel() }}</span>
+      <button
+        type="button"
+        class="rdr-viewer-nav-btn"
+        aria-label="Previous match"
+        [disabled]="!canStepMatch()"
+        (click)="prevMatch()"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        class="rdr-viewer-nav-btn"
+        aria-label="Next match"
+        [disabled]="!canStepMatch()"
+        (click)="nextMatch()"
+      >
+        ›
+      </button>
+      <button
+        type="button"
+        class="rdr-viewer-nav-btn"
+        aria-label="Close find"
+        title="Close find"
+        (click)="closeSearch()"
+      >
+        ✕
+      </button>
+    </div>
+    }
+
+    <!-- Scrolling page area: the scroll spy keeps the indicator in sync in
+         continuous mode; in single mode only the current page is painted. -->
+    <div
+      #scrollArea
+      class="rdr-viewer-scroll"
+      tabindex="0"
+      role="region"
+      aria-label="Report pages"
+      (scroll)="onScroll()"
+    >
+      <rdr-report-document
+        [document]="model.document"
+        [template]="model.template"
+        [resolvedValues]="model.resolvedValues"
+        [zoom]="zoomSpec()"
+        [layout]="pageMode()"
+        [currentPage]="currentPage()"
+        [highlight]="searchHighlight()"
+        (zoomChange)="onZoomChange($event)"
+      />
+    </div>
+
+    <!-- Bottom status: the canonical `Page x of y`. -->
+    <div class="rdr-viewer-status">
+      <span>Page {{ currentPage() }} of {{ totalPages() }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Print-only mirror (E8-S2): every page rendered through the same shared
+     renderer at natural size (zoom 1), one document per page. Hidden on screen
+     (`display:none`); under `@media print` the interactive shell is hidden and
+     this mirror is shown, so `window.print()` emits all pages — vector text, one
+     sheet per paper page — regardless of the on-screen page mode or zoom. Each
+     page is wrapped in a viewer-owned div so the `break-after: page` rule lives
+     in the viewer's own (encapsulated) stylesheet. -->
+<div class="rdr-viewer-print" aria-hidden="true">
+  @for (n of pageNumbers(); track n) {
+  <div class="rdr-viewer-print-page">
+    <rdr-report-document
+      [document]="model.document"
+      [template]="model.template"
+      [resolvedValues]="model.resolvedValues"
+      [layout]="'single'"
+      [currentPage]="n"
+      [zoom]="1"
+    />
+  </div>
+  }
+</div>
+
+<!-- Export PDF dialog (E8-S3): opened by the toolbar Export action. Its choices
+     are resolved into a PdfExportRequest and run through the swappable exporter. -->
+@if (exportOpen()) {
+<rdr-export-dialog
+  [defaultFilename]="exportFilename()"
+  [totalPages]="totalPages()"
+  [currentPage]="currentPage()"
+  [hasWatermark]="hasWatermark()"
+  (confirmExport)="onExportConfirm($event)"
+  (dismiss)="onExportCancel()"
+/>
+}
+
+<!-- Watermark dialog (E8-S4): opened by the toolbar Watermark action. The
+     resolved watermark is set as the active watermark, which re-runs the pipeline
+     so it stamps the on-screen pages, the print mirror and the PDF export. -->
+@if (watermarkOpen()) {
+<rdr-watermark-dialog
+  [watermark]="activeWatermark()"
+  (applyWatermark)="onWatermarkApply($event)"
+  (dismiss)="onWatermarkCancel()"
+/>
+} } }
+
+<!-- Loading: spinner + reassurance + a skeleton page, announced politely. -->
+@case ('loading') {
+<div class="rdr-viewer-state rdr-viewer-state--loading" role="status" aria-live="polite">
+  <span class="rdr-viewer-spinner" aria-hidden="true"></span>
+  <p class="rdr-viewer-state-title">Rendering report…</p>
+  <div class="rdr-viewer-skeleton" aria-hidden="true">
+    <span class="rdr-viewer-skeleton-line rdr-viewer-skeleton-line--title"></span>
+    <span class="rdr-viewer-skeleton-line"></span>
+    <span class="rdr-viewer-skeleton-line"></span>
+    <span class="rdr-viewer-skeleton-line rdr-viewer-skeleton-line--short"></span>
+    <div class="rdr-viewer-skeleton-blocks">
+      <span class="rdr-viewer-skeleton-block"></span>
+      <span class="rdr-viewer-skeleton-block"></span>
+    </div>
+  </div>
+</div>
+}
+
+<!-- Empty: no data to render yet. -->
+@case ('empty') {
+<div class="rdr-viewer-state rdr-viewer-state--empty" role="status">
+  <span class="rdr-viewer-state-icon" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+    </svg>
+  </span>
+  <p class="rdr-viewer-state-title">No data to display</p>
+  <p class="rdr-viewer-state-detail">Provide a data JSON to render this report.</p>
+</div>
+}
+
+<!-- Error: a surfaced (never thrown) failure, with the reason and a details
+     disclosure for the structured validator problems. -->
+@case ('error') {
+<div class="rdr-viewer-state rdr-viewer-state--error" role="alert">
+  <span class="rdr-viewer-state-icon rdr-viewer-state-icon--danger" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v6" />
+      <path d="M12 16.5h.01" />
+    </svg>
+  </span>
+  <p class="rdr-viewer-state-title">Couldn't render this report</p>
+  <p class="rdr-viewer-state-detail rdr-viewer-state-detail--error">{{ viewError()?.message }}</p>
+  <button
+    type="button"
+    class="rdr-viewer-state-btn"
+    [attr.aria-expanded]="detailsOpen()"
+    aria-controls="rdr-viewer-error-details"
+    (click)="toggleDetails()"
+  >
+    {{ detailsOpen() ? 'Hide details' : 'View details' }}
+  </button>
+  @if (detailsOpen()) {
+  <div id="rdr-viewer-error-details" class="rdr-viewer-state-details">
+    @if (viewError()?.details?.length) {
+    <ul class="rdr-viewer-state-details-list">
+      @for (problem of viewError()?.details; track $index) {
+      <li>
+        @if (problem.path) {
+        <code>{{ problem.path }}</code>
+        } {{ problem.message }}
+      </li>
+      }
+    </ul>
+    } @else {
+    <p>{{ viewError()?.kind }} error — no further details available.</p>
+    }
+  </div>
+  }
+</div>
+} }

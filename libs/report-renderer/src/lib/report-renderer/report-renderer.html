@@ -23,7 +23,11 @@
     [rdrDesignAttrs]="elementAnchor(box)"
   >
     @switch (content.kind) { @case ('text') {
-    <div class="rdr-text" [style]="content.textStyle">{{ content.text }}</div>
+    <div class="rdr-text" [style]="content.textStyle">
+      @if (content.segments; as segments) { @for (seg of segments; track $index) { @if (seg.mark) {
+      <mark class="rdr-mark">{{ seg.text }}</mark>
+      } @else {{{ seg.text }}} } } @else {{{ content.text }}}
+    </div>
     } @case ('shape') {
     <svg
       class="rdr-shape"
@@ -75,22 +79,36 @@
   } @for (table of model.tables; track table.elementId) {
   <div
     class="rdr-table"
+    role="table"
+    [attr.aria-label]="tableAccessibleName"
     [style]="tableContainerStyle(table)"
     [attr.data-table-id]="table.elementId"
     [rdrDesignAttrs]="tableAnchor(table)"
   >
     @for (row of table.rows; track $index) {
-    <div class="rdr-table-row" [style]="tableRowStyle(row)" [attr.data-row-kind]="row.kind">
+    <div
+      class="rdr-table-row"
+      role="row"
+      [style]="tableRowStyle(row)"
+      [attr.data-row-kind]="row.kind"
+    >
       @for (cell of row.cells; track cell.columnKey) {
       <div
         class="rdr-table-cell"
+        [attr.role]="cellRole(row.kind)"
         [style]="tableCellStyle(cell)"
         [attr.data-column-key]="cell.columnKey"
       >
-        {{ cell.text }}
+        @if (cell.segments; as segments) { @for (seg of segments; track $index) { @if (seg.mark) {
+        <mark class="rdr-mark">{{ seg.text }}</mark>
+        } @else {{{ seg.text }}} } } @else {{{ cell.text }}}
       </div>
       } @if (row.label; as label) {
-      <div class="rdr-table-label" [style]="tableLabelStyle(label)">{{ label.text }}</div>
+      <div class="rdr-table-label" role="cell" [style]="tableLabelStyle(label)">
+        @if (label.segments; as segments) { @for (seg of segments; track $index) { @if (seg.mark) {
+        <mark class="rdr-mark">{{ seg.text }}</mark>
+        } @else {{{ seg.text }}} } } @else {{{ label.text }}}
+      </div>
       }
     </div>
     }

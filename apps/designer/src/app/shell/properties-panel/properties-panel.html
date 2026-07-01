@@ -1,7 +1,740 @@
 <div class="rdr-properties__header">
   <h2 class="rdr-properties__title">Properties</h2>
 </div>
+
+@if (element(); as el) {
+<div class="rdr-properties__sections">
+  <!-- Layout: frame geometry, for any single element. -->
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-layout-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('layout')"
+      (click)="toggleSection('layout')"
+    >
+      <span id="rdr-prop-layout-h" class="rdr-properties__section-title">Layout</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('layout') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('layout') && frame(); as f) {
+    <div class="rdr-properties__section-body">
+      <div class="rdr-properties__grid">
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">X</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              [value]="f.xMm"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onFrame('xMm', numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Y</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              [value]="f.yMm"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onFrame('yMm', numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Width</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              min="0"
+              [value]="f.wMm"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onFrame('wMm', numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Height</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              min="0"
+              [value]="f.hMm ?? ''"
+              [disabled]="f.hMm === null"
+              [attr.placeholder]="f.hMm === null ? 'Auto' : null"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onFrame('hMm', numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+      </div>
+    </div>
+    }
+  </section>
+
+  <!-- Text: literal content + font style, for a text element only. -->
+  @if (textElement(); as txt) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-text-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('text')"
+      (click)="toggleSection('text')"
+    >
+      <span id="rdr-prop-text-h" class="rdr-properties__section-title">Text</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('text') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('text') && font(); as fnt) {
+    <div class="rdr-properties__section-body">
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Content</span>
+        <textarea
+          class="rdr-properties__textarea"
+          rows="2"
+          [value]="txt.text ?? ''"
+          (focus)="beginEdit()"
+          (blur)="endEdit()"
+          (input)="onText(valueFrom($event))"
+        ></textarea>
+      </label>
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Font family</span>
+        <select class="rdr-properties__select" (change)="onFamily(valueFrom($event))">
+          @for (fam of familyOptions(); track fam) {
+          <option [value]="fam" [selected]="fam === fnt.family">{{ fam }}</option>
+          }
+        </select>
+      </label>
+      <div class="rdr-properties__pair">
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Size</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="1"
+              min="1"
+              [value]="fnt.sizePt"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onSize(numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">pt</span>
+          </span>
+        </label>
+        <div class="rdr-properties__field">
+          <span class="rdr-properties__label">Weight</span>
+          <div class="rdr-properties__segmented" role="group" aria-label="Font weight">
+            <button
+              type="button"
+              class="rdr-properties__segment"
+              [class.rdr-properties__segment--active]="!fnt.bold"
+              [attr.aria-pressed]="!fnt.bold"
+              (click)="onWeight('normal')"
+            >
+              Reg
+            </button>
+            <button
+              type="button"
+              class="rdr-properties__segment"
+              [class.rdr-properties__segment--active]="fnt.bold"
+              [attr.aria-pressed]="fnt.bold"
+              (click)="onWeight('bold')"
+            >
+              Bold
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    }
+  </section>
+  }
+
+  <!-- Shape: stroke + fill, for a line/rect/ellipse element only. -->
+  @if (shapeElement()) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-shape-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('shape')"
+      (click)="toggleSection('shape')"
+    >
+      <span id="rdr-prop-shape-h" class="rdr-properties__section-title">Shape</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('shape') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('shape') && stroke(); as st) {
+    <div class="rdr-properties__section-body">
+      <div class="rdr-properties__pair">
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Stroke style</span>
+          <select class="rdr-properties__select" (change)="onStrokeStyle($any(valueFrom($event)))">
+            @for (s of strokeStyles; track s) {
+            <option [value]="s" [selected]="s === st.style">{{ s }}</option>
+            }
+          </select>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Stroke width</span>
+          <span class="rdr-properties__suffix-field">
+            <input
+              class="rdr-properties__input"
+              type="number"
+              step="0.1"
+              min="0"
+              [value]="st.widthMm"
+              [disabled]="!st.enabled"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onStrokeWidth(numberFrom($event))"
+            />
+            <span class="rdr-properties__suffix">mm</span>
+          </span>
+        </label>
+      </div>
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Stroke colour</span>
+        <input
+          class="rdr-properties__color"
+          type="color"
+          [value]="st.color"
+          [disabled]="!st.enabled"
+          (input)="onStrokeColor(valueFrom($event))"
+        />
+      </label>
+
+      @if (fillable()) {
+      <div class="rdr-properties__field">
+        <label class="rdr-properties__check">
+          <input
+            type="checkbox"
+            [checked]="hasFill()"
+            (change)="onFillToggle(($any($event.target)).checked)"
+          />
+          <span class="rdr-properties__label">Fill</span>
+        </label>
+        @if (fill(); as fillColor) {
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Fill colour</span>
+          <input
+            class="rdr-properties__color"
+            type="color"
+            [value]="fillColor"
+            (input)="onFillColor(valueFrom($event))"
+          />
+        </label>
+        }
+      </div>
+      }
+    </div>
+    }
+  </section>
+  }
+
+  <!-- Image: source (URL / upload) + fit mode, for an image element only. -->
+  @if (imageElement()) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-image-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('image')"
+      (click)="toggleSection('image')"
+    >
+      <span id="rdr-prop-image-h" class="rdr-properties__section-title">Image</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('image') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('image')) {
+    <div class="rdr-properties__section-body">
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Source URL</span>
+        <input
+          class="rdr-properties__input"
+          type="url"
+          inputmode="url"
+          placeholder="https://… or data:image/…"
+          [attr.aria-invalid]="imageError() ? 'true' : null"
+          [attr.aria-describedby]="imageError() ? 'rdr-prop-image-err' : null"
+          [value]="imageSrc()"
+          (focus)="beginEdit()"
+          (blur)="endEdit()"
+          (input)="onImageUrl(valueFrom($event))"
+        />
+      </label>
+      <div class="rdr-properties__field">
+        <span class="rdr-properties__label">Upload</span>
+        <input
+          class="rdr-properties__file"
+          type="file"
+          accept="image/*"
+          aria-label="Upload image file"
+          (change)="onImageUpload($event)"
+        />
+      </div>
+      @if (imageError(); as err) {
+      <p id="rdr-prop-image-err" class="rdr-properties__error" role="alert">{{ err }}</p>
+      }
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Fit</span>
+        <select class="rdr-properties__select" (change)="onImageFit($any(valueFrom($event)))">
+          @for (f of imageFits; track f) {
+          <option [value]="f" [selected]="f === imageFit()">{{ f }}</option>
+          }
+        </select>
+      </label>
+    </div>
+    }
+  </section>
+  }
+
+  <!-- Data Binding: expression + format + fallback + visibility, for a text/image element. -->
+  @if (bindable()) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-binding-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('binding')"
+      (click)="toggleSection('binding')"
+    >
+      <span id="rdr-prop-binding-h" class="rdr-properties__section-title">Data Binding</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('binding') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('binding')) {
+    <div class="rdr-properties__section-body">
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Expression</span>
+        <span class="rdr-properties__fx">
+          <span class="rdr-properties__fx-icon" aria-hidden="true">fx</span>
+          <input
+            class="rdr-properties__input rdr-properties__fx-input"
+            type="text"
+            list="rdr-binding-fields"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="e.g. invoice.customer.name"
+            [class.rdr-properties__fx-input--valid]="bindingValid()"
+            [attr.aria-invalid]="bindingError() ? 'true' : null"
+            [attr.aria-describedby]="bindingError() ? 'rdr-prop-binding-err' : null"
+            [value]="bindingExpr()"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onBindingExpr(valueFrom($event))"
+          />
+          @if (bindingValid()) {
+          <span class="rdr-properties__fx-valid" title="Valid expression" aria-hidden="true"
+            >✓</span
+          >
+          }
+        </span>
+      </label>
+
+      <datalist id="rdr-binding-fields">
+        @for (path of fieldPaths(); track path) {
+        <option [value]="path"></option>
+        }
+      </datalist>
+
+      @if (bindingError(); as err) {
+      <p id="rdr-prop-binding-err" class="rdr-properties__error" role="alert">{{ err }}</p>
+      } @if (bindingPreview() !== null) {
+      <div class="rdr-properties__preview">
+        <span class="rdr-properties__preview-label">Preview</span>
+        <span class="rdr-properties__preview-value">{{ bindingPreview() || '—' }}</span>
+      </div>
+      } @else if (binding() && !hasSampleData()) {
+      <p class="rdr-properties__hint">Import sample data to preview the resolved value.</p>
+      }
+
+      <div class="rdr-properties__pair">
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Format</span>
+          <select
+            class="rdr-properties__select"
+            [disabled]="!binding()"
+            (change)="onBindingFormat(valueFrom($event))"
+          >
+            @for (opt of formatOptions; track opt.label) {
+            <option [value]="opt.token ?? ''" [selected]="(opt.token ?? '') === bindingFormat()">
+              {{ opt.label }}
+            </option>
+            }
+          </select>
+        </label>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Fallback</span>
+          <input
+            class="rdr-properties__input"
+            type="text"
+            placeholder="—"
+            [disabled]="!binding()"
+            [value]="bindingFallback()"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onBindingFallback(valueFrom($event))"
+          />
+        </label>
+      </div>
+
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Visible when</span>
+        <input
+          class="rdr-properties__input"
+          type="text"
+          list="rdr-binding-fields"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="always"
+          [value]="visibleWhen()"
+          (focus)="beginEdit()"
+          (blur)="endEdit()"
+          (input)="onVisibleWhen(valueFrom($event))"
+        />
+      </label>
+
+      @if (binding()) {
+      <button type="button" class="rdr-properties__add-btn" (click)="clearBinding()">
+        Clear binding
+      </button>
+      }
+    </div>
+    }
+  </section>
+  }
+
+  <!-- Table: column structure, selected-column editor, options + grouping (data-table only). -->
+  @if (tableElement(); as tbl) {
+  <section class="rdr-properties__section" aria-labelledby="rdr-prop-table-h">
+    <button
+      type="button"
+      class="rdr-properties__section-head"
+      [attr.aria-expanded]="isOpen('table')"
+      (click)="toggleSection('table')"
+    >
+      <span id="rdr-prop-table-h" class="rdr-properties__section-title">Table</span>
+      <span class="rdr-properties__chevron" aria-hidden="true"
+        >{{ isOpen('table') ? '▾' : '▸' }}</span
+      >
+    </button>
+    @if (isOpen('table')) {
+    <div class="rdr-properties__section-body">
+      <!-- Data Source: the bound array expression + resolved row count (E6-S8). -->
+      <label class="rdr-properties__field">
+        <span class="rdr-properties__label">Data source</span>
+        <span class="rdr-properties__fx">
+          <span class="rdr-properties__fx-icon" aria-hidden="true">fx</span>
+          <input
+            class="rdr-properties__input rdr-properties__fx-input"
+            type="text"
+            list="rdr-table-array-fields"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="e.g. invoice.lineItems"
+            [attr.aria-invalid]="sourceError() ? 'true' : null"
+            [attr.aria-describedby]="sourceError() ? 'rdr-prop-source-err' : null"
+            [value]="tableSource()"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onTableSource(valueFrom($event))"
+          />
+        </span>
+      </label>
+      <datalist id="rdr-table-array-fields">
+        @for (path of arrayPaths(); track path) {
+        <option [value]="path"></option>
+        }
+      </datalist>
+      <datalist id="rdr-table-row-fields">
+        @for (path of rowFieldPaths(); track path) {
+        <option [value]="path"></option>
+        }
+      </datalist>
+      @if (sourceError(); as err) {
+      <p id="rdr-prop-source-err" class="rdr-properties__error" role="alert">{{ err }}</p>
+      } @else if (tableRowCount() !== null) {
+      <p class="rdr-properties__hint">{{ tableRowCount() }} rows in sample data</p>
+      }
+
+      <!-- Columns: reorderable list with per-column remove + Add column. -->
+      <div class="rdr-properties__field">
+        <span class="rdr-properties__label">Columns</span>
+        <ul
+          class="rdr-properties__col-list"
+          cdkDropList
+          (cdkDropListDropped)="onColumnDrop($event)"
+        >
+          @for (col of columns(); track col.key) {
+          <li
+            class="rdr-properties__col-row"
+            [class.rdr-properties__col-row--active]="col.key === selectedColumn()?.key"
+            cdkDrag
+          >
+            <button
+              type="button"
+              class="rdr-properties__col-grip"
+              cdkDragHandle
+              aria-label="Reorder column"
+            >
+              ⠿
+            </button>
+            <button
+              type="button"
+              class="rdr-properties__col-name"
+              [attr.aria-pressed]="col.key === selectedColumn()?.key"
+              (click)="selectColumn(col.key)"
+            >
+              {{ col.header || '(no header)' }}
+            </button>
+            <button
+              type="button"
+              class="rdr-properties__icon-btn"
+              [disabled]="columns().length <= 1"
+              [attr.aria-label]="'Remove column ' + (col.header || col.key)"
+              (click)="onRemoveColumn(col.key)"
+            >
+              ✕
+            </button>
+          </li>
+          }
+        </ul>
+        <button type="button" class="rdr-properties__add-btn" (click)="onAddColumn()">
+          + Add column
+        </button>
+      </div>
+
+      <!-- Selected-Column editor: header text, width, align (cell expr/aggregate are E6-S8). -->
+      @if (selectedColumn(); as col) {
+      <div class="rdr-properties__subsection">
+        <span class="rdr-properties__label">Selected column</span>
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Header text</span>
+          <input
+            class="rdr-properties__input"
+            type="text"
+            [value]="col.header"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onColumnHeader(col.key, valueFrom($event))"
+          />
+        </label>
+        <div class="rdr-properties__pair">
+          <label class="rdr-properties__field">
+            <span class="rdr-properties__label">Width</span>
+            <span class="rdr-properties__suffix-field">
+              <input
+                class="rdr-properties__input"
+                type="number"
+                step="0.1"
+                min="0"
+                aria-label="Column width"
+                [value]="col.widthMm"
+                (focus)="beginEdit()"
+                (blur)="endEdit()"
+                (input)="onColumnWidth(col.key, numberFrom($event))"
+              />
+              <span class="rdr-properties__suffix">mm</span>
+            </span>
+          </label>
+          <div class="rdr-properties__field">
+            <span class="rdr-properties__label">Align</span>
+            <div class="rdr-properties__segmented" role="group" aria-label="Column alignment">
+              @for (a of columnAligns; track a) {
+              <button
+                type="button"
+                class="rdr-properties__segment"
+                [class.rdr-properties__segment--active]="(col.align ?? 'left') === a"
+                [attr.aria-pressed]="(col.align ?? 'left') === a"
+                [attr.aria-label]="'Align ' + a"
+                (click)="onColumnAlign(col.key, a)"
+              >
+                {{ a === 'left' ? '⤝' : a === 'center' ? '↔' : '⤞' }}
+              </button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- Cell value: the per-row expression (row scope $) + format (E6-S8). -->
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Cell value expression</span>
+          <span class="rdr-properties__fx">
+            <span class="rdr-properties__fx-icon" aria-hidden="true">fx</span>
+            <input
+              class="rdr-properties__input rdr-properties__fx-input"
+              type="text"
+              list="rdr-table-row-fields"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="e.g. $.amount"
+              [attr.aria-invalid]="cellError() ? 'true' : null"
+              [attr.aria-describedby]="cellError() ? 'rdr-prop-cell-err' : null"
+              [value]="cellExpr()"
+              (focus)="beginEdit()"
+              (blur)="endEdit()"
+              (input)="onCellExpr(col.key, valueFrom($event))"
+            />
+          </span>
+        </label>
+        @if (cellError(); as err) {
+        <p id="rdr-prop-cell-err" class="rdr-properties__error" role="alert">{{ err }}</p>
+        }
+        <label class="rdr-properties__field">
+          <span class="rdr-properties__label">Cell format</span>
+          <select class="rdr-properties__select" (change)="onCellFormat(col.key, valueFrom($event))">
+            @for (opt of formatOptions; track opt.label) {
+            <option [value]="opt.token ?? ''" [selected]="(opt.token ?? '') === cellFormat()">
+              {{ opt.label }}
+            </option>
+            }
+          </select>
+        </label>
+
+        <!-- Footer aggregate: a grand total under this column (E6-S8). -->
+        <div class="rdr-properties__field">
+          <label class="rdr-properties__check">
+            <input
+              type="checkbox"
+              [checked]="footerFn() !== null"
+              [disabled]="!columnAggregatable()"
+              (change)="onToggleColumnFooter(col.key, checkedFrom($event))"
+            />
+            <span class="rdr-properties__label">Show footer aggregate</span>
+          </label>
+          @if (footerFn(); as fn) {
+          <label class="rdr-properties__field">
+            <span class="rdr-properties__label">Aggregate function</span>
+            <select
+              class="rdr-properties__select"
+              aria-label="Footer aggregate function"
+              (change)="onColumnFooterFn(col.key, $any(valueFrom($event)))"
+            >
+              @for (agg of aggregateFunctions; track agg.fn) {
+              <option [value]="agg.fn" [selected]="agg.fn === fn">{{ agg.label }}</option>
+              }
+            </select>
+          </label>
+          } @else if (!columnAggregatable()) {
+          <p class="rdr-properties__hint">Bind the cell to a single field to total it.</p>
+          }
+        </div>
+
+        <!-- Group subtotal: a per-group total under this column (E6-S8), when grouped. -->
+        @if (hasGroups()) {
+        <div class="rdr-properties__field">
+          <label class="rdr-properties__check">
+            <input
+              type="checkbox"
+              [checked]="groupAggFn() !== null"
+              [disabled]="!columnAggregatable()"
+              (change)="onToggleGroupAggregate(col.key, checkedFrom($event))"
+            />
+            <span class="rdr-properties__label">Show group subtotal</span>
+          </label>
+          @if (groupAggFn(); as fn) {
+          <label class="rdr-properties__field">
+            <span class="rdr-properties__label">Subtotal function</span>
+            <select
+              class="rdr-properties__select"
+              aria-label="Group subtotal function"
+              (change)="onGroupAggregateFn(col.key, $any(valueFrom($event)))"
+            >
+              @for (agg of aggregateFunctions; track agg.fn) {
+              <option [value]="agg.fn" [selected]="agg.fn === fn">{{ agg.label }}</option>
+              }
+            </select>
+          </label>
+          }
+        </div>
+        }
+      </div>
+      }
+
+      <!-- Options: header repeat + keep-together. -->
+      <div class="rdr-properties__field">
+        <label class="rdr-properties__check">
+          <input
+            type="checkbox"
+            [checked]="tbl.repeatHeaderOnEachPage"
+            (change)="onRepeatHeader(checkedFrom($event))"
+          />
+          <span class="rdr-properties__label">Repeat header on each page</span>
+        </label>
+        <label class="rdr-properties__check">
+          <input
+            type="checkbox"
+            [checked]="tbl.keepTogether"
+            (change)="onKeepTogether(checkedFrom($event))"
+          />
+          <span class="rdr-properties__label">Keep table together</span>
+        </label>
+      </div>
+
+      <!-- Grouping: add/remove a band + its groupBy expression (aggregates are E6-S8). -->
+      <div class="rdr-properties__field">
+        <span class="rdr-properties__label">Grouping</span>
+        @for (group of groups(); track $index) {
+        <div class="rdr-properties__group-row">
+          <input
+            class="rdr-properties__input"
+            type="text"
+            aria-label="Group by expression"
+            [value]="group.groupBy"
+            (focus)="beginEdit()"
+            (blur)="endEdit()"
+            (input)="onGroupBy($index, valueFrom($event))"
+          />
+          <button
+            type="button"
+            class="rdr-properties__icon-btn"
+            aria-label="Remove group"
+            (click)="onRemoveGroup($index)"
+          >
+            ✕
+          </button>
+        </div>
+        }
+        <button type="button" class="rdr-properties__add-btn" (click)="onAddGroup()">
+          + Add group
+        </button>
+      </div>
+    </div>
+    }
+  </section>
+  }
+</div>
+} @else if (selectionCount() > 1) {
+<div class="rdr-properties__empty">
+  <span class="rdr-properties__empty-glyph" aria-hidden="true">▦</span>
+  <p class="rdr-properties__empty-text">
+    {{ selectionCount() }} elements selected — select a single element to edit its properties.
+  </p>
+</div>
+} @else {
 <div class="rdr-properties__empty">
   <span class="rdr-properties__empty-glyph" aria-hidden="true">⚙</span>
   <p class="rdr-properties__empty-text">Select an element on the canvas to edit its properties</p>
 </div>
+}

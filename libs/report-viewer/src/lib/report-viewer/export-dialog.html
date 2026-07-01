@@ -1,0 +1,142 @@
+<!-- E8-S3 Export PDF dialog. A modal over a dismissing backdrop; the panel traps
+     focus (CDK), is labelled by its title, and cancels on Escape. Matches the
+     export mockup (reconciled per brief §12.3): Filename · Pages · Quality ·
+     Include watermark · the in-browser reassurance · Cancel / Export PDF. -->
+<!-- The backdrop is a decorative click-to-dismiss affordance; keyboard users
+     dismiss via the Cancel button or Escape (handled on the dialog below). -->
+<!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+<div class="rdr-export-backdrop" (click)="onCancel()"></div>
+
+<div
+  class="rdr-export-dialog"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="titleId"
+  cdkTrapFocus
+  cdkTrapFocusAutoCapture
+  (keydown)="onKeydown($event)"
+>
+  <h2 [id]="titleId" class="rdr-export-title">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+    </svg>
+    Export PDF
+  </h2>
+
+  <div class="rdr-export-body">
+    <!-- Filename -->
+    <label class="rdr-export-label" for="rdr-export-filename">Filename</label>
+    <input
+      id="rdr-export-filename"
+      class="rdr-export-input"
+      type="text"
+      [value]="filename()"
+      (input)="onFilenameInput($event)"
+    />
+
+    <!-- Pages -->
+    <span class="rdr-export-label" id="rdr-export-pages-label">Pages</span>
+    <div class="rdr-export-segmented" role="group" aria-labelledby="rdr-export-pages-label">
+      <button
+        type="button"
+        class="rdr-export-seg"
+        [class.rdr-export-seg--active]="scope() === 'all'"
+        [attr.aria-pressed]="scope() === 'all'"
+        (click)="setScope('all')"
+      >
+        All
+      </button>
+      <button
+        type="button"
+        class="rdr-export-seg"
+        [class.rdr-export-seg--active]="scope() === 'current'"
+        [attr.aria-pressed]="scope() === 'current'"
+        (click)="setScope('current')"
+      >
+        {{ currentLabel() }}
+      </button>
+      <button
+        type="button"
+        class="rdr-export-seg"
+        [class.rdr-export-seg--active]="scope() === 'range'"
+        [attr.aria-pressed]="scope() === 'range'"
+        (click)="setScope('range')"
+      >
+        Range
+      </button>
+    </div>
+
+    @if (scope() === 'range') {
+    <div class="rdr-export-range">
+      <label class="rdr-export-sr-only" for="rdr-export-from">From page</label>
+      <input
+        id="rdr-export-from"
+        class="rdr-export-input rdr-export-input--num"
+        type="number"
+        min="1"
+        [max]="totalPages()"
+        [value]="rangeFrom()"
+        (input)="onRangeFromInput($event)"
+      />
+      <span aria-hidden="true">–</span>
+      <label class="rdr-export-sr-only" for="rdr-export-to">To page</label>
+      <input
+        id="rdr-export-to"
+        class="rdr-export-input rdr-export-input--num"
+        type="number"
+        min="1"
+        [max]="totalPages()"
+        [value]="rangeTo()"
+        (input)="onRangeToInput($event)"
+      />
+      <span class="rdr-export-hint">of {{ totalPages() }}</span>
+    </div>
+    }
+
+    <!-- Quality (informational on the vector default path — ADR 0012) -->
+    <label class="rdr-export-label" for="rdr-export-quality">Quality/size</label>
+    <select id="rdr-export-quality" class="rdr-export-select" disabled>
+      <option>Standard (vector text)</option>
+    </select>
+
+    <!-- Include watermark -->
+    <div class="rdr-export-row">
+      <div>
+        <span class="rdr-export-label rdr-export-label--inline">Include watermark</span>
+        <span class="rdr-export-hint">Apply document overlay</span>
+      </div>
+      <button
+        type="button"
+        class="rdr-export-toggle"
+        role="switch"
+        [class.rdr-export-toggle--on]="includeWatermark()"
+        [attr.aria-checked]="includeWatermark()"
+        [disabled]="!hasWatermark()"
+        aria-label="Include watermark"
+        (click)="toggleWatermark()"
+      >
+        <span class="rdr-export-toggle-knob"></span>
+      </button>
+    </div>
+
+    <p class="rdr-export-note">Generated in your browser — no data leaves the page.</p>
+  </div>
+
+  <div class="rdr-export-actions">
+    <button type="button" class="rdr-export-btn" (click)="onCancel()">Cancel</button>
+    <button type="button" class="rdr-export-btn rdr-export-btn--primary" (click)="onExport()">
+      Export PDF
+    </button>
+  </div>
+</div>

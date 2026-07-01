@@ -8,10 +8,12 @@ import {
   elementStyle,
   printableStyle,
   sheetStyle,
+  tableCellRole,
   tableCellStyle,
   tableContainerStyle,
   tableLabelStyle,
   tableRowStyle,
+  TABLE_ACCESSIBLE_NAME,
   type AttrMap,
   type ElementBoxView,
   type PageViewModel,
@@ -22,6 +24,7 @@ import {
   type TableRowView,
   type TableView,
 } from '../page-view-model';
+import type { MeasuredRowKind } from '@rendara/report-engine';
 import { RdrDesignAttrs } from '../rdr-design-attrs';
 import { RENDERER_PAGE_CSS, RENDERER_PRINT_CSS, RENDERER_THEME_CSS } from '../renderer-styles';
 
@@ -116,6 +119,13 @@ export class ReportRenderer {
    * engine's `PaginatedDocument.watermark` here. `null` (the default) → none.
    */
   readonly watermark = input<Watermark | null>(null);
+  /**
+   * Search-highlight query (E8-S6): a non-empty string paints every matching run
+   * of a text element / table cell / group label as a `<mark>`. `null`/empty (the
+   * default) leaves the page byte-stable. Driven by the viewer's in-report search;
+   * the designer never sets it.
+   */
+  readonly highlight = input<string | null>(null);
 
   /** The pure view-model for the current inputs. */
   protected readonly vm = computed<PageViewModel>(() =>
@@ -126,6 +136,7 @@ export class ReportRenderer {
       resolvedValues: this.resolvedValues(),
       mode: this.mode(),
       watermark: this.watermark(),
+      highlightQuery: this.highlight(),
     }),
   );
 
@@ -158,6 +169,14 @@ export class ReportRenderer {
   /** Inline styles for one full-width band label (E4-S3). */
   protected tableLabelStyle(label: TableLabelView): StyleMap {
     return tableLabelStyle(label);
+  }
+
+  /** The accessible name announced for each rendered data table (E10-S1, WCAG 2.2 AA). */
+  protected readonly tableAccessibleName = TABLE_ACCESSIBLE_NAME;
+
+  /** ARIA `role` for a table cell: `columnheader` on the header row, else `cell` (E10-S1). */
+  protected cellRole(rowKind: MeasuredRowKind): 'columnheader' | 'cell' {
+    return tableCellRole(rowKind);
   }
 
   /** Design-mode selection anchors for one element box (E4-S6); `null` in view mode. */

@@ -1,0 +1,12 @@
+{
+  "name": "@rendara/report-engine",
+  "version": "0.0.0",
+  "description": "Framework-agnostic core for Rendara Reports: expression eval, formatting, binding, pagination/layout. Bundled into @rendara/report-viewer.",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@rendara/report-schema": "workspace:*",
+    "jsonata": "2.2.1",
+    "tslib": "^2.3.0"
+  }
+}

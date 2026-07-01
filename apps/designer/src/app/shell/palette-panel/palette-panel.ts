@@ -1,8 +1,16 @@
-import { Component, ViewEncapsulation, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  ViewEncapsulation,
+  inject,
+  signal,
+  viewChildren,
+} from '@angular/core';
 import { CdkDrag, CdkDragPlaceholder, CdkDropList } from '@angular/cdk/drag-drop';
 import { ElementCreator } from '../../state/element-creator';
 import { CANVAS_DROP_LIST_ID, type PaletteKind } from '../../state/drag-create';
 import { LayersPanel } from '../layers-panel/layers-panel';
+import { DataPanel } from '../data-panel/data-panel';
 
 /** Left-panel tabs, canonical per brief §12.3.3. */
 export type PaletteTab = 'insert' | 'layers' | 'data';
@@ -26,12 +34,12 @@ interface PaletteItem {
  * the single-pointer alternative required by WCAG 2.2 SC 2.5.7. A {@link dragging}
  * guard stops the click that may trail a genuine drag from adding a second element.
  *
- * The Layers tab hosts the {@link LayersPanel} (E5-S7); Data remains a placeholder
- * (E6-S6).
+ * The Layers tab hosts the {@link LayersPanel} (E5-S7); the Data tab hosts the
+ * {@link DataPanel} (E6-S6) — sample-data import and the bindable field tree.
  */
 @Component({
   selector: 'rdr-palette-panel',
-  imports: [CdkDropList, CdkDrag, CdkDragPlaceholder, LayersPanel],
+  imports: [CdkDropList, CdkDrag, CdkDragPlaceholder, LayersPanel, DataPanel],
   templateUrl: './palette-panel.html',
   styleUrl: './palette-panel.css',
   encapsulation: ViewEncapsulation.Emulated,
@@ -66,8 +74,43 @@ export class PalettePanel {
   /** True while a real drag is in flight, so the trailing click does not also add. */
   private dragging = false;
 
+  /** The tab buttons, in declared order, so keyboard navigation can move focus. */
+  private readonly tabButtons = viewChildren<ElementRef<HTMLButtonElement>>('tabButton');
+
   protected select(tab: PaletteTab): void {
     this.activeTab.set(tab);
+  }
+
+  /**
+   * Roving keyboard navigation for the tablist (E10-S1, WAI-ARIA tabs pattern):
+   * `ArrowLeft`/`ArrowRight` move to the previous/next tab (wrapping) and `Home`/
+   * `End` to the first/last, activating the target and moving focus to it
+   * (automatic activation). Other keys fall through. The roving `tabindex` on the
+   * template keeps the tablist a single Tab stop.
+   */
+  protected onTabKeydown(event: KeyboardEvent): void {
+    const ids = this.tabs.map((t) => t.id);
+    const current = ids.indexOf(this.activeTab());
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight':
+        next = (current + 1) % ids.length;
+        break;
+      case 'ArrowLeft':
+        next = (current - 1 + ids.length) % ids.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = ids.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    this.select(ids[next]);
+    this.tabButtons()[next]?.nativeElement.focus();
   }
 
   /** Each fresh pointer interaction starts clean; only a drag sets the guard. */

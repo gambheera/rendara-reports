@@ -10,6 +10,7 @@
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
+      "dependsOn": ["report-viewer:local-install"],
       "options": {
         "outputPath": "dist/apps/viewer-demo",
         "browser": "apps/viewer-demo/src/main.ts",
@@ -20,15 +21,16 @@
             "input": "apps/viewer-demo/public"
           }
         ],
-        "styles": ["apps/viewer-demo/src/styles.css"]
+        "styles": ["apps/viewer-demo/src/styles.css"],
+        "allowedCommonJsDependencies": ["ajv", "ajv-formats", "jsonata"]
       },
       "configurations": {
         "production": {
           "budgets": [
             {
               "type": "initial",
-              "maximumWarning": "500kb",
-              "maximumError": "1mb"
+              "maximumWarning": "1mb",
+              "maximumError": "2mb"
             },
             {
               "type": "anyComponentStyle",
@@ -49,6 +51,7 @@
       "continuous": true,
       "executor": "@angular/build:dev-server",
       "defaultConfiguration": "development",
+      "dependsOn": ["report-viewer:local-install"],
       "configurations": {
         "production": {
           "buildTarget": "viewer-demo:build:production"

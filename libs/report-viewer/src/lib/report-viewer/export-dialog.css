@@ -1,0 +1,227 @@
+/**
+ * Export PDF dialog styles (E8-S3). Scoped to the component (emulated
+ * encapsulation) and built entirely on the viewer's own `--rdr-viewer-*` tokens
+ * (declared on the host in report-viewer.css), so the dialog never leaks into the
+ * host app and host CSS can re-theme it. Accent indigo #4F46E5 per brief §12.3.
+ */
+
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--rdr-viewer-text, #111827);
+}
+
+.rdr-export-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(17 24 39 / 35%);
+}
+
+.rdr-export-dialog {
+  position: relative;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--rdr-viewer-surface, #ffffff);
+  border-radius: 12px;
+  box-shadow:
+    0 10px 15px -3px rgb(0 0 0 / 10%),
+    0 4px 6px -4px rgb(0 0 0 / 10%);
+}
+
+.rdr-export-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 16px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rdr-viewer-accent, #4f46e5);
+  border-bottom: 1px solid var(--rdr-viewer-hairline, #e5e7eb);
+}
+
+.rdr-export-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rdr-export-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+  margin-top: 8px;
+}
+
+.rdr-export-label--inline {
+  display: block;
+  color: var(--rdr-viewer-text, #111827);
+  font-size: 13px;
+  margin-top: 0;
+}
+
+.rdr-export-input,
+.rdr-export-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--rdr-viewer-input-border, #d1d5db);
+  border-radius: 6px;
+  background: var(--rdr-viewer-surface, #ffffff);
+  color: var(--rdr-viewer-text, #111827);
+}
+
+.rdr-export-input--num {
+  width: 64px;
+}
+
+.rdr-export-input:focus-visible,
+.rdr-export-select:focus-visible,
+.rdr-export-seg:focus-visible,
+.rdr-export-toggle:focus-visible,
+.rdr-export-btn:focus-visible {
+  outline: 2px solid var(--rdr-viewer-accent, #4f46e5);
+  outline-offset: 1px;
+}
+
+.rdr-export-select:disabled {
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+  background: var(--rdr-viewer-panel, #f9fafb);
+}
+
+.rdr-export-segmented {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--rdr-viewer-panel, #f9fafb);
+  border: 1px solid var(--rdr-viewer-input-border, #d1d5db);
+  border-radius: 8px;
+}
+
+.rdr-export-seg {
+  flex: 1;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rdr-export-seg--active {
+  background: var(--rdr-viewer-surface, #ffffff);
+  color: var(--rdr-viewer-accent, #4f46e5);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+.rdr-export-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rdr-export-hint {
+  font-size: 12px;
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+}
+
+.rdr-export-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.rdr-export-toggle {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--rdr-viewer-input-border, #d1d5db);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.rdr-export-toggle--on {
+  background: var(--rdr-viewer-accent, #4f46e5);
+}
+
+.rdr-export-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rdr-export-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform 0.12s ease;
+}
+
+.rdr-export-toggle--on .rdr-export-toggle-knob {
+  transform: translateX(18px);
+}
+
+.rdr-export-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+}
+
+.rdr-export-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--rdr-viewer-hairline, #e5e7eb);
+}
+
+.rdr-export-btn {
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--rdr-viewer-text-secondary, #6b7280);
+  cursor: pointer;
+}
+
+.rdr-export-btn--primary {
+  background: var(--rdr-viewer-accent, #4f46e5);
+  color: #ffffff;
+}
+
+.rdr-export-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

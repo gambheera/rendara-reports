@@ -1,6 +1,7 @@
 <div class="rdr-palette__tabs" role="tablist" aria-label="Palette">
   @for (tab of tabs; track tab.id) {
   <button
+    #tabButton
     type="button"
     role="tab"
     class="rdr-palette__tab"
@@ -10,6 +11,7 @@
     [attr.aria-controls]="'palette-panel-' + tab.id"
     [attr.tabindex]="activeTab() === tab.id ? 0 : -1"
     (click)="select(tab.id)"
+    (keydown)="onTabKeydown($event)"
   >
     {{ tab.label }}
   </button>
@@ -83,9 +85,8 @@
   role="tabpanel"
   id="palette-panel-data"
   aria-labelledby="palette-tab-data"
-  class="rdr-palette__body rdr-palette__empty"
+  class="rdr-palette__body"
 >
-  <p>No data imported</p>
-  <p class="rdr-palette__empty-hint">Import sample data to bind fields.</p>
+  <rdr-data-panel />
 </div>
 }

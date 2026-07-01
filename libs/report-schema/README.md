@@ -1,8 +1,9 @@
 # report-schema
 
 `@rendara/report-schema` — the framework-agnostic Template JSON contract for
-Rendara Reports: TypeScript types, (later) JSON Schema, ajv validator, and
-migrations. Depends on nothing internal (brief §4).
+Rendara Reports: TypeScript types, JSON Schema, ajv validator, and migrations.
+Depends on nothing internal (brief §4). **No Angular** — usable in any Node
+backend or template-tooling script.
 
 ## Status
 
@@ -64,6 +65,32 @@ if (result.ok) {
     console.error(`${path}: ${message}`);
   }
 }
+```
+
+## Packaging (E9-S3)
+
+The package is built **framework-agnostic — no Angular** (`tools/bundle-schema.mjs`,
+not ng-packagr; see [ADR 0015](../../docs/adr/0015-schema-framework-agnostic-packaging.md)).
+It ships **dual ESM + CommonJS**, so it works in either Node module system:
+
+```js
+import { validate } from '@rendara/report-schema'; // ESM
+const { validate } = require('@rendara/report-schema'); // CommonJS
+```
+
+The raw JSON Schema is shipped as a file and exposed as a subpath, for backends
+that consume it directly (e.g. with ajv):
+
+```js
+import schema from '@rendara/report-schema/schema.json' with { type: 'json' };
+```
+
+Build, then verify the package is Angular-free and consumable in Node (the QA
+gate imports + validates a golden via both `import` and `require`):
+
+```sh
+npx nx build report-schema       # -> dist/libs/report-schema (ESM + CJS + types + schema.json)
+npx nx run report-schema:pack    # verify-schema-pack + verify-schema-node
 ```
 
 ## Schema artifact

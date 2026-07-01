@@ -66,6 +66,23 @@ describe('StatusBar', () => {
     expect(screen.getByText('Page 1 of 1')).toBeTruthy();
   });
 
+  it('toggles snapping via the Snap button, reflecting aria-pressed (E5-S8)', async () => {
+    const view = await render(StatusBar);
+    const store = TestBed.inject(DesignerStore);
+
+    const snap = screen.getByRole('button', { name: 'Snap to grid and guides' });
+    expect(snap.getAttribute('aria-pressed')).toBe('true');
+
+    fireEvent.click(snap);
+    view.detectChanges();
+    expect(store.snapEnabled()).toBe(false);
+    expect(snap.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(snap);
+    view.detectChanges();
+    expect(store.snapEnabled()).toBe(true);
+  });
+
   it('emits fitToView when Fit is activated', async () => {
     const view = await render(StatusBar);
     const fitted = vi.fn();

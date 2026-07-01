@@ -35,12 +35,13 @@ describe('PalettePanel', () => {
     expect(screen.queryByText('Rectangle')).toBeNull();
   });
 
-  it('switches to the Data empty state when its tab is selected', async () => {
+  it('switches to the Data tab, showing its sample-data empty state', async () => {
     await render(PalettePanel);
 
     await fireEvent.click(screen.getByRole('tab', { name: 'Data' }));
 
-    expect(screen.getByText('No data imported')).toBeTruthy();
+    expect(screen.getByText('No sample data')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Import sample data' })).toBeTruthy();
   });
 
   // Each palette tile is a button (the WCAG 2.5.7 single-pointer alternative to
@@ -67,6 +68,54 @@ describe('PalettePanel', () => {
       expect(store.selectionCount()).toBe(1);
     });
   }
+
+  // Roving keyboard navigation across the tablist (E10-S1, WAI-ARIA tabs pattern):
+  // Arrow keys move (and activate + focus) the adjacent tab, wrapping; Home/End jump
+  // to the ends. This is the keyboard operability WCAG 2.2 AA requires for the tabs.
+  describe('keyboard navigation (E10-S1)', () => {
+    async function tabs() {
+      await render(PalettePanel);
+      return {
+        insert: screen.getByRole('tab', { name: 'Insert' }),
+        layers: screen.getByRole('tab', { name: 'Layers' }),
+        data: screen.getByRole('tab', { name: 'Data' }),
+      };
+    }
+
+    it('ArrowRight moves to the next tab and activates + focuses it', async () => {
+      const { insert, layers } = await tabs();
+      await fireEvent.keyDown(insert, { key: 'ArrowRight' });
+
+      expect(layers.getAttribute('aria-selected')).toBe('true');
+      expect(insert.getAttribute('aria-selected')).toBe('false');
+      expect(document.activeElement).toBe(layers);
+    });
+
+    it('ArrowLeft from the first tab wraps to the last', async () => {
+      const { insert, data } = await tabs();
+      await fireEvent.keyDown(insert, { key: 'ArrowLeft' });
+
+      expect(data.getAttribute('aria-selected')).toBe('true');
+      expect(document.activeElement).toBe(data);
+    });
+
+    it('Home and End jump to the first and last tab', async () => {
+      const { insert, data } = await tabs();
+
+      await fireEvent.keyDown(insert, { key: 'End' });
+      expect(data.getAttribute('aria-selected')).toBe('true');
+
+      await fireEvent.keyDown(data, { key: 'Home' });
+      expect(insert.getAttribute('aria-selected')).toBe('true');
+      expect(document.activeElement).toBe(insert);
+    });
+
+    it('ignores other keys (e.g. Tab falls through)', async () => {
+      const { insert } = await tabs();
+      await fireEvent.keyDown(insert, { key: 'Tab' });
+      expect(insert.getAttribute('aria-selected')).toBe('true');
+    });
+  });
 
   it('does not add a second element when the click merely concludes a drag', async () => {
     const view = await render(PalettePanel);

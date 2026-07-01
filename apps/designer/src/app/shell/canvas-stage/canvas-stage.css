@@ -108,6 +108,14 @@
   display: block;
 }
 
+/* Drag-to-bind (E6-S7): while a Data-tab field is dragged over the canvas, ring
+   the page area so it reads as a drop target for the binding gesture. */
+.rdr-canvas__pages--bind-target .rdr-canvas__doc {
+  outline: 2px dashed var(--rdr-accent, #4f46e5);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
 /* Selection overlay, laid over the first page sheet (same origin as the sheet:
    the pages area's --pad inset). Click-through except its own box + handles. */
 .rdr-canvas__overlay {

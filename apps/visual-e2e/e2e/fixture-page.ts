@@ -50,6 +50,8 @@ const SCREEN_CHROME_CSS = `* { margin: 0; padding: 0; box-sizing: border-box; }
       .rdr-page { box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(15, 23, 42, 0.12); overflow: hidden; }
       .rdr-printable { outline: 1px dashed rgba(79, 70, 229, 0.25); pointer-events: none; }
       .rdr-text { margin: 0; }
+      .rdr-mark { background: #fde68a; color: inherit; border-radius: 1px; }
+      .rdr-mark--active { background: #fbbf24; }
       .rdr-image { display: block; }
       .rdr-watermark { margin: 0; }
       .rdr-watermark-text { margin: 0; }

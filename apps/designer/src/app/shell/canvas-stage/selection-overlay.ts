@@ -9,19 +9,27 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { pxToMm } from '@rendara/report-engine';
-import type { TemplateElement } from '@rendara/report-schema';
+import { mmToPx, pxToMm } from '@rendara/report-engine';
+import type { Frame, TemplateElement } from '@rendara/report-schema';
 import { DesignerStore } from '../../state/designer-store';
 import type { PageSizeMm } from '../../state/drag-create';
 import {
   RESIZE_HANDLES,
   type ResizeHandle,
   type SelectionBoxPx,
+  boundingFrame,
   moveFramesAsGroup,
   nudgeStepMm,
   resizeFrame,
   selectionBoxPx,
 } from '../../state/frame-ops';
+import {
+  GRID_MM,
+  type SnapLine,
+  computeSnap,
+  snapResizedFrame,
+  snapTargets,
+} from '../../state/snapping';
 
 /** The live coordinate/size readout shown in the single-selection badge. */
 interface CoordBadge {
@@ -76,6 +84,13 @@ export class SelectionOverlay {
 
   /** The eight resize grips, for the template `@for`. */
   protected readonly handles = RESIZE_HANDLES;
+
+  /** Screen distance (px) within which an edge snaps to a guide — a constant feel
+   *  regardless of zoom (converted to mm at the live zoom for the pure core). */
+  private readonly snapThresholdPx = 6;
+
+  /** The live alignment guides to paint during a snapping drag-move (E5-S8). */
+  protected readonly guides = signal<readonly SnapLine[]>([]);
 
   private readonly boxRef = viewChild<ElementRef<HTMLElement>>('box');
 
@@ -162,27 +177,56 @@ export class SelectionOverlay {
     });
   }
 
-  /** Starts a drag-move from any selection box — moves the whole selection as a unit. */
+  /**
+   * Starts a drag-move from any selection box — moves the whole selection as a
+   * unit, with **snapping + alignment guides** (E5-S8). After the raw translation,
+   * the moved selection's bounding box is snapped: an edge/centre within the
+   * pixel threshold of another element, a page edge, a margin or a centre line
+   * pulls the group into alignment and paints an indigo guide; otherwise the group
+   * origin falls back to the grid. Snapping is skipped when it is toggled off or
+   * while Alt is held (a per-gesture free-move bypass). Guides clear on release.
+   */
   protected onBoxPointerDown(event: PointerEvent): void {
     const elements = this.selectedElements();
     if (event.button !== 0 || elements.length === 0) return;
     event.preventDefault();
     event.stopPropagation();
+    // Coalesce the whole drag into one undo step (E5-S9).
+    this.store.beginInteraction();
     const startFrames = elements.map((el) => el.frame);
-    const ids = elements.map((el) => el.id);
-    const pageMm = this.pageMm();
+    const ids = new Set(elements.map((el) => el.id));
+    const orderedIds = elements.map((el) => el.id);
+    const others = this.store.bodyElements().filter((el) => !ids.has(el.id));
+    const geometry = this.store.paginatedDocument().geometry;
+    const targets = snapTargets(
+      others.map((el) => el.frame),
+      geometry,
+    );
+    const pageMm = geometry.pageMm;
     const startX = event.clientX;
     const startY = event.clientY;
     const zoom = this.store.zoom();
     const onMove = (move: PointerEvent): void => {
-      const dxMm = pxToMm((move.clientX - startX) / zoom);
-      const dyMm = pxToMm((move.clientY - startY) / zoom);
-      const moved = moveFramesAsGroup(startFrames, dxMm, dyMm, pageMm);
-      this.store.setFrames(new Map(ids.map((id, i) => [id, moved[i]])));
+      const rawDx = pxToMm((move.clientX - startX) / zoom);
+      const rawDy = pxToMm((move.clientY - startY) / zoom);
+      let moved = moveFramesAsGroup(startFrames, rawDx, rawDy, pageMm);
+      if (this.store.snapEnabled() && !move.altKey) {
+        const thresholdMm = pxToMm(this.snapThresholdPx / zoom);
+        const snap = computeSnap(this.movingRect(moved), targets, thresholdMm, GRID_MM, true);
+        if (snap.dxMm !== 0 || snap.dyMm !== 0) {
+          moved = moveFramesAsGroup(startFrames, rawDx + snap.dxMm, rawDy + snap.dyMm, pageMm);
+        }
+        this.guides.set(snap.guides);
+      } else {
+        this.guides.set([]);
+      }
+      this.store.setFrames(new Map(orderedIds.map((id, i) => [id, moved[i]])));
     };
     const onUp = (): void => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      this.guides.set([]);
+      this.store.endInteraction();
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -194,6 +238,8 @@ export class SelectionOverlay {
     if (event.button !== 0 || !this.isSingle() || element === undefined) return;
     event.preventDefault();
     event.stopPropagation();
+    // Coalesce the whole resize into one undo step (E5-S9).
+    this.store.beginInteraction();
     const startFrame = element.frame;
     const pageMm = this.pageMm();
     const startX = event.clientX;
@@ -202,13 +248,17 @@ export class SelectionOverlay {
     const onMove = (move: PointerEvent): void => {
       const dxMm = pxToMm((move.clientX - startX) / zoom);
       const dyMm = pxToMm((move.clientY - startY) / zoom);
-      this.store.updateElement(element.id, {
-        frame: resizeFrame(startFrame, handle, dxMm, dyMm, pageMm),
-      });
+      let frame = resizeFrame(startFrame, handle, dxMm, dyMm, pageMm);
+      // Grid-snap the dragged edge unless snapping is off or Alt bypasses it.
+      if (this.store.snapEnabled() && !move.altKey) {
+        frame = snapResizedFrame(frame, handle, GRID_MM);
+      }
+      this.store.updateElement(element.id, { frame });
     };
     const onUp = (): void => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      this.store.endInteraction();
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -253,6 +303,28 @@ export class SelectionOverlay {
       width: `${box.widthPx}px`,
       height: `${box.heightPx}px`,
     };
+  }
+
+  /** Inline position styles for an alignment guide (mm → scaled px, sheet-relative). */
+  protected guideStyle(guide: SnapLine): Record<string, string> {
+    const zoom = this.store.zoom();
+    const posPx = mmToPx(guide.posMm) * zoom;
+    const startPx = mmToPx(guide.startMm) * zoom;
+    const lengthPx = mmToPx(guide.endMm - guide.startMm) * zoom;
+    return guide.axis === 'x'
+      ? { left: `${posPx}px`, top: `${startPx}px`, height: `${lengthPx}px` }
+      : { top: `${posPx}px`, left: `${startPx}px`, width: `${lengthPx}px` };
+  }
+
+  /** The moving selection's bounding box as a {@link RectMm} (growing height → 0). */
+  private movingRect(frames: readonly Frame[]): {
+    xMm: number;
+    yMm: number;
+    wMm: number;
+    hMm: number;
+  } {
+    const bounds = boundingFrame(frames) ?? { xMm: 0, yMm: 0, wMm: 0, hMm: 0 };
+    return { xMm: bounds.xMm, yMm: bounds.yMm, wMm: bounds.wMm, hMm: bounds.hMm ?? 0 };
   }
 
   /** The element's rendered hit node (element box or table) within the canvas. */
