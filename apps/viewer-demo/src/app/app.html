@@ -7,6 +7,9 @@
     <div class="rdr-demo-actions">
       <button type="button" (click)="loadSample()">Load sample</button>
       <button type="button" (click)="loadInvalidTemplate()">Load invalid template</button>
+      <button type="button" (click)="toggleTheme()">
+        {{ themed() ? 'Use default theme' : 'Use dark theme' }}
+      </button>
     </div>
     <dl class="rdr-demo-event-log">
       <dt>rendered</dt>
@@ -30,6 +33,7 @@
       [template]="template()"
       [data]="data"
       [config]="config"
+      [theme]="theme()"
       (rendered)="onRendered($event)"
       (pageChange)="onPageChange($event)"
       (error)="onError($event)"

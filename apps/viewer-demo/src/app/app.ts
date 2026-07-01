@@ -1,10 +1,11 @@
-import { Component, signal } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import {
   ReportViewer,
   type PageChangeEvent,
   type RenderedEvent,
   type ViewerConfig,
   type ViewerError,
+  type ViewerTheme,
 } from '@rendara/report-viewer';
 
 import { INVALID_TEMPLATE_JSON, SAMPLE_DATA, SAMPLE_TEMPLATE_JSON } from './sample-report';
@@ -41,6 +42,30 @@ export class App {
   protected readonly lastPageChange = signal<PageChangeEvent | null>(null);
   protected readonly lastError = signal<ViewerError | null>(null);
 
+  /**
+   * The theming proof (E9-S5): a dark, brand-accented chrome expressed purely as
+   * `--rdr-viewer-*` CSS custom properties — the README's theming example, live.
+   * Applied through the viewer's `[theme]` input (host inline styles), so it
+   * re-themes only this viewer and touches nothing else on the page.
+   */
+  private readonly darkTheme: ViewerTheme = {
+    '--rdr-viewer-backdrop': '#0f172a',
+    '--rdr-viewer-surface': '#111827',
+    '--rdr-viewer-panel': '#1f2937',
+    '--rdr-viewer-hairline': '#334155',
+    '--rdr-viewer-text': '#e5e7eb',
+    '--rdr-viewer-text-secondary': '#94a3b8',
+    '--rdr-viewer-accent': '#818cf8',
+  };
+
+  /** Whether the dark theme override is active; toggled from the host controls. */
+  protected readonly themed = signal(false);
+
+  /** The `[theme]` handed to the viewer: the dark override when on, else `null`. */
+  protected readonly theme = computed<ViewerTheme | null>(() =>
+    this.themed() ? this.darkTheme : null,
+  );
+
   protected onRendered(event: RenderedEvent): void {
     this.lastRendered.set(event);
     this.lastError.set(null);
@@ -65,5 +90,10 @@ export class App {
   protected loadSample(): void {
     this.lastError.set(null);
     this.template.set(SAMPLE_TEMPLATE_JSON);
+  }
+
+  /** Toggle the dark `--rdr-viewer-*` theme override (E9-S5 theming proof). */
+  protected toggleTheme(): void {
+    this.themed.update((on) => !on);
   }
 }
