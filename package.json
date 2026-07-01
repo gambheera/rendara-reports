@@ -25,6 +25,7 @@
     "fixtures:generate": "node -r @swc-node/register tools/generate-fixtures.ts",
     "render-fixtures:generate": "node -r ./tools/register-swc-paths.cjs tools/generate-render-fixtures.ts",
     "smoke": "nx report && nx graph --file=tmp/graph.json && nx run-many -t lint && prettier --check .",
+    "smoke:clean-room": "nx run report-viewer:clean-room",
     "docs:build": "nx run report-viewer:build-docs",
     "changeset": "changeset",
     "release:status": "changeset status --verbose",
