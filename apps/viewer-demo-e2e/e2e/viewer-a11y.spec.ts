@@ -53,6 +53,7 @@ test.describe('Viewer accessibility @a11y', () => {
   test('the surfaced error state has no violations', async ({ page }) => {
     await page.getByRole('button', { name: 'Load invalid template' }).click();
     await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page.locator('.rdr-viewer-state-detail')).toHaveCSS('color', 'rgb(17, 24, 39)');
     await expectNoAxeViolations(page);
   });
 

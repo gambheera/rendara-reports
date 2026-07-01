@@ -355,6 +355,10 @@
   color: var(--rdr-viewer-text-secondary);
 }
 
+.rdr-viewer-state--error .rdr-viewer-state-detail {
+  color: var(--rdr-viewer-text);
+}
+
 /* Icon framing shared by the empty and error states. */
 .rdr-viewer-state-icon {
   display: inline-flex;
