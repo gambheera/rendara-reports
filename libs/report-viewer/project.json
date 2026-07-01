@@ -48,6 +48,13 @@
         "coverage.reportsDirectory": "../../coverage/libs/report-viewer"
       }
     },
+    "build-docs": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/docs/report-viewer"],
+      "options": {
+        "command": "typedoc --options libs/report-viewer/typedoc.json"
+      }
+    },
     "storybook": {
       "executor": "@storybook/angular:start-storybook",
       "options": {

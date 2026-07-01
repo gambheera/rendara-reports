@@ -4,7 +4,10 @@
 # -> test -> build via `nx affected`, Nx Cloud caching, branch protection) is
 # owned by E0-S3, which should fold this build-storybook step into it and drop
 # this file.
-name: Storybook
+#
+# E9-S6 adds a second gate here: the viewer's TypeDoc API reference must generate
+# without error ("docs build in CI"), alongside the Storybook state gallery.
+name: Docs & Storybook
 
 on:
   push:
@@ -39,3 +42,28 @@ jobs:
 
       - name: Build Storybook (all projects)
         run: pnpm storybook:build
+
+  build-docs:
+    name: Build viewer API docs (TypeDoc) (E9-S6)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Generates the full input/output reference from src/index.ts (README as the
+      # landing page) to dist/docs/report-viewer; fails the PR if docs can't build.
+      - name: Build viewer TypeDoc API reference
+        run: pnpm nx run report-viewer:build-docs --skip-nx-cache

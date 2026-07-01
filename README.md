@@ -54,6 +54,7 @@ pnpm install
 | Visual regression        | `pnpm visual` · update: `pnpm visual:update`     |
 | Storybook (one lib)      | `npx nx storybook ui-kit` (4400)                 |
 | Build all Storybooks     | `pnpm storybook:build`                           |
+| Viewer API docs          | `pnpm docs:build` (TypeDoc)                      |
 | Format (write)           | `pnpm format`                                    |
 | Check formatting         | `pnpm format:check`                              |
 | Add a changeset          | `pnpm changeset`                                 |
@@ -88,6 +89,16 @@ to build all three (the step CI gates). A root **composition host**
 (`pnpm storybook:compose`, port 4500) aggregates the three under one sidebar. See
 [`docs/tooling/storybook.md`](docs/tooling/storybook.md) and
 [ADR 0002](docs/adr/0002-storybook-per-project-zoneless.md).
+
+## Viewer package docs
+
+The published viewer's consumer docs live with the package: a **quick-start** and
+the full theming/API guide in
+[`libs/report-viewer/README.md`](libs/report-viewer/README.md), a versioned
+[CHANGELOG](libs/report-viewer/CHANGELOG.md) (Changesets), the Storybook state
+gallery, and a generated **TypeDoc input/output reference** — `pnpm docs:build`
+emits it to `dist/docs/report-viewer` and CI builds it on every PR. Background:
+[ADR 0018](docs/adr/0018-viewer-api-docs-and-changelog.md).
 
 ## Releases & commit conventions
 

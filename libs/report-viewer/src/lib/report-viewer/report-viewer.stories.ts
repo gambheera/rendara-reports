@@ -30,6 +30,13 @@ const paginatedData = {
  * buttons and a host custom-action slot, each shown/hidden via `config.toolbar`.
  * These stories feed it the canonical invoice
  * golden so the body shows a live, paginated report.
+ *
+ * **E9-S6** treats this file as the documented **viewer-state gallery** — a live
+ * example per state (Default, Themed, Paginated, Zoom, toolbar variants, Export,
+ * Watermark, Download-source, Search, thumbnail rail, and the Empty / No-data /
+ * Error feedback states) — alongside the generated TypeDoc input/output reference
+ * (`pnpm docs:build`) and the README quick-start. `tags: ['autodocs']` renders the
+ * component's typed API into Storybook's Docs tab from the same source.
  */
 const meta: Meta<ReportViewer> = {
   title: 'report-viewer/ReportViewer',
