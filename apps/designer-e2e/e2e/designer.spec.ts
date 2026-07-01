@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { expectNoAxeViolations } from '../../../tools/testing/axe';
+
+// Accessibility (axe) scans for the designer live in `designer-a11y.spec.ts`,
+// tagged `@a11y` so the dedicated CI gate can select them (E10-S1).
 
 test.describe('Designer shell', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
@@ -84,20 +86,5 @@ test.describe('Designer shell', () => {
       .click();
 
     await expect(summary).toHaveText('A4 · Portrait · mm');
-  });
-
-  test('has no detectable accessibility violations', async ({ page }) => {
-    await page.goto('/');
-
-    await expectNoAxeViolations(page);
-  });
-
-  test('page setup dialog has no detectable accessibility violations', async ({ page }) => {
-    await page.goto('/');
-
-    await page.getByRole('button', { name: /Page setup/ }).click();
-    await expect(page.getByRole('dialog', { name: 'Page setup' })).toBeVisible();
-
-    await expectNoAxeViolations(page);
   });
 });

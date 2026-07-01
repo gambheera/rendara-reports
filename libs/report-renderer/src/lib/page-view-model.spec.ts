@@ -34,6 +34,8 @@ import {
   sanitizeImageUrl,
   sheetStyle,
   splitHighlightSegments,
+  TABLE_ACCESSIBLE_NAME,
+  tableCellRole,
   type ElementBoxView,
   type ImageContentView,
   type PageViewModel,
@@ -1048,5 +1050,20 @@ describe('collectPageText (E8-S6)', () => {
     });
     const textCount = vm.elements.filter((e) => e.content.kind === 'text').length;
     expect(collectPageText(vm)).toHaveLength(textCount);
+  });
+});
+
+describe('accessible table roles (E10-S1)', () => {
+  it('maps a header row cell to columnheader and every other kind to cell', () => {
+    expect(tableCellRole('header')).toBe('columnheader');
+    for (const kind of ['detail', 'groupHeader', 'groupFooter', 'columnFooter'] as const) {
+      expect(tableCellRole(kind)).toBe('cell');
+    }
+  });
+
+  it('exposes a stable accessible name for the table', () => {
+    // A non-empty accessible name so a screen reader announces the region as a
+    // named table (brief §9, WCAG 2.2 AA).
+    expect(TABLE_ACCESSIBLE_NAME.trim().length).toBeGreaterThan(0);
   });
 });

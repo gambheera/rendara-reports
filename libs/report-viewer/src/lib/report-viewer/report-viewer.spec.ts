@@ -158,6 +158,25 @@ describe('ReportViewer (E7-S3 navigation)', () => {
     expect(thumbs.length).toBe(totalFromStatus(container));
   });
 
+  it('hides each thumbnail preview from assistive tech (E10-S1)', async () => {
+    const { container } = await renderMultiPage('single');
+    // The button carries the accessible name ("Go to page N"); its mini render and
+    // number are decorative, so they are aria-hidden — otherwise a screen reader
+    // would read the whole report once per thumbnail.
+    const thumbs = Array.from(container.querySelectorAll('.rdr-viewer-thumb'));
+    expect(thumbs.length).toBeGreaterThan(0);
+    for (const thumb of thumbs) {
+      const label = thumb.getAttribute('aria-label') ?? '';
+      expect(label).toMatch(/^Go to page \d+$/);
+      expect(thumb.querySelector('.rdr-viewer-thumb-doc')?.getAttribute('aria-hidden')).toBe(
+        'true',
+      );
+      expect(thumb.querySelector('.rdr-viewer-thumb-label')?.getAttribute('aria-hidden')).toBe(
+        'true',
+      );
+    }
+  });
+
   it('next / prev move the current page and emit (pageChange)', async () => {
     const pageChange = vi.fn<(e: PageChangeEvent) => void>();
     const { container } = await renderMultiPage('single', pageChange);
