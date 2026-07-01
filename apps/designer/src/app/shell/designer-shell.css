@@ -62,8 +62,10 @@
 .rdr-shell__collapse {
   position: absolute;
   top: var(--rdr-space-2);
-  width: 20px;
-  height: 20px;
+  /* 24px min so the panel-collapse control meets the WCAG 2.2 AA target-size
+     minimum (2.5.8 / axe target-size); it was 20px — E10-S1. */
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
