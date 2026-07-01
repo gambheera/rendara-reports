@@ -27,10 +27,12 @@ import {
   elementStyle,
   printableStyle,
   sheetStyle,
+  tableCellRole,
   tableCellStyle,
   tableContainerStyle,
   tableLabelStyle,
   tableRowStyle,
+  TABLE_ACCESSIBLE_NAME,
   type AttrMap,
   type ElementBoxView,
   type ElementContentView,
@@ -143,10 +145,14 @@ function serializeWatermark(watermark: WatermarkView): string {
 export function serializeDocumentToHtml(vm: DocumentViewModel): string {
   const slot = slotSize(vm.sheet, vm.zoom);
   const slotInline = inlineStyle({ width: `${slot.widthPx}px`, height: `${slot.heightPx}px` });
+  // Each slot is a labelled `group` (E10-S1) so a screen reader announces "Page N"
+  // as it enters each sheet; the roles mirror the component template and paint
+  // nothing, so the multi-page visual snapshot is unchanged (ADR 0020).
   const pages = vm.pages
     .map(
       (page) =>
-        `<div class="rdr-page-slot" data-page-number="${page.pageNumber}" ` +
+        `<div class="rdr-page-slot" role="group" aria-roledescription="page" ` +
+        `aria-label="Page ${page.pageNumber}" data-page-number="${page.pageNumber}" ` +
         `style="${escapeAttr(slotInline)}">${serializePageToHtml(page)}</div>`,
     )
     .join('');
@@ -222,22 +228,34 @@ function serializeShapePrimitive(content: ShapeContentView): string {
   }
 }
 
-/** Serializes one table slice (E4-S3) as a positioned container of row tracks. */
+/**
+ * Serializes one table slice (E4-S3) as a positioned container of row tracks. The
+ * additive ARIA table roles (E10-S1) mirror the component template exactly so the
+ * headless output — and thus the visual-regression fixtures — announce a real
+ * table to assistive tech (see ADR 0020); they paint nothing, so the snapshots are
+ * unchanged.
+ */
 function serializeTable(table: TableView, mode: RenderMode): string {
   const rows = table.rows.map(serializeTableRow).join('');
   const anchor = inlineAttrs(designAnchorAttrs('table', table, mode));
   return (
-    `<div class="rdr-table" data-table-id="${escapeAttr(table.elementId)}" ` +
+    `<div class="rdr-table" role="table" aria-label="${escapeAttr(TABLE_ACCESSIBLE_NAME)}" ` +
+    `data-table-id="${escapeAttr(table.elementId)}" ` +
     `style="${escapeAttr(inlineStyle(tableContainerStyle(table)))}"${anchor}>${rows}</div>`
   );
 }
 
 /** Serializes one table row: its per-column cells then an optional full-width band label. */
 function serializeTableRow(row: TableRowView): string {
+  // Header cells are `columnheader` so a screen reader ties each data cell to its
+  // column; every other row's cells (and band labels) are plain `cell` (E10-S1).
+  const cellRole = tableCellRole(row.kind);
   const cells = row.cells
     .map(
       (cell) =>
-        `<div class="rdr-table-cell" data-column-key="${escapeAttr(cell.columnKey)}" ` +
+        `<div class="rdr-table-cell" role="${cellRole}" data-column-key="${escapeAttr(
+          cell.columnKey,
+        )}" ` +
         `style="${escapeAttr(inlineStyle(tableCellStyle(cell)))}">${serializeHighlightable(
           cell.text,
           cell.segments,
@@ -245,12 +263,12 @@ function serializeTableRow(row: TableRowView): string {
     )
     .join('');
   const label = row.label
-    ? `<div class="rdr-table-label" style="${escapeAttr(
+    ? `<div class="rdr-table-label" role="cell" style="${escapeAttr(
         inlineStyle(tableLabelStyle(row.label)),
       )}">${serializeHighlightable(row.label.text, row.label.segments)}</div>`
     : '';
   return (
-    `<div class="rdr-table-row" data-row-kind="${escapeAttr(row.kind)}" ` +
+    `<div class="rdr-table-row" role="row" data-row-kind="${escapeAttr(row.kind)}" ` +
     `style="${escapeAttr(inlineStyle(tableRowStyle(row)))}">${cells}${label}</div>`
   );
 }

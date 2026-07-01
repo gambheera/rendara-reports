@@ -22,8 +22,13 @@
           [attr.aria-label]="'Go to page ' + n"
           (click)="goToPage(n)"
         >
+          <!-- The mini page render is a decorative preview: the button's aria-label
+               ("Go to page N") is its accessible name, so the full duplicate of the
+               report's text is hidden from assistive tech (E10-S1) — without it a
+               screen reader would read the entire report once per thumbnail. -->
           <rdr-report-document
             class="rdr-viewer-thumb-doc"
+            aria-hidden="true"
             [document]="model.document"
             [template]="model.template"
             [resolvedValues]="model.resolvedValues"
@@ -32,7 +37,7 @@
             [zoom]="'fit-width'"
             [availableSize]="thumbnailSize()"
           />
-          <span class="rdr-viewer-thumb-label">{{ n }}</span>
+          <span class="rdr-viewer-thumb-label" aria-hidden="true">{{ n }}</span>
         </button>
       </li>
       }

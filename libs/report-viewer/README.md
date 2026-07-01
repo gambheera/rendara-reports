@@ -205,7 +205,7 @@ override only what you need.
 | `--rdr-viewer-hairline`       | `#e5e7eb` | Dividers and borders                      |
 | `--rdr-viewer-input-border`   | `#d1d5db` | Button / input outlines                   |
 | `--rdr-viewer-text`           | `#111827` | Primary chrome text                       |
-| `--rdr-viewer-text-secondary` | `#6b7280` | Secondary / muted chrome text             |
+| `--rdr-viewer-text-secondary` | `#5f6672` | Secondary / muted chrome text             |
 | `--rdr-viewer-accent`         | `#4f46e5` | Focus rings, active thumbnail, Find state |
 | `--rdr-viewer-accent-subtle`  | `#eef2ff` | Hover / active tints                      |
 | `--rdr-viewer-danger`         | `#dc2626` | Error-state icon + border                 |

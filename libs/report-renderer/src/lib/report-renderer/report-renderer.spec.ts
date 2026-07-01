@@ -275,6 +275,47 @@ describe('ReportRenderer tables (E4-S3)', () => {
       '244',
     );
   });
+
+  it('exposes ARIA table semantics for assistive tech (E10-S1, WCAG 2.2 AA)', async () => {
+    const container = await renderInvoiceTable();
+    const table = el(container, '.rdr-table[data-table-id="el_inv_table"]');
+
+    // The container is a named table; each row track is a row; a header cell is a
+    // columnheader and a data cell a plain cell — so a screen reader announces a
+    // real, navigable table.
+    expect(table.getAttribute('role')).toBe('table');
+    expect(table.getAttribute('aria-label')?.trim()).toBeTruthy();
+
+    const header = el(table, '.rdr-table-row[data-row-kind="header"]');
+    expect(header.getAttribute('role')).toBe('row');
+    expect(el(header, '.rdr-table-cell[data-column-key="desc"]').getAttribute('role')).toBe(
+      'columnheader',
+    );
+
+    const detail = el(table, '.rdr-table-row[data-row-kind="detail"]');
+    expect(detail.getAttribute('role')).toBe('row');
+    expect(el(detail, '.rdr-table-cell').getAttribute('role')).toBe('cell');
+
+    // Every row track carries role="row", so a role="table" never owns a bare
+    // (childless) row that axe would flag.
+    const rows = Array.from(table.querySelectorAll('.rdr-table-row'));
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.getAttribute('role')).toBe('row');
+    }
+  });
+
+  it('gives a group band label a cell role so its row is a valid table row', async () => {
+    const doc = await paginateWithTables(goldenTabularReportTemplate, goldenTabularReportData);
+    const { container } = await render(ReportRenderer, {
+      inputs: { page: doc.pages[0], geometry: doc.geometry, template: goldenTabularReportTemplate },
+    });
+    const groupHeader = el(
+      container,
+      '.rdr-table[data-table-id="el_rpt_table"] .rdr-table-row[data-row-kind="groupHeader"]',
+    );
+    expect(el(groupHeader, '.rdr-table-label').getAttribute('role')).toBe('cell');
+  });
 });
 
 /**
@@ -309,9 +350,7 @@ describe('ReportRenderer design-mode hooks (E4-S6)', () => {
     expect(el(container, '.rdr-page').getAttribute('data-rdr-mode')).toBe('design');
 
     const elementHits = container.querySelectorAll('.rdr-element[data-rdr-hit="element"]');
-    expect(elementHits.length).toBe(
-      container.querySelectorAll('.rdr-element').length,
-    );
+    expect(elementHits.length).toBe(container.querySelectorAll('.rdr-element').length);
     expect(container.querySelector('.rdr-table[data-rdr-hit="table"]')).not.toBeNull();
   });
 

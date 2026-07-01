@@ -41,6 +41,7 @@ have the context behind the code.
 | [0017](0017-viewer-theming-and-isolation.md)          | Viewer theming API (`--rdr-*` families) + isolation guarantees; content-only shadow-DOM opt-in | Accepted | E9-S5 |
 | [0018](0018-viewer-api-docs-and-changelog.md)         | Viewer consumer docs: TypeDoc API reference, Storybook state gallery, Changesets CHANGELOG | Accepted | E9-S6 |
 | [0019](0019-viewer-clean-room-smoke-test.md)          | Clean-room install smoke test: packed tarball → fresh external Angular app → AOT build + browser render gate | Accepted | E9-S7 |
+| [0020](0020-accessible-report-output-semantics.md)    | Accessible report output via ARIA roles on the positioned DOM (table/row/columnheader/cell + page groups), not native `<table>` | Accepted | E10-S1 |
 
 > **Numbering note:** ADRs 0001–0004 were written first, during E0-S5…S8, each
 > recording one Epic 0 tooling decision. The foundational stack/architecture ADR

@@ -142,13 +142,29 @@ describe('serializePageToHtml tables (E4-S3)', () => {
 
   it('emits a positioned table container with header, detail and footer rows', async () => {
     const html = await invoiceTableHtml();
-    expect(html).toContain('class="rdr-table" data-table-id="el_inv_table"');
+    expect(html).toContain(
+      'class="rdr-table" role="table" aria-label="Data table" data-table-id="el_inv_table"',
+    );
     expect(html).toContain('data-row-kind="header"');
     expect(html).toContain('data-row-kind="detail"');
     expect(html).toContain('data-row-kind="columnFooter"');
     expect(html).toContain('data-column-key="amt"');
     expect(html).toContain('Design consultation'); // a detail cell
     expect(html).toContain('$3,060.00'); // the grand total
+  });
+
+  it('marks up the table with ARIA table semantics (E10-S1, WCAG 2.2 AA)', async () => {
+    const html = await invoiceTableHtml();
+    // Container is a table; header cells are columnheaders; data cells are cells.
+    expect(html).toContain('role="table"');
+    expect(html).toContain('<div class="rdr-table-row" role="row" data-row-kind="header"');
+    expect(html).toContain('<div class="rdr-table-cell" role="columnheader"');
+    expect(html).toContain('<div class="rdr-table-cell" role="cell"');
+    // Every row track carries role="row"; every cell a header/data cell role — so a
+    // role="table" never has a childless (invalid) row.
+    const rows = (html.match(/class="rdr-table-row"/g) ?? []).length;
+    const rowRoles = (html.match(/class="rdr-table-row" role="row"/g) ?? []).length;
+    expect(rowRoles).toBe(rows);
   });
 
   it('escapes cell text it interpolates', () => {

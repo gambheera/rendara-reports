@@ -1,4 +1,12 @@
-<div #scroll class="rdr-canvas__scroll" [style.backgroundSize]="gridSizePx() + ' ' + gridSizePx()">
+<!-- tabindex makes the scrollable canvas keyboard-reachable so it can be scrolled
+     with the arrow keys (E10-S1, WCAG 2.1.1 / axe scrollable-region-focusable). It
+     lives inside the labelled `main` ("Report canvas"), so it needs no own name. -->
+<div
+  #scroll
+  class="rdr-canvas__scroll"
+  tabindex="0"
+  [style.backgroundSize]="gridSizePx() + ' ' + gridSizePx()"
+>
   <div class="rdr-canvas__grid">
     <div class="rdr-canvas__corner" aria-hidden="true"></div>
 

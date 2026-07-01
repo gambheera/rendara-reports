@@ -49,7 +49,13 @@
             {{ copied() ? 'Copied' : 'Copy' }}
           </button>
         </div>
-        <pre class="rdr-eio__code"><code>{{ serialized() }}</code></pre>
+        <!-- tabindex makes the scrollable JSON preview keyboard-scrollable (E10-S1,
+             axe scrollable-region-focusable); aria-label names the focus stop. -->
+        <pre
+          class="rdr-eio__code"
+          tabindex="0"
+          aria-label="Template JSON"
+        ><code>{{ serialized() }}</code></pre>
       </div>
 
       <div class="rdr-eio__field">

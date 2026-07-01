@@ -57,6 +57,7 @@ story's own QA. The checklist is embedded in the
 - [ ] **Schema round-trip** preserved where templates are involved (export →
       re-import yields an equivalent, ajv-valid template).
 - [ ] **Accessibility:** no new axe violations; keyboard operability; WCAG 2.2 AA.
+      See [accessibility](docs/testing/accessibility.md) (the axe gate + audit).
 - [ ] **Lint, format, strict typecheck** clean; **Nx module boundaries** respected.
 - [ ] **Performance budgets** respected (viewer bundle size; render time on
       large-data fixtures).

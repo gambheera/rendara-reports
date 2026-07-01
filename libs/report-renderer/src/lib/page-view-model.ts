@@ -1075,6 +1075,31 @@ function tableTextStyle(
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// Accessible output semantics (E10-S1) — ARIA table roles so the rendered report
+// body is announced as a real table to assistive tech (brief §9, WCAG 2.2 AA).
+// The renderer paints tables as absolutely-positioned `<div>`s (to keep the
+// WYSIWYG pixel geometry and visual-regression baselines exact; see ADR 0020), so
+// semantics come from `role`/`aria-*` attributes rather than native `<table>`
+// markup. The attributes are additive and paint nothing, so the DOM stays
+// byte-parallel between the Angular component and the headless serializer, and the
+// visual snapshots are unchanged. This is the one dynamic piece; the container /
+// row / band-label roles are constant literals applied identically in both paths.
+// ---------------------------------------------------------------------------
+
+/** The accessible name announced for every rendered data table (brief §9). */
+export const TABLE_ACCESSIBLE_NAME = 'Data table';
+
+/**
+ * The ARIA `role` for one table cell: a header-row cell is a `columnheader`, so a
+ * screen reader ties each data cell to its column name; every other row's cell
+ * (detail / group band / subtotal / grand-total) is a plain `cell`. Shared by the
+ * component template and the serializer so the two stay in lock-step.
+ */
+export function tableCellRole(rowKind: MeasuredRowKind): 'columnheader' | 'cell' {
+  return rowKind === 'header' ? 'columnheader' : 'cell';
+}
+
 /** The per-kind row-track decoration (fill + separators / rules); empty for none. */
 function tableRowDecoration(kind: MeasuredRowKind): StyleMap {
   switch (kind) {
@@ -1222,7 +1247,12 @@ function clampOpacity(opacity: number): number {
  */
 export function designAnchorAttrs(
   role: 'element' | 'table',
-  frame: { readonly leftPx: number; readonly topPx: number; readonly widthPx: number; readonly heightPx: number | null },
+  frame: {
+    readonly leftPx: number;
+    readonly topPx: number;
+    readonly widthPx: number;
+    readonly heightPx: number | null;
+  },
   mode: RenderMode,
 ): AttrMap | null {
   if (mode !== 'design') {

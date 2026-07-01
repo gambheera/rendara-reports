@@ -1,0 +1,79 @@
+# Accessibility gate (E10-S1).
+#
+# Runs the `@a11y`-tagged axe (WCAG 2.2 A/AA) Playwright scans over BOTH the Report
+# Designer and the embedded Report Viewer (in the demo host, consuming the built
+# package) and fails on ANY violation — the "axe CI gate at zero violations" the
+# story requires (brief §9). The scans themselves live in:
+#   * apps/designer-e2e/e2e/designer-a11y.spec.ts
+#   * apps/viewer-demo-e2e/e2e/viewer-a11y.spec.ts
+# tagged `@a11y` so `--grep @a11y` selects only them, keeping this a focused gate.
+#
+# Like release.yml / storybook.yml this is a thin, self-contained slice; the broader
+# unified `nx affected` pipeline (lint + test + build + e2e + visual) remains E0-S3's
+# scope. The two jobs run in parallel because the viewer scan rebuilds + installs the
+# packaged viewer (its webServer drives the whole chain) and is the slower path.
+name: Accessibility
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: a11y-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  designer-a11y:
+    name: Designer axe scan (WCAG 2.2 AA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run the designer @a11y scans (zero violations)
+        run: pnpm nx e2e designer-e2e --skip-nx-cache -- --grep=@a11y
+
+  viewer-a11y:
+    name: Viewer axe scan (WCAG 2.2 AA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # The viewer-demo-e2e webServer builds + bundles the viewer, installs it, and
+      # serves the production demo, so this scans the SAME output a host app ships.
+      - name: Run the viewer @a11y scans (zero violations)
+        run: pnpm nx e2e viewer-demo-e2e --skip-nx-cache -- --grep=@a11y
