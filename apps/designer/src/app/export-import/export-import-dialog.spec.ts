@@ -37,9 +37,12 @@ async function selectFile(
 describe('ExportImportDialog', () => {
   describe('export tab', () => {
     it('shows the validated chip and a JSON preview of the current template', async () => {
-      await open();
+      const { view } = await open();
       expect(screen.getByText('✓ validated')).toBeTruthy();
       expect(screen.getByText(/"schemaVersion"/)).toBeTruthy();
+      const codePreview = view.container.querySelector('.rdr-eio__code');
+      expect(codePreview?.getAttribute('tabindex')).toBe('0');
+      expect(codePreview?.getAttribute('aria-label')).toBe('Template JSON preview');
     });
 
     it('seeds the filename from the template metadata name', async () => {

@@ -49,7 +49,9 @@
             {{ copied() ? 'Copied' : 'Copy' }}
           </button>
         </div>
-        <pre class="rdr-eio__code"><code>{{ serialized() }}</code></pre>
+        <pre class="rdr-eio__code" tabindex="0" aria-label="Template JSON preview">
+          <code>{{ serialized() }}</code>
+        </pre>
       </div>
 
       <div class="rdr-eio__field">
