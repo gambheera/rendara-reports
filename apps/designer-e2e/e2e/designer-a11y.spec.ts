@@ -33,7 +33,7 @@ test.describe('Designer accessibility @a11y', () => {
   test('the Data tab has no violations', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('tab', { name: 'Data' }).click();
-    await expect(page.getByText('No data imported')).toBeVisible();
+    await expect(page.getByText('No sample data')).toBeVisible();
     await expectNoAxeViolations(page);
   });
 

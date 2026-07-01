@@ -123,7 +123,9 @@
   border: 1px solid color-mix(in srgb, var(--rdr-color-success) 25%, transparent);
   border-radius: var(--rdr-radius-control);
   background: color-mix(in srgb, var(--rdr-color-success) 10%, transparent);
-  color: var(--rdr-color-success);
+  /* Darker than --rdr-color-success (#16a34a, ~2.95:1 on the tint) so the chip
+     text clears WCAG AA on its own light-green fill (#166534 → 6.38:1) — E10-S1. */
+  color: #166534;
   font-size: var(--rdr-font-size-caption);
   font-weight: var(--rdr-font-weight-semibold);
   text-transform: none;
@@ -132,7 +134,8 @@
 .rdr-eio__chip--invalid {
   border-color: color-mix(in srgb, var(--rdr-color-danger) 25%, transparent);
   background: color-mix(in srgb, var(--rdr-color-danger) 10%, transparent);
-  color: var(--rdr-color-danger);
+  /* Darker than --rdr-color-danger for the same AA reason (#b91c1c → 5.54:1). */
+  color: #b91c1c;
 }
 
 .rdr-eio__copy {
