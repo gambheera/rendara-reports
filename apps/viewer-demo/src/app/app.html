@@ -1,8 +1,38 @@
-<!-- E7-S3 demo: a multi-page sample report wired into the embedded viewer so the
-     page-navigation e2e has pages to move between. Real wiring lands in Epic 9. -->
+<!-- E9-S4 integration proof: the host wires the viewer's public outputs (brief §8)
+     and surfaces the latest value of each, against the BUILT viewer package. -->
 <main class="rdr-demo">
   <h1>Rendara Reports — Viewer demo host</h1>
+
+  <section class="rdr-demo-events" aria-label="Integration events">
+    <div class="rdr-demo-actions">
+      <button type="button" (click)="loadSample()">Load sample</button>
+      <button type="button" (click)="loadInvalidTemplate()">Load invalid template</button>
+    </div>
+    <dl class="rdr-demo-event-log">
+      <dt>rendered</dt>
+      <dd data-testid="evt-rendered">
+        {{ lastRendered() ? 'pageCount ' + lastRendered()!.pageCount : '—' }}
+      </dd>
+      <dt>pageChange</dt>
+      <dd data-testid="evt-pagechange">
+        {{ lastPageChange() ? 'current ' + lastPageChange()!.current + ' of ' +
+        lastPageChange()!.total : '—' }}
+      </dd>
+      <dt>error</dt>
+      <dd data-testid="evt-error">
+        {{ lastError() ? lastError()!.kind + ': ' + lastError()!.message : '—' }}
+      </dd>
+    </dl>
+  </section>
+
   <div class="rdr-demo-viewer">
-    <rdr-report-viewer [template]="template" [data]="data" [config]="config" />
+    <rdr-report-viewer
+      [template]="template()"
+      [data]="data"
+      [config]="config"
+      (rendered)="onRendered($event)"
+      (pageChange)="onPageChange($event)"
+      (error)="onError($event)"
+    />
   </div>
 </main>

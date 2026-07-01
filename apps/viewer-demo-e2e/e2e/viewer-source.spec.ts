@@ -10,7 +10,7 @@ test.describe('viewer download source', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // Wait for the pipeline to render the chrome (status shows once paginated).
-    await expect(page.getByText(/^Page \d+ of \d+$/)).toBeVisible();
+    await expect(page.locator('.rdr-viewer-status')).toBeVisible();
   });
 
   test('downloads the template JSON named from the document title', async ({ page }) => {
