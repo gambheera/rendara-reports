@@ -67,6 +67,13 @@ const jsResult = await esbuild.build({
   format: 'esm',
   target: 'es2022',
   legalComments: 'none',
+  // Keep non-ASCII characters literal (esbuild otherwise escapes them to
+  // `\uXXXX`). This matters for the Angular linker: it decides whether to
+  // process a file by testing for the literal `ɵɵngDeclare` substring, so the
+  // theta-prefixed partial-declaration calls (`ɵɵngDeclareComponent`, …) must
+  // survive as real Unicode. With them escaped, the linker skips the bundle and
+  // a consumer hits "JIT compiler unavailable" at runtime (surfaced by E9-S4).
+  charset: 'utf8',
   sourcemap: true,
   write: false,
   allowOverwrite: true,

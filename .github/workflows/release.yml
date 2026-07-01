@@ -127,3 +127,39 @@ jobs:
       # Node (imports + validates a golden via both import and require). See ADR 0015.
       - name: Build + pack @rendara/report-schema
         run: pnpm nx run report-schema:pack --skip-nx-cache
+
+  viewer-demo-integration:
+    name: viewer-demo consumes the built package + e2e (E9-S4)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Static guard: the demo resolves @rendara/report-viewer to the installed
+      # built package, not workspace source (E9-S4 acceptance). See ADR 0016.
+      - name: Assert demo consumes the built package (not source)
+        run: node tools/verify-demo-consumes-build.mjs
+
+      # End-to-end proof: builds + bundles the viewer, installs it into
+      # node_modules, builds the demo against it (so the Angular Linker resolves
+      # the partial FESM), serves the production build and drives the report —
+      # render, page navigation, the rendered/pageChange/error outputs, print and
+      # export PDF. The `serve-static` webServer runs the whole chain.
+      - name: Run viewer-demo integration e2e
+        run: pnpm nx e2e viewer-demo-e2e --skip-nx-cache

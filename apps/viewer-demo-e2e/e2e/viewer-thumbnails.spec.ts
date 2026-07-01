@@ -10,7 +10,7 @@ test.describe('viewer optional thumbnail rail', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // Wait for the pipeline to render the chrome (status shows once paginated).
-    await expect(page.getByText(/^Page \d+ of \d+$/)).toBeVisible();
+    await expect(page.locator('.rdr-viewer-status')).toBeVisible();
   });
 
   test('shows the rail and a pressed toggle by default', async ({ page }) => {

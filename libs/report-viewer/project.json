@@ -31,6 +31,14 @@
         "parallel": false
       }
     },
+    "local-install": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle"],
+      "outputs": ["{workspaceRoot}/node_modules/@rendara/report-viewer"],
+      "options": {
+        "command": "node tools/install-viewer-local.mjs"
+      }
+    },
     "test": {
       "outputs": [
         "{projectRoot}/{options.coverage.reportsDirectory}",

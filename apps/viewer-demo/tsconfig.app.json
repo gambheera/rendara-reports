@@ -2,7 +2,20 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
-    "types": []
+    "types": [],
+    // E9-S4: the demo proves the integration story by consuming the BUILT,
+    // self-contained APF package (engine/renderer/schema inlined by the
+    // report-viewer:bundle step) — NOT the workspace source. Emptying `paths`
+    // drops the base-config `@rendara/*` → source mappings for the APP build, so
+    // `@rendara/report-viewer` resolves through normal node resolution to
+    // `node_modules/@rendara/report-viewer` (a junction to the `dist` output,
+    // created by `report-viewer:link`). Resolving it as a real node_modules
+    // package — rather than a first-party path mapping — is what lets the Angular
+    // Linker process its partial-compiled FESM, exactly as a host's `npm i` would.
+    // The build/serve targets `dependsOn` `report-viewer:link` so it exists first.
+    // Unit tests (tsconfig.spec.json) still resolve source via the base paths,
+    // so component tests run without a prior build.
+    "paths": {}
   },
   "include": ["src/**/*.ts"],
   "exclude": [

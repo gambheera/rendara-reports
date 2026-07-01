@@ -31,7 +31,7 @@ async function readoutPercent(page: import('@playwright/test').Page): Promise<nu
 test.describe('viewer zoom', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText(/^Page \d+ of \d+$/)).toBeVisible();
+    await expect(page.locator('.rdr-viewer-status')).toBeVisible();
   });
 
   test('renders the zoom stepper, readout and fit-mode dropdown', async ({ page }) => {

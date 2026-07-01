@@ -27,4 +27,46 @@ describe('Viewer demo App', () => {
     expect(status).toMatch(/^Page 1 of \d+$/);
     expect(Number(status.match(/of (\d+)/)?.[1] ?? '0')).toBeGreaterThan(1);
   });
+
+  it('surfaces the (rendered) and (pageChange) outputs from the wired viewer', async () => {
+    const { fixture } = await render(App);
+    await flush();
+    fixture.detectChanges();
+
+    // `(rendered)` fires once pagination completes; `(pageChange)` fires for the
+    // initial page too (brief §8). The host surfaces both into the event log.
+    const rendered = screen.getByTestId('evt-rendered').textContent?.trim() ?? '';
+    expect(rendered).toMatch(/^pageCount \d+$/);
+    expect(Number(rendered.match(/pageCount (\d+)/)?.[1] ?? '0')).toBeGreaterThan(1);
+
+    expect(screen.getByTestId('evt-pagechange').textContent?.trim() ?? '').toMatch(
+      /^current 1 of \d+$/,
+    );
+    expect(screen.getByTestId('evt-error').textContent?.trim()).toBe('—');
+  });
+
+  it('surfaces the (error) output for an invalid template and recovers', async () => {
+    const { container, fixture } = await render(App);
+    await flush();
+    fixture.detectChanges();
+
+    // Swap in a schema-invalid template: the viewer surfaces a validation error
+    // (never throws) and the host shows it in the event log.
+    screen.getByRole('button', { name: 'Load invalid template' }).click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(container.querySelector('[role="alert"]')).not.toBeNull();
+    const error = screen.getByTestId('evt-error').textContent?.trim() ?? '';
+    expect(error).toMatch(/^validation: Template failed validation:/);
+    expect(screen.getByTestId('evt-rendered').textContent?.trim()).toBe('—');
+
+    // Restoring the valid sample re-renders and clears the error.
+    screen.getByRole('button', { name: 'Load sample' }).click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(screen.getByTestId('evt-error').textContent?.trim()).toBe('—');
+    expect(screen.getByTestId('evt-rendered').textContent?.trim() ?? '').toMatch(/^pageCount \d+$/);
+  });
 });

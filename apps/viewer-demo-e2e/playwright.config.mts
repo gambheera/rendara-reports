@@ -41,13 +41,19 @@ export default defineConfig({
     /* Collect trace when retrying a failed test. */
     trace: 'on-first-retry',
   },
-  /* Start the viewer-demo dev server before the tests run. */
+  /* Serve the PRODUCTION build of the demo before the tests run (E9-S4).
+     The demo consumes the BUILT `@rendara/report-viewer` package, whose
+     partial-compiled FESM is resolved to AOT instructions by the Angular Linker
+     — which runs in the production build but not the vite dev server's dependency
+     optimizer. So e2e exercises `serve-static` (prod build + file server), which
+     also matches what a host ships. The `build` it depends on runs
+     `report-viewer:local-install`, installing the freshly bundled package. */
   webServer: {
-    command: 'npx nx run viewer-demo:serve --port=4201',
+    command: 'npx nx run viewer-demo:serve-static --port=4201',
     url: 'http://localhost:4201',
     reuseExistingServer: !isCI,
     cwd: workspaceRoot,
-    timeout: 120_000,
+    timeout: 180_000,
   },
   /* v1 runs Chromium only for a fast, deterministic gate; the cross-browser
      matrix is a hardening concern (brief Epic 10). */

@@ -135,3 +135,14 @@ const SAMPLE_TEMPLATE = {
 
 /** The template handed to the viewer as a JSON string (validated on input). */
 export const SAMPLE_TEMPLATE_JSON = JSON.stringify(SAMPLE_TEMPLATE);
+
+/**
+ * A deliberately invalid template (the required `page.size` is missing) used by
+ * the demo to exercise the viewer's `(error)` output (E9-S4 QA). The viewer
+ * validates the template on input and surfaces a `kind: 'validation'` error
+ * instead of throwing.
+ */
+export const INVALID_TEMPLATE_JSON = JSON.stringify({
+  ...SAMPLE_TEMPLATE,
+  page: { ...SAMPLE_TEMPLATE.page, size: undefined },
+});
