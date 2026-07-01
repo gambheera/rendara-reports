@@ -1,0 +1,5 @@
+# The E9-S7 clean-room fixture is a standalone EXTERNAL consumer app (its own
+# package.json / angular.json), materialized into a throwaway temp dir by the
+# clean-room smoke test. It is deliberately NOT an Nx project — keep Nx from
+# inferring one from its package.json/angular.json.
+tools/clean-room/fixture

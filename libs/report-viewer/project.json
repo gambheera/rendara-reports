@@ -39,6 +39,13 @@
         "command": "node tools/install-viewer-local.mjs"
       }
     },
+    "clean-room": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["bundle"],
+      "options": {
+        "command": "node tools/clean-room-smoke.mjs"
+      }
+    },
     "test": {
       "outputs": [
         "{projectRoot}/{options.coverage.reportsDirectory}",

@@ -163,3 +163,34 @@ jobs:
       # export PDF. The `serve-static` webServer runs the whole chain.
       - name: Run viewer-demo integration e2e
         run: pnpm nx e2e viewer-demo-e2e --skip-nx-cache
+
+  viewer-clean-room:
+    name: Clean-room install smoke test (E9-S7) — release gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Proof the package works OUTSIDE the monorepo: builds + bundles the viewer,
+      # `npm pack`s it, installs the tarball into a fresh external Angular app in a
+      # throwaway temp dir, AOT-builds it, and drives it in headless Chromium to
+      # assert the report renders (catching the runtime Linker "JIT compiler
+      # unavailable" regression a build-only check misses). See ADR 0019.
+      - name: Clean-room install + render smoke test
+        run: pnpm nx run report-viewer:clean-room --skip-nx-cache

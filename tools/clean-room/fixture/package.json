@@ -1,0 +1,25 @@
+{
+  "name": "rendara-clean-room",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Fixture consumer app for the E9-S7 clean-room install smoke test. NOT part of the Nx workspace; materialized into a throwaway temp dir by tools/clean-room-smoke.mjs, which drops the packed @rendara/report-viewer tarball beside this file.",
+  "scripts": {
+    "build": "ng build"
+  },
+  "dependencies": {
+    "@angular/cdk": "21.2.9",
+    "@angular/common": "21.2.9",
+    "@angular/compiler": "21.2.9",
+    "@angular/core": "21.2.9",
+    "@angular/platform-browser": "21.2.9",
+    "@rendara/report-viewer": "file:./report-viewer.tgz",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "21.2.7",
+    "@angular/cli": "21.2.7",
+    "@angular/compiler-cli": "21.2.9",
+    "typescript": "~5.9.2"
+  }
+}

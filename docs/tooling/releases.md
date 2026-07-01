@@ -72,3 +72,20 @@ CHANGELOG is seeded the same way when it next changes.
 
 **Real publishing is not wired yet.** Once E9 adds the package builds, a
 `changeset publish` step (gated on an `NPM_TOKEN`) replaces the dry-run.
+
+## Release gates (must be green before publishing)
+
+Beyond the DoD's per-PR CI, these package-level gates prove the tarballs are
+publishable and consumable. They run in [`release.yml`](../../.github/workflows/release.yml)
+and each must be green before cutting a release:
+
+| Gate | Command | Proves |
+| --- | --- | --- |
+| **Clean-room install smoke test** ⭐ | `nx run report-viewer:clean-room` | The packed `@rendara/report-viewer` installs into a **fresh Angular app outside the monorepo**, AOT-builds, and **renders a report in a browser** — catching the runtime Linker ("JIT compiler unavailable") regression a build-only check misses (E9-S7, [ADR 0019](../adr/0019-viewer-clean-room-smoke-test.md)). |
+| Viewer APF pack + tree-shake | `nx run report-viewer:pack` | The tarball is APF-compliant, self-contained (engine/renderer/schema bundled, no `@rendara/*` deps leak), advertises wide Angular peers, and has no eager side effects (E9-S1/S2). |
+| Schema Node smoke | `nx run report-schema:pack` | `@rendara/report-schema` is framework-agnostic (no Angular) and validates a golden in plain Node via both ESM and CJS (E9-S3). |
+| `viewer-demo` integration | `nx e2e viewer-demo-e2e` | The in-repo demo consumes the **built** package and renders/prints/exports with the public outputs wired (E9-S4). |
+
+The clean-room gate needs registry access (a real `npm install` of Angular) and a
+Playwright Chromium (`pnpm exec playwright install chromium`); run it locally with
+`pnpm smoke:clean-room`.

@@ -79,6 +79,12 @@ Angular (peer) + jsonata/ajv/tslib. **Note:** `nx build report-viewer` alone is
 _not_ publishable (its FESM still imports `@rendara/*`); use `bundle`/`pack`. See
 [ADR 0013](../../docs/adr/0013-viewer-apf-packaging.md).
 
+A **clean-room smoke test** (`nx run report-viewer:clean-room`) then installs the
+packed tarball into a fresh Angular app **outside the monorepo**, AOT-builds it and
+renders a report in a headless browser — proof the package is consumable as a real
+`npm i`, and a release gate. See [ADR 0019](../../docs/adr/0019-viewer-clean-room-smoke-test.md)
+and [releases.md](../../docs/tooling/releases.md#release-gates-must-be-green-before-publishing).
+
 ## Compatibility & version tolerance (E9-S2)
 
 The package is built to fit a host app's existing Angular install:
