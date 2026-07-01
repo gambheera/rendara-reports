@@ -341,9 +341,11 @@ describe('ReportViewer (E7-S5 states)', () => {
     fixture.detectChanges();
 
     const errorState = query<HTMLElement>(container, '.rdr-viewer-state--error');
+    const errorDetail = query<HTMLElement>(container, '.rdr-viewer-state-detail');
     expect(errorState.getAttribute('role')).toBe('alert');
     expect(errorState.textContent).toContain("Couldn't render this report");
     expect(errorState.textContent).toContain('Template failed validation');
+    expect(errorDetail.classList.contains('rdr-viewer-state-detail--error')).toBe(true);
     expect(container.querySelector('.rdr-page')).toBeNull();
     expect(error).toHaveBeenCalledTimes(1);
     expect(error.mock.calls[0][0].kind).toBe('validation');
