@@ -14,6 +14,11 @@
  */
 export default {
   extends: ['@commitlint/config-conventional'],
+  ignores: [
+    // Agent progress checkpoints currently create an "Initial plan" empty commit.
+    // Keep lint strict otherwise, but ignore this one known automation message.
+    (message) => message.trim() === 'Initial plan',
+  ],
   rules: {
     'body-max-line-length': [1, 'always', 100],
   },
