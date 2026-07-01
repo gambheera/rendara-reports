@@ -128,6 +128,11 @@ describe('CanvasStage', () => {
     expect(container.querySelector('[data-rdr-mode="design"]')).toBeTruthy();
   });
 
+  it('makes the scroll viewport keyboard-focusable for keyboard scrolling', async () => {
+    const { container } = await render(CanvasStage);
+    expect(container.querySelector('.rdr-canvas__scroll')?.getAttribute('tabindex')).toBe('0');
+  });
+
   it('shows the empty-state placeholder until an element exists', async () => {
     const view = await render(CanvasStage);
     expect(screen.getByText('Drag a control here to begin')).toBeTruthy();

@@ -42,6 +42,13 @@ describe('ExportImportDialog', () => {
       expect(screen.getByText(/"schemaVersion"/)).toBeTruthy();
     });
 
+    it('makes the JSON preview keyboard-focusable for scrolling', async () => {
+      const { view } = await open();
+      const code = view.container.querySelector('.rdr-eio__code');
+      expect(code?.getAttribute('tabindex')).toBe('0');
+      expect(code?.getAttribute('aria-labelledby')).toBe('rdr-eio-preview-label');
+    });
+
     it('seeds the filename from the template metadata name', async () => {
       await open('export', (store) =>
         store.loadTemplate({

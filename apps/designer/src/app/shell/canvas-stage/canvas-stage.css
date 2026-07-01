@@ -19,6 +19,11 @@
   background-attachment: local;
 }
 
+.rdr-canvas__scroll:focus-visible {
+  outline: none;
+  box-shadow: inset var(--rdr-focus-ring);
+}
+
 /* Two-track grid: ruler gutters + the page area. Sized to its content. */
 .rdr-canvas__grid {
   display: grid;

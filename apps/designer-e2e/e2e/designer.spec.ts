@@ -44,7 +44,7 @@ test.describe('Designer shell', () => {
     await page.goto('/');
 
     await page.getByRole('tab', { name: 'Data' }).click();
-    await expect(page.getByText('No data imported')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Import sample data' })).toBeVisible();
   });
 
   test('opens page setup and applies an A4 → Letter change', async ({ page }) => {
