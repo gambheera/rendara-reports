@@ -45,6 +45,32 @@ describe('Viewer demo App', () => {
     expect(screen.getByTestId('evt-error').textContent?.trim()).toBe('—');
   });
 
+  it('applies the [theme] override to the viewer host when toggled (E9-S5)', async () => {
+    const { container, fixture } = await render(App);
+    await flush();
+    fixture.detectChanges();
+
+    const viewer = container.querySelector<HTMLElement>('rdr-report-viewer');
+    expect(viewer).not.toBeNull();
+
+    // Default: no theme override on the host element.
+    expect(viewer?.style.getPropertyValue('--rdr-viewer-backdrop')).toBe('');
+
+    // Toggle the dark theme: the --rdr-viewer-* overrides land as host inline
+    // styles (the viewer's [theme] input → host [style] binding).
+    screen.getByRole('button', { name: 'Use dark theme' }).click();
+    fixture.detectChanges();
+
+    expect(viewer?.style.getPropertyValue('--rdr-viewer-backdrop')).toBe('#0f172a');
+    expect(viewer?.style.getPropertyValue('--rdr-viewer-accent')).toBe('#818cf8');
+
+    // Toggle back: the override is removed, restoring the design-system defaults.
+    screen.getByRole('button', { name: 'Use default theme' }).click();
+    fixture.detectChanges();
+
+    expect(viewer?.style.getPropertyValue('--rdr-viewer-backdrop')).toBe('');
+  });
+
   it('surfaces the (error) output for an invalid template and recovers', async () => {
     const { container, fixture } = await render(App);
     await flush();
