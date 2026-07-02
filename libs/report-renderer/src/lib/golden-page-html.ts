@@ -697,6 +697,126 @@ export function renderSearchHighlightPageHtml(): string {
 }
 
 // ---------------------------------------------------------------------------
+// RTL fixture (E10-S2): an Arabic-locale invoice-style table rendered with
+// `direction: 'rtl'`, so the visual harness snapshots a real right-to-left page.
+// The *layout* is what RTL exercises — the un-aligned heading right-aligns and the
+// data-table columns mirror across the table width — so the content stays Latin
+// and renders crisply under the harness's Latin fixture font (Arabic glyphs would
+// be missing-glyph boxes and non-deterministic). The direction is passed
+// explicitly here (the viewer/designer derive it from the locale); `metadata.locale`
+// is `ar-EG` to document the intent. Rows are pre-resolved constants fed through
+// the real paginator, so the geometry is genuine and deterministic.
+// ---------------------------------------------------------------------------
+
+/** Zoom for the RTL table fixture page (A4 portrait), sized to the harness viewport. */
+export const RTL_TABLE_FIXTURE_ZOOM = 0.75;
+
+const RTL_TABLE_ID = 'el_rtl_table';
+const RTL_TABLE_COLUMNS = ['item', 'qty', 'price', 'amount'] as const;
+
+/**
+ * A compact A4-portrait page with an un-aligned heading and a single data table,
+ * authored for RTL rendering (locale `ar-EG`). Mirrors the plain-table golden's
+ * columns so the RTL snapshot reads against a familiar layout.
+ */
+const rtlTableTemplate: RendaraTemplate = {
+  schemaVersion: '1.0.0',
+  metadata: {
+    name: 'RTL Invoice',
+    id: 'fixture-rtl-table-0001',
+    createdAt: '2026-06-17T00:00:00.000Z',
+    locale: 'ar-EG',
+  },
+  page: {
+    size: 'A4',
+    orientation: 'portrait',
+    marginsMm: { top: 20, right: 15, bottom: 20, left: 15 },
+    units: 'mm',
+    defaultFont: { family: 'Inter', sizePt: 10 },
+    background: null,
+  },
+  header: { elements: [] },
+  body: {
+    elements: [
+      {
+        // No authored horizontal alignment, so it right-aligns under RTL.
+        id: 'el_rtl_title',
+        type: 'text',
+        frame: { xMm: 15, yMm: 18, wMm: 180, hMm: 10 },
+        text: 'Invoice — Acme Corp',
+        style: {
+          font: { family: 'Inter', sizePt: 18, weight: 'bold', style: 'normal' },
+          color: '#4F46E5',
+        },
+        z: 1,
+      },
+      {
+        id: RTL_TABLE_ID,
+        type: 'dataTable',
+        frame: { xMm: 15, yMm: 34, wMm: 180, hMm: null },
+        source: { arrayExpr: 'items' },
+        columns: [
+          { key: 'item', header: 'Item', cell: { expr: '$.item' }, widthMm: 95 },
+          {
+            key: 'qty',
+            header: 'Qty',
+            cell: { expr: '$.qty', format: 'number:0' },
+            widthMm: 25,
+            align: 'right',
+          },
+          {
+            key: 'price',
+            header: 'Unit Price',
+            cell: { expr: '$.price', format: 'currency:USD' },
+            widthMm: 30,
+            align: 'right',
+          },
+          {
+            key: 'amount',
+            header: 'Amount',
+            cell: { expr: '$.amount', format: 'currency:USD' },
+            footer: { expr: '$sum(items.amount)', format: 'currency:USD' },
+            widthMm: 30,
+            align: 'right',
+          },
+        ],
+        repeatHeaderOnEachPage: true,
+        keepTogether: false,
+        z: 1,
+      },
+    ],
+  },
+  footer: { elements: [] },
+};
+
+/** Pre-resolved cells/total for {@link rtlTableTemplate} (no JSONata at generate time). */
+const RTL_TABLE_RESOLVED: ResolvedDataTable = {
+  rows: [
+    resolvedRow(0, RTL_TABLE_COLUMNS, ['Aurora Desk Lamp', '12', '$45.00', '$540.00']),
+    resolvedRow(1, RTL_TABLE_COLUMNS, ['Borealis Floor Lamp', '6', '$110.00', '$660.00']),
+    resolvedRow(2, RTL_TABLE_COLUMNS, ['Cedar Side Table', '3', '$130.00', '$390.00']),
+  ],
+  columnFooters: [resolvedAggregate('amount', '$1,590.00')],
+  errors: [],
+  diagnostics: [],
+};
+
+/**
+ * Renders the RTL table fixture page to its static HTML, built with
+ * `direction: 'rtl'` so the sheet carries `dir="rtl"`, the heading right-aligns and
+ * the table columns mirror. Deterministic.
+ */
+export function renderRtlTablePageHtml(): string {
+  const doc = paginate(rtlTableTemplate, new Map([[RTL_TABLE_ID, RTL_TABLE_RESOLVED]]));
+  const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+    zoom: RTL_TABLE_FIXTURE_ZOOM,
+    template: rtlTableTemplate,
+    direction: 'rtl',
+  });
+  return serializePageToHtml(vm);
+}
+
+// ---------------------------------------------------------------------------
 // Style-isolation fixture (E4-S5): the exact content of an isolated render root —
 // the shared reset/theme/chrome stylesheet plus a serialized report page. The
 // e2e attaches a shadow root to a host element (under hostile global CSS) and

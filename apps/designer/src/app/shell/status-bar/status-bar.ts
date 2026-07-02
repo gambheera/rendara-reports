@@ -1,5 +1,6 @@
 import { Component, ViewEncapsulation, computed, inject, output } from '@angular/core';
 import { isNamedPageSize } from '@rendara/report-schema';
+import { I18nService } from '@rendara/ui-kit';
 import { DesignerStore } from '../../state/designer-store';
 
 /** Zoom step applied by the −/+ buttons, in percentage points. */
@@ -22,6 +23,9 @@ const ZOOM_STEP_PERCENT = 10;
 })
 export class StatusBar {
   private readonly store = inject(DesignerStore);
+
+  /** Designer i18n (E10-S2): the template calls `i18n.t(...)` for its chrome strings. */
+  protected readonly i18n = inject(I18nService);
 
   /** Fired when the author activates the page-summary button (E5-S3). */
   readonly openPageSetup = output<void>();

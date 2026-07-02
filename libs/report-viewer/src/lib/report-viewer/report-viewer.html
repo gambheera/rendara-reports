@@ -36,6 +36,7 @@
             [currentPage]="n"
             [zoom]="'fit-width'"
             [availableSize]="thumbnailSize()"
+            [direction]="direction()"
           />
           <span class="rdr-viewer-thumb-label" aria-hidden="true">{{ n }}</span>
         </button>
@@ -372,6 +373,7 @@
         [layout]="pageMode()"
         [currentPage]="currentPage()"
         [highlight]="searchHighlight()"
+        [direction]="direction()"
         (zoomChange)="onZoomChange($event)"
       />
     </div>
@@ -400,6 +402,7 @@
       [layout]="'single'"
       [currentPage]="n"
       [zoom]="1"
+      [direction]="direction()"
     />
   </div>
   }

@@ -10,6 +10,7 @@ import {
   renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
   renderPrintStylesheetCss,
+  renderRtlTablePageHtml,
   renderSearchHighlightPageHtml,
   renderStyleIsolationContent,
   renderWatermarkPageHtml,
@@ -175,6 +176,26 @@ describe('renderSearchHighlightPageHtml (E8-S6)', () => {
     expect(html).toContain('<mark class="rdr-mark">Lamp</mark>');
     // Exactly one active mark (the current match).
     expect((html.match(/rdr-mark--active/g) ?? []).length).toBe(1);
+  });
+});
+
+describe('renderRtlTablePageHtml (E10-S2)', () => {
+  it('matches the committed visual fixture (regenerate with render-fixtures:generate)', () => {
+    const committed = readFileSync(fixturePath('rtl-table-page.html'), 'utf8');
+    expect(committed.trimEnd()).toBe(renderRtlTablePageHtml());
+  });
+
+  it('renders a right-to-left page with mirrored table columns', () => {
+    const html = renderRtlTablePageHtml();
+    // The sheet reads right-to-left.
+    expect(html).toContain('dir="rtl"');
+    expect(html).toContain('direction: rtl');
+    // The un-aligned heading right-aligns under RTL.
+    expect(html).toContain('text-align: right');
+    // The table still paints its rows + grand total.
+    expect(html).toContain('class="rdr-table"');
+    expect(html).toContain('Aurora Desk Lamp');
+    expect(html).toContain('$1,590.00');
   });
 });
 

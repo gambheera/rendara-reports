@@ -1067,3 +1067,108 @@ describe('accessible table roles (E10-S1)', () => {
     expect(TABLE_ACCESSIBLE_NAME.trim().length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * RTL rendering (E10-S2) — the base text direction (derived from the template
+ * locale by the renderer's host) drives three additive effects: the sheet gets
+ * `direction: rtl`, un-aligned text right-aligns, and data-table columns mirror
+ * across the table width. Every effect is gated on `direction: 'rtl'`, so the LTR
+ * default keeps the view-model byte-identical to before this story.
+ */
+describe('RTL rendering (E10-S2)', () => {
+  /** A minimal Arabic-locale template: one un-aligned and one left-aligned text box. */
+  const rtlTextTemplate: RendaraTemplate = {
+    schemaVersion: '1.0.0',
+    metadata: { name: 'RTL', id: 'rtl-0001', createdAt: '2026-06-17T00:00:00.000Z', locale: 'ar' },
+    page: {
+      size: 'A4',
+      orientation: 'portrait',
+      marginsMm: { top: 20, right: 15, bottom: 20, left: 15 },
+      units: 'mm',
+      defaultFont: { family: 'Inter', sizePt: 10 },
+      background: null,
+    },
+    header: { elements: [] },
+    body: {
+      elements: [
+        { id: 'el_unaligned', type: 'text', frame: { xMm: 15, yMm: 20, wMm: 80, hMm: 8 }, text: 'مرحبا', z: 1 },
+        {
+          id: 'el_aligned',
+          type: 'text',
+          frame: { xMm: 15, yMm: 30, wMm: 80, hMm: 8 },
+          text: 'left',
+          style: { align: { horizontal: 'left' } },
+          z: 1,
+        },
+      ],
+    },
+    footer: { elements: [] },
+  };
+
+  it('defaults the direction to ltr and keeps the sheet style byte-stable', () => {
+    const doc = paginate(rtlTextTemplate, new Map());
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, { template: rtlTextTemplate });
+    expect(vm.direction).toBe('ltr');
+    // No `direction` key on the LTR sheet style (byte-stable vs. before E10-S2).
+    expect(sheetStyle(vm)['direction']).toBeUndefined();
+  });
+
+  it('sets the sheet direction for rtl', () => {
+    const doc = paginate(rtlTextTemplate, new Map());
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: rtlTextTemplate,
+      direction: 'rtl',
+    });
+    expect(vm.direction).toBe('rtl');
+    expect(sheetStyle(vm)['direction']).toBe('rtl');
+  });
+
+  it('right-aligns un-aligned text under rtl but honours an authored alignment', () => {
+    const doc = paginate(rtlTextTemplate, new Map());
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, {
+      template: rtlTextTemplate,
+      direction: 'rtl',
+    });
+    const unaligned = boxById(vm, 'el_unaligned').content as TextContentView;
+    const aligned = boxById(vm, 'el_aligned').content as TextContentView;
+    expect(unaligned.textStyle['text-align']).toBe('right');
+    // An authored `left` is respected regardless of direction.
+    expect(aligned.textStyle['text-align']).toBe('left');
+  });
+
+  it('leaves un-aligned text with no text-align key under ltr (byte-stable)', () => {
+    const doc = paginate(rtlTextTemplate, new Map());
+    const vm = buildPageViewModel(doc.pages[0], doc.geometry, { template: rtlTextTemplate });
+    const unaligned = boxById(vm, 'el_unaligned').content as TextContentView;
+    expect(unaligned.textStyle['text-align']).toBeUndefined();
+  });
+
+  it('mirrors data-table columns across the table width under rtl', async () => {
+    const doc = await paginateGolden(goldenInvoiceTemplate, goldenInvoiceData);
+    const ltr = onlyTable(buildPageViewModel(doc.pages[0], doc.geometry, { template: goldenInvoiceTemplate }));
+    const rtl = onlyTable(
+      buildPageViewModel(doc.pages[0], doc.geometry, {
+        template: goldenInvoiceTemplate,
+        direction: 'rtl',
+      }),
+    );
+
+    // The table container and column widths are unchanged; only the cells' left
+    // offsets mirror to `tableWidth − xPx − colWidth`, row for row (cells keep their
+    // declared column order — only the geometry mirrors).
+    expect(rtl.widthPx).toBe(ltr.widthPx);
+    expect(rtl.rows).toHaveLength(ltr.rows.length);
+    rtl.rows.forEach((rtlRow, r) => {
+      const ltrRow = ltr.rows[r];
+      rtlRow.cells.forEach((cell, i) => {
+        const ltrCell = ltrRow.cells[i];
+        expect(cell.columnKey).toBe(ltrCell.columnKey);
+        expect(cell.widthPx).toBe(ltrCell.widthPx);
+        expect(cell.leftPx).toBeCloseTo(rtl.widthPx - ltrCell.leftPx - ltrCell.widthPx, 6);
+      });
+    });
+    // The first declared column now sits on the right (largest left offset).
+    const firstRowCells = rtl.rows[0].cells;
+    expect(firstRowCells[0].leftPx).toBeGreaterThan(firstRowCells[firstRowCells.length - 1].leftPx);
+  });
+});

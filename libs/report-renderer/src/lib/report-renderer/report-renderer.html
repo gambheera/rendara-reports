@@ -4,6 +4,7 @@
   [style]="sheetStyle()"
   [attr.data-page-number]="model.pageNumber"
   [attr.data-rdr-mode]="model.mode === 'design' ? 'design' : null"
+  [attr.dir]="model.direction === 'rtl' ? 'rtl' : null"
 >
   <div class="rdr-printable" [style]="printableStyle()"></div>
   @if (model.watermark; as watermark) {

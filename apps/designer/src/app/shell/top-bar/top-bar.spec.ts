@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import type { TextElement } from '@rendara/report-schema';
+import { DE_MESSAGES, I18nService, provideI18n } from '@rendara/ui-kit';
 import { TopBar } from './top-bar';
 import { DesignerStore } from '../../state/designer-store';
 import { DRAFT_STORAGE, createMemoryStorage } from '../../state/draft-persistence.service';
@@ -83,5 +84,27 @@ describe('TopBar', () => {
     expect(screen.getByRole('tab', { name: 'Export' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Import' })).toBeTruthy();
     expect(screen.getByText('✓ validated')).toBeTruthy();
+  });
+
+  /**
+   * i18n (E10-S2): the chrome strings come from the {@link I18nService}, so
+   * switching the locale at runtime re-renders them into the target language.
+   */
+  it('localises the action buttons when the locale switches to German', async () => {
+    const view = await render(TopBar, {
+      providers: [
+        { provide: DRAFT_STORAGE, useValue: createMemoryStorage() },
+        provideI18n({ catalogs: { de: DE_MESSAGES } }),
+      ],
+    });
+    // Default (English) first.
+    expect(screen.getByRole('button', { name: 'Export' })).toBeTruthy();
+
+    TestBed.inject(I18nService).setLocale('de-DE');
+    view.detectChanges();
+
+    expect(screen.getByRole('button', { name: 'Exportieren' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Vorschau' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Export' })).toBeNull();
   });
 });

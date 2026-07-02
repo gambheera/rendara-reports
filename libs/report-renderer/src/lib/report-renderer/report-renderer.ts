@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { PageGeometry, PaginatedPage, Watermark } from '@rendara/report-engine';
+import type { PageGeometry, PaginatedPage, TextDirection, Watermark } from '@rendara/report-engine';
 import type { RendaraTemplate } from '@rendara/report-schema';
 
 import {
@@ -126,6 +126,13 @@ export class ReportRenderer {
    * the designer never sets it.
    */
   readonly highlight = input<string | null>(null);
+  /**
+   * Base text direction (E10-S2), from the host's locale-derived
+   * {@link textDirection}. `'rtl'` renders the page right-to-left (sheet direction +
+   * `dir="rtl"`, mirrored table columns, right-aligned un-aligned text); `'ltr'`
+   * (the default) keeps the page byte-stable.
+   */
+  readonly direction = input<TextDirection>('ltr');
 
   /** The pure view-model for the current inputs. */
   protected readonly vm = computed<PageViewModel>(() =>
@@ -137,6 +144,7 @@ export class ReportRenderer {
       mode: this.mode(),
       watermark: this.watermark(),
       highlightQuery: this.highlight(),
+      direction: this.direction(),
     }),
   );
 

@@ -1,5 +1,5 @@
 import { Component, ViewEncapsulation, computed, inject, viewChild } from '@angular/core';
-import { Button } from '@rendara/ui-kit';
+import { Button, I18nService } from '@rendara/ui-kit';
 import { DesignerStore } from '../../state/designer-store';
 import { DraftPersistenceService } from '../../state/draft-persistence.service';
 import { ExportImportDialog } from '../../export-import/export-import-dialog';
@@ -29,14 +29,19 @@ export class TopBar {
   private readonly draftPersistence = inject(DraftPersistenceService);
   private readonly exportImport = viewChild.required(ExportImportDialog);
 
+  /** Designer i18n (E10-S2): the template calls `i18n.t(...)` for its chrome strings. */
+  protected readonly i18n = inject(I18nService);
+
   /** The document's name, shown in the title area (from the template metadata). */
   protected readonly documentName = computed(() => this.store.template().metadata.name);
 
   /** True while the document has unsaved changes since the last file save. */
   protected readonly dirty = this.store.dirty;
 
-  /** Save-status label for the title area, driven by {@link dirty}. */
-  protected readonly statusLabel = computed(() => (this.dirty() ? 'Unsaved changes' : 'Saved'));
+  /** Save-status label for the title area, driven by {@link dirty} (localised, E10-S2). */
+  protected readonly statusLabel = computed(() =>
+    this.dirty() ? this.i18n.t('topBar.status.unsaved') : this.i18n.t('topBar.status.saved'),
+  );
 
   /** Enters live preview mode (E6-S9) — a viewer-style render of the document. */
   protected enterPreview(): void {

@@ -7,7 +7,7 @@
     rdr-button
     variant="ghost"
     class="rdr-top-bar__icon-btn"
-    aria-label="Rename document"
+    [attr.aria-label]="i18n.t('topBar.renameDocument')"
     disabled
   >
     <span class="rdr-top-bar__icon" aria-hidden="true">&#9998;</span>
@@ -19,17 +19,27 @@
 </div>
 
 <div class="rdr-top-bar__actions">
-  <button type="button" rdr-button variant="ghost" (click)="newDocument()">New</button>
-  <button type="button" rdr-button variant="ghost" (click)="openImport()">Open…</button>
-  <button type="button" rdr-button variant="secondary" disabled>Import data</button>
-  <button type="button" rdr-button variant="secondary" (click)="enterPreview()">Preview</button>
-  <button type="button" rdr-button variant="primary" (click)="openExport()">Export</button>
+  <button type="button" rdr-button variant="ghost" (click)="newDocument()">
+    {{ i18n.t('topBar.new') }}
+  </button>
+  <button type="button" rdr-button variant="ghost" (click)="openImport()">
+    {{ i18n.t('topBar.open') }}
+  </button>
+  <button type="button" rdr-button variant="secondary" disabled>
+    {{ i18n.t('topBar.importData') }}
+  </button>
+  <button type="button" rdr-button variant="secondary" (click)="enterPreview()">
+    {{ i18n.t('topBar.preview') }}
+  </button>
+  <button type="button" rdr-button variant="primary" (click)="openExport()">
+    {{ i18n.t('topBar.export') }}
+  </button>
   <button
     type="button"
     rdr-button
     variant="ghost"
     class="rdr-top-bar__icon-btn"
-    aria-label="More actions"
+    [attr.aria-label]="i18n.t('topBar.moreActions')"
     disabled
   >
     <span class="rdr-top-bar__icon" aria-hidden="true">&#8943;</span>

@@ -26,7 +26,7 @@
  * Node/Playwright serializer context.
  */
 
-import type { PageGeometry, PaginatedDocument } from '@rendara/report-engine';
+import type { PageGeometry, PaginatedDocument, TextDirection } from '@rendara/report-engine';
 import type { RendaraTemplate } from '@rendara/report-schema';
 
 import { buildPageViewModel, type PageViewModel, type RenderMode } from './page-view-model';
@@ -127,6 +127,11 @@ export interface DocumentViewOptions {
   readonly background?: string | null;
   /** Render mode (E4-S6), forwarded to every page; `'view'` (default) or `'design'`. */
   readonly mode?: RenderMode;
+  /**
+   * Base text direction (E10-S2), forwarded to every page so the whole document
+   * renders RTL. `'ltr'` (the default) keeps every page byte-identical to before.
+   */
+  readonly direction?: TextDirection;
 }
 
 /** Everything a renderer needs to paint a whole document: the resolved zoom + every page. */
@@ -168,6 +173,7 @@ export function buildDocumentViewModel(
       template: options?.template,
       resolvedValues: options?.resolvedValues,
       mode,
+      direction: options?.direction,
       // The watermark (E4-S7) is document-level: the engine echoes the render-time
       // config onto the document, and it is stamped on every page behind the content.
       watermark: doc.watermark,

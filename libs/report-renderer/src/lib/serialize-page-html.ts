@@ -112,9 +112,11 @@ export function serializePageToHtml(vm: PageViewModel): string {
   const tables = vm.tables.map((table) => serializeTable(table, mode)).join('');
   // The page-mode marker is additive (design only), so view-mode output is byte-stable.
   const pageMode = mode === 'design' ? ' data-rdr-mode="design"' : '';
+  // The `dir` attribute is emitted only for RTL (E10-S2), so LTR output is byte-stable.
+  const dir = vm.direction === 'rtl' ? ' dir="rtl"' : '';
 
   return (
-    `<div class="rdr-page" style="${escapeAttr(inlineStyle(sheetStyle(vm)))}"${pageMode}>` +
+    `<div class="rdr-page" style="${escapeAttr(inlineStyle(sheetStyle(vm)))}"${pageMode}${dir}>` +
     `<div class="rdr-printable" style="${escapeAttr(inlineStyle(printableStyle(vm)))}"></div>` +
     watermark +
     boxes +

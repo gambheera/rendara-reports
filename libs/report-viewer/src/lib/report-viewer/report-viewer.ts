@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { type RendaraTemplate, type RendaraValidationError } from '@rendara/report-schema';
 import { ReportDocument, type ViewportSize } from '@rendara/report-renderer';
-import type { Watermark } from '@rendara/report-engine';
+import { textDirection, type TextDirection, type Watermark } from '@rendara/report-engine';
 
 import { runPipeline, type PipelineResult } from './report-pipeline';
 import {
@@ -255,6 +255,19 @@ export class ReportViewer {
   protected readonly documentTitle = computed<string>(
     () => this.renderModel()?.template.metadata.name ?? '',
   );
+
+  /**
+   * Base text direction for the rendered report (E10-S2), derived from the same
+   * effective locale the pipeline formats with — `config.locale` if the host set
+   * one, else the template's `metadata.locale` — via {@link textDirection}. Forwarded
+   * to every {@link ReportDocument} (on-screen, print mirror, thumbnails) so an
+   * Arabic/Hebrew/… report reads right-to-left. `'ltr'` until a document renders.
+   */
+  protected readonly direction = computed<TextDirection>(() => {
+    const model = this.renderModel();
+    const locale = this.resolvedConfig().locale ?? model?.template.metadata.locale;
+    return textDirection(locale);
+  });
 
   /** The host-configured initial zoom; seeds {@link zoomSpec} and re-syncs it on change. */
   protected readonly initialZoom = computed<ViewerZoom>(

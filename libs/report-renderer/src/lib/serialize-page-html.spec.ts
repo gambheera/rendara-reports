@@ -428,3 +428,28 @@ describe('serializePageToHtml search highlighting (E8-S6)', () => {
     expect(html).toContain('<mark class="rdr-mark">&lt;b&gt;x&lt;/b&gt;</mark>');
   });
 });
+
+/**
+ * RTL serialization (E10-S2) — the serializer emits the same `dir="rtl"` marker
+ * on the page sheet the Angular component binds, so the visual-regression harness
+ * snapshots a real RTL page. The marker is additive: an LTR page never carries it,
+ * so every existing golden stays byte-identical.
+ */
+describe('serializePageToHtml RTL (E10-S2)', () => {
+  it('emits dir="rtl" and a right-to-left sheet direction for an rtl page', () => {
+    const doc = paginate(goldenCertificateTemplate, new Map());
+    const html = serializePageToHtml(
+      buildPageViewModel(doc.pages[0], doc.geometry, { direction: 'rtl' }),
+    );
+    expect(html).toContain('class="rdr-page"');
+    expect(html).toContain('dir="rtl"');
+    expect(html).toContain('direction: rtl');
+  });
+
+  it('omits the dir marker for an ltr page (byte-stable)', () => {
+    const doc = paginate(goldenCertificateTemplate, new Map());
+    const html = serializePageToHtml(buildPageViewModel(doc.pages[0], doc.geometry));
+    expect(html).not.toContain('dir="rtl"');
+    expect(html).not.toContain('direction: rtl');
+  });
+});

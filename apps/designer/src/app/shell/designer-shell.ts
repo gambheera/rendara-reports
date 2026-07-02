@@ -1,4 +1,6 @@
-import { Component, ViewEncapsulation, inject, signal, viewChild } from '@angular/core';
+import { Component, ViewEncapsulation, computed, inject, signal, viewChild } from '@angular/core';
+import { textDirection, type TextDirection } from '@rendara/report-engine';
+import { I18nService } from '@rendara/ui-kit';
 import { TopBar } from './top-bar/top-bar';
 import { PalettePanel } from './palette-panel/palette-panel';
 import { CanvasStage } from './canvas-stage/canvas-stage';
@@ -103,10 +105,23 @@ function isEditableTarget(target: EventTarget | null): boolean {
   templateUrl: './designer-shell.html',
   styleUrl: './designer-shell.css',
   encapsulation: ViewEncapsulation.Emulated,
-  host: { class: 'rdr-designer-shell', '(keydown)': 'onKeyDown($event)' },
+  host: {
+    class: 'rdr-designer-shell',
+    '(keydown)': 'onKeyDown($event)',
+    '[attr.dir]': 'dir()',
+  },
 })
 export class DesignerShell {
   private readonly store = inject(DesignerStore);
+  private readonly i18n = inject(I18nService);
+
+  /**
+   * Base text direction of the designer chrome (E10-S2), derived from the active
+   * UI locale via the engine's {@link textDirection}. An RTL locale (e.g. Arabic)
+   * sets `dir="rtl"` on the shell; the default English locale keeps `dir="ltr"`, so
+   * the designer is unchanged until a locale is configured.
+   */
+  protected readonly dir = computed<TextDirection>(() => textDirection(this.i18n.locale()));
 
   /** Width bounds (px) shared by both side panels. */
   protected readonly MIN_WIDTH = 200;

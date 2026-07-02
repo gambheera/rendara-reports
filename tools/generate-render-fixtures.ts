@@ -20,6 +20,7 @@ import {
   renderMultiPageDocumentHtml,
   renderPlainTablePageHtml,
   renderPrintStylesheetCss,
+  renderRtlTablePageHtml,
   renderSearchHighlightPageHtml,
   renderStyleIsolationContent,
   renderWatermarkPageHtml,
@@ -37,6 +38,8 @@ const artifacts: ReadonlyArray<readonly [string, string]> = [
   ['multi-page-document.html', renderMultiPageDocumentHtml()],
   ['watermark-page.html', renderWatermarkPageHtml()],
   ['search-highlight-page.html', renderSearchHighlightPageHtml()],
+  // E10-S2: an RTL (right-to-left) table page — mirrored columns + right-aligned heading.
+  ['rtl-table-page.html', renderRtlTablePageHtml()],
   ['style-isolation.html', renderStyleIsolationContent()],
   // E4-S8: the renderer's print stylesheet, applied by the harness for the
   // `*-print.png` snapshots.
