@@ -11,7 +11,12 @@ import {
   output,
   signal,
 } from '@angular/core';
-import type { PaginatedDocument, PaginatedPage, Watermark } from '@rendara/report-engine';
+import type {
+  PaginatedDocument,
+  PaginatedPage,
+  TextDirection,
+  Watermark,
+} from '@rendara/report-engine';
 import type { RendaraTemplate } from '@rendara/report-schema';
 
 import {
@@ -92,6 +97,13 @@ export class ReportDocument {
   readonly currentPage = input<number>(1);
   /** Render mode (E4-S6), forwarded to every page; `'view'` (default) or `'design'`. */
   readonly mode = input<RenderMode>('view');
+  /**
+   * Base text direction (E10-S2), forwarded to every child {@link ReportRenderer}
+   * so the whole document renders RTL. `'ltr'` (the default) keeps the document
+   * byte-stable. The viewer/designer derive it from the template locale via
+   * {@link textDirection}.
+   */
+  readonly direction = input<TextDirection>('ltr');
   /**
    * Explicit viewport size for resolving the fit zoom modes. When `null` (the
    * default) the component measures its own host with a `ResizeObserver`. A host

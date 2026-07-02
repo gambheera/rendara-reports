@@ -433,3 +433,29 @@ describe('ReportRenderer watermark (E4-S7)', () => {
     expect(container.querySelector('.rdr-watermark')).toBeNull();
   });
 });
+
+/**
+ * RTL rendering (E10-S2): a `direction: 'rtl'` input sets the sheet's `dir="rtl"`
+ * and inline `direction`, so the page reads right-to-left. The default (ltr) leaves
+ * the sheet with no `dir`, keeping the viewer DOM byte-stable.
+ */
+describe('ReportRenderer RTL (E10-S2)', () => {
+  async function renderDir(direction?: 'ltr' | 'rtl') {
+    const doc = certificatePage();
+    const { container } = await render(ReportRenderer, {
+      inputs: { page: doc.pages[0], geometry: doc.geometry, ...(direction ? { direction } : {}) },
+    });
+    return container;
+  }
+
+  it('sets dir="rtl" and an rtl sheet direction when rtl', async () => {
+    const sheet = el(await renderDir('rtl'), '.rdr-page');
+    expect(sheet.getAttribute('dir')).toBe('rtl');
+    expect(sheet.style.direction).toBe('rtl');
+  });
+
+  it('emits no dir attribute for the ltr default', async () => {
+    const sheet = el(await renderDir(), '.rdr-page');
+    expect(sheet.getAttribute('dir')).toBeNull();
+  });
+});

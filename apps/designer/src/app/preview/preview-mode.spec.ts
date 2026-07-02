@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { fireEvent, render, screen, waitFor } from '@testing-library/angular';
-import type { TemplateElement } from '@rendara/report-schema';
+import type { RendaraTemplate, TemplateElement } from '@rendara/report-schema';
 import { PreviewMode } from './preview-mode';
 import { DesignerStore } from '../state/designer-store';
+import { createEmptyTemplate } from '../state/template-ops';
 import { parseSampleData } from '../state/sample-data';
 
 /** A text element bound to `expr`, placed on the sheet. */
@@ -98,5 +99,42 @@ describe('PreviewMode', () => {
     // A one-page document has nothing before or after the current page.
     expect((prev as HTMLButtonElement).disabled).toBe(true);
     expect((next as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  /**
+   * RTL preview (E10-S2): the preview derives the document direction from the
+   * template's `metadata.locale`, so an Arabic template previews right-to-left —
+   * the same direction the viewer will render for that template.
+   */
+  it('previews an Arabic-locale template right-to-left', async () => {
+    const view = await render(PreviewMode);
+    const store = TestBed.inject(DesignerStore);
+    const arabic: RendaraTemplate = {
+      ...createEmptyTemplate(),
+      metadata: { ...createEmptyTemplate().metadata, locale: 'ar-EG' },
+      body: {
+        elements: [
+          {
+            id: 'el_ar',
+            type: 'text',
+            frame: { xMm: 15, yMm: 20, wMm: 80, hMm: 10 },
+            z: 1,
+            text: 'فاتورة',
+          } as TemplateElement,
+        ],
+      },
+    };
+    store.loadTemplate(arabic);
+    store.enterPreview();
+    view.detectChanges();
+
+    const page = view.container.querySelector<HTMLElement>('.rdr-page');
+    expect(page?.getAttribute('dir')).toBe('rtl');
+  });
+
+  it('previews the default (en) template left-to-right (no dir marker)', async () => {
+    const { view } = await setup(boundText('invoice.customer.name'), INVOICE);
+    const page = view.container.querySelector<HTMLElement>('.rdr-page');
+    expect(page?.getAttribute('dir')).toBeNull();
   });
 });

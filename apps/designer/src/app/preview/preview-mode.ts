@@ -7,6 +7,8 @@ import {
   signal,
 } from '@angular/core';
 import { ReportDocument } from '@rendara/report-renderer';
+import { textDirection, type TextDirection } from '@rendara/report-engine';
+import { I18nService } from '@rendara/ui-kit';
 import { DesignerStore, MAX_ZOOM, MIN_ZOOM } from '../state/designer-store';
 import { BindingPreviewService } from '../state/binding-preview';
 import { TablePreviewService } from '../state/table-preview';
@@ -52,6 +54,9 @@ export class PreviewMode {
   protected readonly store = inject(DesignerStore);
   protected readonly preview = inject(BindingPreviewService);
 
+  /** Designer i18n (E10-S2): the template calls `i18n.t(...)` for its chrome strings. */
+  protected readonly i18n = inject(I18nService);
+
   /** Placeholder document name shown beside the PREVIEW badge. */
   protected readonly documentName = DOCUMENT_NAME;
 
@@ -69,16 +74,28 @@ export class PreviewMode {
   /** Resolved zoom factor for the renderer. */
   protected readonly zoom = computed(() => this.zoomFactor());
 
+  /**
+   * Base text direction of the preview (E10-S2), derived from the template's
+   * `metadata.locale` via {@link textDirection}. An Arabic/Hebrew/… template
+   * previews right-to-left — exactly what the viewer will render for the same
+   * template (brief §7, "one renderer, two modes").
+   */
+  protected readonly direction = computed<TextDirection>(() =>
+    textDirection(this.store.template().metadata.locale),
+  );
+
   /** Zoom as an integer percentage for the toolbar readout (e.g. 100). */
   protected readonly zoomPercent = computed(() => Math.round(this.zoomFactor() * 100));
 
   /** `n / total` page counter for the toolbar. */
   protected readonly pageLabel = computed(() => `${this.page()} / ${this.store.pageCount()}`);
 
-  /** The data-source hint: the imported file name, or a no-data note. */
+  /** The data-source hint: the imported file name, or a no-data note (localised, E10-S2). */
   protected readonly sourceHint = computed(() => {
     const sample = this.store.sampleData();
-    return sample === null ? 'No sample data imported' : `Rendered with ${sample.fileName}`;
+    return sample === null
+      ? this.i18n.t('preview.noSampleData')
+      : this.i18n.t('preview.renderedWith', { fileName: sample.fileName });
   });
 
   /** True when there is a previous/next page to navigate to. */

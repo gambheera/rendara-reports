@@ -343,3 +343,25 @@ or hides it at runtime (a hidden rail is removed from the DOM, freeing the width
 for the report). Set the rail's initial visibility with `config.thumbnails: false`
 (default `true`), and hide the toggle button itself with
 `config.toolbar.thumbnails: false`.
+
+## Localization & RTL (E10-S2)
+
+The viewer is locale-aware end to end. All formatting (currency, number, percent,
+date) uses the effective locale — `config.locale` if you set one, otherwise the
+template's `metadata.locale` — through the `Intl`-based engine, so the same report
+renders `$1,234.50` in `en-US`, `1.234,50 €` in `de-DE`, and Arabic-Indic digits in
+`ar-EG`.
+
+**Right-to-left** rendering is derived from that same locale — there is no
+`direction` field on the template (the schema is a versioned contract). When the
+effective locale is RTL (Arabic, Hebrew, Persian, Urdu, …) the report reads
+right-to-left: the page carries `dir="rtl"`, un-aligned text right-aligns, and
+data-table columns mirror across the table width. LTR reports are unchanged.
+
+```html
+<!-- RTL because config.locale is Arabic (overrides the template locale). -->
+<rendara-report-viewer [template]="tpl" [data]="data" [config]="{ locale: 'ar-EG' }" />
+```
+
+Leave `config.locale` unset to inherit the template's `metadata.locale`; a
+Latin/LTR locale keeps the report left-to-right.

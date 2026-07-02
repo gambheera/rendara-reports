@@ -82,6 +82,7 @@ import type {
   PlacedElement,
   TableColumnLayout,
   TableSlice,
+  TextDirection,
   Watermark,
 } from '@rendara/report-engine';
 import type {
@@ -365,6 +366,13 @@ export interface PageViewModel {
   readonly watermark: WatermarkView | null;
   /** Render mode (E4-S6): `'view'` (static output) or `'design'` (selection anchors exposed). */
   readonly mode: RenderMode;
+  /**
+   * Base text direction of the page (E10-S2), derived from the template locale by
+   * the renderer's host (never a schema field). `'rtl'` sets the sheet's `direction`
+   * + `dir="rtl"` so text runs read right-to-left, un-aligned text right-aligns and
+   * data-table columns mirror; `'ltr'` (the default) leaves the output byte-stable.
+   */
+  readonly direction: TextDirection;
 }
 
 /** Options for {@link buildPageViewModel}. */
@@ -410,6 +418,13 @@ export interface PageViewOptions {
    * output. Case-insensitive (see {@link findTextMatches}).
    */
   readonly highlightQuery?: string | null;
+  /**
+   * Base text direction (E10-S2), from the renderer host's locale-derived
+   * {@link textDirection}. `'rtl'` mirrors the table columns, right-aligns
+   * un-aligned text and sets the sheet direction; `'ltr'` (the default) keeps the
+   * view-model — and thus the DOM and serialized HTML — byte-identical to before.
+   */
+  readonly direction?: TextDirection;
 }
 
 /**
@@ -425,6 +440,7 @@ export function buildPageViewModel(
   const zoom = options?.zoom ?? 1;
   const background = resolveBackground(options?.background);
   const mode = options?.mode ?? 'view';
+  const direction: TextDirection = options?.direction ?? 'ltr';
   const dpi = geometry.dpi ?? DEFAULT_DPI;
 
   const template = options?.template;
@@ -446,6 +462,7 @@ export function buildPageViewModel(
         defaultFont,
         dpi,
         highlightQuery,
+        direction,
       ),
   );
 
@@ -460,7 +477,7 @@ export function buildPageViewModel(
     if (source?.type !== 'dataTable') {
       continue;
     }
-    tables.push(toTableView(slice, source, defaultFont, dpi, highlightQuery));
+    tables.push(toTableView(slice, source, defaultFont, dpi, highlightQuery, direction));
   }
 
   return {
@@ -478,6 +495,7 @@ export function buildPageViewModel(
     tables,
     watermark: buildWatermarkView(options?.watermark, dpi),
     mode,
+    direction,
   };
 }
 
@@ -606,6 +624,7 @@ function toElementBoxView(
   defaultFont: FontSpec,
   dpi: number,
   highlightQuery: string,
+  direction: TextDirection,
 ): ElementBoxView {
   const widthPx = placed.boxPx.wPx;
   const heightPx = placed.boxPx.hPx;
@@ -618,6 +637,7 @@ function toElementBoxView(
     widthPx,
     heightPx,
     highlightQuery,
+    direction,
   );
   // Vertical alignment only realises for text (the only flex host box); other
   // types ignore it. Shapes paint their own fill/stroke via SVG, so box
@@ -650,13 +670,22 @@ function buildContent(
   widthPx: number,
   heightPx: number | null,
   highlightQuery: string,
+  direction: TextDirection,
 ): ElementContentView {
   if (!source) {
     return EMPTY_CONTENT;
   }
   switch (source.type) {
     case 'text':
-      return buildTextContent(placed, source, resolvedValues, defaultFont, dpi, highlightQuery);
+      return buildTextContent(
+        placed,
+        source,
+        resolvedValues,
+        defaultFont,
+        dpi,
+        highlightQuery,
+        direction,
+      );
     case 'shape':
       return buildShapeContent(source, dpi, widthPx, heightPx ?? 0);
     case 'image':
@@ -681,12 +710,13 @@ function buildTextContent(
   defaultFont: FontSpec,
   dpi: number,
   highlightQuery: string,
+  direction: TextDirection,
 ): TextContentView {
   const text = resolveTextString(placed, element, resolvedValues);
   const base: TextContentView = {
     kind: 'text',
     text,
-    textStyle: textRunStyle(element.style, defaultFont, dpi),
+    textStyle: textRunStyle(element.style, defaultFont, dpi, direction),
   };
   const segments = splitHighlightSegments(text, highlightQuery);
   // Only attach `segments` when there is a match, so non-search output stays
@@ -718,6 +748,7 @@ function textRunStyle(
   style: ElementStyle | undefined,
   defaultFont: FontSpec,
   dpi: number,
+  direction: TextDirection,
 ): StyleMap {
   const font = style?.font;
   const family = font?.family ?? defaultFont.family;
@@ -741,7 +772,14 @@ function textRunStyle(
   }
   const horizontal = style?.align?.horizontal;
   if (horizontal !== undefined) {
+    // An authored horizontal alignment is honoured verbatim in either direction.
     out['text-align'] = horizontal;
+  } else if (direction === 'rtl') {
+    // With no authored alignment, RTL text reads from the right. Set it explicitly
+    // (rather than relying on inherited `start`) so the run right-aligns regardless
+    // of the renderer's `text-align` reset. LTR keeps the default (no key emitted),
+    // so existing output stays byte-identical.
+    out['text-align'] = 'right';
   }
   return out;
 }
@@ -954,6 +992,7 @@ function toTableView(
   defaultFont: FontSpec,
   dpi: number,
   highlightQuery: string,
+  direction: TextDirection,
 ): TableView {
   const leftPx = mmToPx(element.frame.xMm, dpi);
   const widthPx = slice.columns.reduce((sum, c) => sum + c.widthPx, 0);
@@ -971,6 +1010,7 @@ function toTableView(
       padding,
       dpi,
       highlightQuery,
+      direction,
     ),
   );
 
@@ -996,6 +1036,7 @@ function toTableRowView(
   padding: CellPaddingMm,
   dpi: number,
   highlightQuery: string,
+  direction: TextDirection,
 ): TableRowView {
   // Header / footer / subtotal / grand-total text is emphasised; detail is plain.
   const emphasised = row.kind !== 'detail';
@@ -1003,10 +1044,14 @@ function toTableRowView(
     const cell = row.cells[i];
     const text = cell?.text ?? '';
     const segments = splitHighlightSegments(text, highlightQuery);
+    // RTL mirrors the columns across the table width so the first declared column
+    // sits on the right; each cell keeps its authored text-align. LTR uses the
+    // engine's `xPx` verbatim, so existing geometry is byte-identical.
+    const leftPx = direction === 'rtl' ? widthPx - column.xPx - column.widthPx : column.xPx;
     const base: TableCellView = {
       columnKey: column.key,
       text,
-      leftPx: column.xPx,
+      leftPx,
       widthPx: column.widthPx,
       cellStyle: tableTextStyle(column.align, fontFamily, fontSizePx, padding, dpi, emphasised),
     };
@@ -1288,7 +1333,7 @@ export type StyleMap = Readonly<Record<string, string>>;
 
 /** Inline styles for the page sheet: natural size, background, and the zoom transform. */
 export function sheetStyle(vm: PageViewModel): StyleMap {
-  return {
+  const base: Record<string, string> = {
     position: 'relative',
     width: `${vm.sheet.widthPx}px`,
     height: `${vm.sheet.heightPx}px`,
@@ -1296,6 +1341,13 @@ export function sheetStyle(vm: PageViewModel): StyleMap {
     transform: `scale(${vm.zoom})`,
     'transform-origin': 'top left',
   };
+  // RTL base direction (E10-S2): set inline so it overrides the renderer's
+  // `direction: ltr` reset (a stylesheet rule that would otherwise beat the `dir`
+  // attribute). Omitted for LTR so the sheet style stays byte-identical.
+  if (vm.direction === 'rtl') {
+    base['direction'] = 'rtl';
+  }
+  return base;
 }
 
 /** Inline styles for the printable-area guide rectangle. */

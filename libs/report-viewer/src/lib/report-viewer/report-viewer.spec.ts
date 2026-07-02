@@ -1240,3 +1240,50 @@ describe('ReportViewer (E8-S7 optional thumbnail rail)', () => {
     expect(query<HTMLButtonElement>(container, TOGGLE).getAttribute('aria-pressed')).toBe('true');
   });
 });
+
+/**
+ * RTL rendering (E10-S2). The viewer derives the report's base direction from the
+ * same effective locale it formats with — `config.locale` when the host sets one,
+ * else `template.metadata.locale` — and forwards it to the shared renderer, so an
+ * Arabic (or other RTL) template reads right-to-left. An LTR template stays LTR.
+ */
+describe('ReportViewer RTL (E10-S2)', () => {
+  const arabicTemplate: RendaraTemplate = {
+    ...(golden.template as RendaraTemplate),
+    metadata: { ...(golden.template as RendaraTemplate).metadata, locale: 'ar-EG' },
+  };
+
+  it('renders the report right-to-left for an Arabic-locale template', async () => {
+    const { container, fixture } = await render(ReportViewer, {
+      inputs: { template: arabicTemplate, data: golden.data },
+    });
+    await flush();
+    fixture.detectChanges();
+
+    const page = container.querySelector<HTMLElement>('.rdr-viewer-scroll .rdr-page');
+    expect(page?.getAttribute('dir')).toBe('rtl');
+  });
+
+  it('keeps an LTR template left-to-right (no dir marker)', async () => {
+    const { container, fixture } = await render(ReportViewer, {
+      inputs: { template: golden.template, data: golden.data },
+    });
+    await flush();
+    fixture.detectChanges();
+
+    const page = container.querySelector<HTMLElement>('.rdr-viewer-scroll .rdr-page');
+    expect(page).toBeTruthy();
+    expect(page?.getAttribute('dir')).toBeNull();
+  });
+
+  it('lets config.locale override the template locale for direction', async () => {
+    const { container, fixture } = await render(ReportViewer, {
+      inputs: { template: golden.template, data: golden.data, config: { locale: 'he-IL' } },
+    });
+    await flush();
+    fixture.detectChanges();
+
+    const page = container.querySelector<HTMLElement>('.rdr-viewer-scroll .rdr-page');
+    expect(page?.getAttribute('dir')).toBe('rtl');
+  });
+});

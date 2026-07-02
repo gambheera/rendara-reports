@@ -8,6 +8,10 @@ export * from './lib/expression';
 // (currency/number/percent/date + raw fallback) → display strings (E2-S2).
 export * from './lib/format';
 
+// Locale → base text direction (ltr/rtl), derived from the template locale so the
+// shared renderer paints RTL without a schema field (E10-S2).
+export * from './lib/direction';
+
 // Conditional visibility (`visibleWhen`) + conditional style rules resolved to a
 // concrete style, with a documented fail-safe-on-error default (E2-S3).
 export * from './lib/conditional';

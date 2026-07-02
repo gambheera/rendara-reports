@@ -307,3 +307,43 @@ describe('formatValueDetailed — status (E2-S6)', () => {
     expect(formatValueDetailed(10, 'currency:US', { fallback: 'X' }).formatted).toBe('X');
   });
 });
+
+/**
+ * Story QA (E10-S2): "Arabic/German locale fixtures render correctly". An
+ * invoice-shaped set of values — currency, number, percent, date — formatted in
+ * `ar-EG` and `de-DE` and checked against a same-`Intl` oracle, so the assertions
+ * hold across ICU versions while proving the locale is threaded through every
+ * formatter (not just currency). This exercises the *engine* end of the
+ * "locale-aware formatting end-to-end" acceptance; the viewer/designer wiring is
+ * covered by their own specs.
+ */
+describe('formatValue — locale fixtures (E10-S2 i18n)', () => {
+  const iso = '2026-06-17T13:05:09Z';
+
+  it.each(['ar-EG', 'de-DE'])('formats an invoice value set in %s like Intl does', (locale) => {
+    // currency
+    expect(formatValue(1234.5, 'currency:EUR', { locale })).toBe(
+      new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(1234.5),
+    );
+    // grouped number
+    expect(formatValue(1234567.891, 'number:#,##0.00', { locale })).toBe(
+      new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        useGrouping: true,
+      }).format(1234567.891),
+    );
+    // percent
+    expect(formatValue(0.1538, 'percent:0.0', { locale })).toBe(
+      new Intl.NumberFormat(locale, {
+        style: 'percent',
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }).format(0.1538),
+    );
+    // date
+    expect(formatValue(iso, 'date:long', { locale })).toBe(
+      new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(iso)),
+    );
+  });
+});

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { render, screen, fireEvent } from '@testing-library/angular';
 import type { TextElement } from '@rendara/report-schema';
+import { I18nService } from '@rendara/ui-kit';
 import { DesignerShell, arrangeShortcut, editShortcut } from './designer-shell';
 import { DesignerStore } from '../state/designer-store';
 
@@ -170,5 +171,19 @@ describe('DesignerShell', () => {
     // Spam left past the minimum; the width clamps at MIN_WIDTH (200).
     for (let i = 0; i < 50; i++) fireEvent.keyDown(handle, { key: 'ArrowLeft' });
     expect(Number(handle.getAttribute('aria-valuenow'))).toBe(200);
+  });
+
+  /**
+   * RTL chrome (E10-S2): the shell derives its `dir` from the active UI locale, so
+   * an RTL locale flips the whole designer to `dir="rtl"`. English stays `ltr`.
+   */
+  it('sets the shell direction from the active UI locale', async () => {
+    const view = await render(DesignerShell);
+    const host = view.fixture.nativeElement as HTMLElement;
+    expect(host.getAttribute('dir')).toBe('ltr');
+
+    TestBed.inject(I18nService).setLocale('ar-EG');
+    view.detectChanges();
+    expect(host.getAttribute('dir')).toBe('rtl');
   });
 });
